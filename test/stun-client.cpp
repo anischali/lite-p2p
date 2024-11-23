@@ -1,6 +1,7 @@
 #include "stun_client.hpp"
 #include "peer_connection.hpp"
 #include <time.h>
+#include <cstdlib>
 #include <thread>
 
 
@@ -61,6 +62,10 @@ void visichat_sender(void *args) {
 
 //stun:stun.l.google.com 19302
 //34.203.251.243 3478
+//TCP
+//stun.sipnet.net:3478
+//stun.sipnet.ru:3478
+//stun.stunprotocol.org:3478
 int main(int argc, char *argv[]) {
 
     if (argc < 4) {
@@ -79,7 +84,7 @@ int main(int argc, char *argv[]) {
         return ret;
     }
 
-    conn.remote.sin_addr.s_addr = htonl(inet_network("24.48.39.41"));//stun.ext_ip.sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
+    conn.remote.sin_addr.s_addr = stun.ext_ip.sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
     conn.remote.sin_family = AF_INET;
     conn.remote.sin_port = htons(atoi(argv[4]));
 
@@ -91,8 +96,14 @@ int main(int argc, char *argv[]) {
     sender.join();
     recver.join();
 
-    conn.~udp_peer_connection();
-    stun.~stun_client();
+    auto main_clean = [&conn, &stun, &sender, &recver](){
+        conn.~udp_peer_connection();
+        stun.~stun_client();
+        sender.~thread();
+        recver.~thread();
+    };
+
+    main_clean();
 
     return 0;
 }
