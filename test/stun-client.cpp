@@ -1,5 +1,5 @@
-#include "lib/stun_client.hpp"
-#include "lib/peer_connection.hpp"
+#include "stun_client.hpp"
+#include "peer_connection.hpp"
 #include <time.h>
 #include <thread>
 
