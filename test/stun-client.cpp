@@ -60,6 +60,7 @@ void visichat_sender(void *args) {
 
 
 //stun:stun.l.google.com 19302
+//34.203.251.243 3478
 int main(int argc, char *argv[]) {
 
     if (argc < 4) {
