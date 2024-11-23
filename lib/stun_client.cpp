@@ -19,14 +19,6 @@
     printf("%d: %s\n", err, msg); \
     return err
 
-#define min(x, y) x < y ? x : y
-
-static inline bool c_array_cmp(uint8_t a1[], uint8_t a2[], int len) {
-    
-    while(len-- > 0 && *(a1++) != *(a2++));
-    return len == 0;
-}
-
 stun_client::stun_client(int socket_fd) : 
     _socket{socket_fd}, ext_ip{0}
 {}
@@ -37,45 +29,59 @@ stun_client::~stun_client()
 
 int stun_client::stun_request(struct sockaddr_in stun_server) {
     struct sockaddr_in laddr;  
-    struct stun_request_t request;
-    struct stun_response_t response;
+    struct stun_packet_t packet(STUN_REQUEST);
+    uint8_t transaction_id[12];
     uint16_t attr_len = 0, attr_type = 0;
-    int ret, len, i;
-    uint8_t *attrs;
+    int ret, len, i, offset = 0;
+    uint8_t *attrs = &packet.attributes[0];
+    bool auth_packet = false;
+    struct stun_attr_t attr = STUN_ATTR(STUN_ATTR_USERNAME, 13, "tqrgssa:tweys");
     
-    ret = sendto(_socket, (uint8_t *)&request, ntohs(request.msg_len) + 20, 0, (struct sockaddr *)&stun_server, sizeof(stun_server));
+    memcpy(transaction_id, packet.transaction_id, sizeof(transaction_id));
+
+resend_auth:
+    if (auth_packet) {
+        offset += stun_add_attr(&attrs[offset], &attr);
+        packet.msg_len = htons(ntohs(packet.msg_len) + offset);
+    }
+
+    ret = sendto(_socket, (uint8_t *)&packet, ntohs(packet.msg_len) + 20, 0, (struct sockaddr *)&stun_server, sizeof(stun_server));
     if (ret < 0) {
         err_ret("Failed to send data", ret);
     }
 
-    ret = recvfrom(_socket, &response, sizeof(response), 0, NULL, 0);
+    ret = recvfrom(_socket, &packet, sizeof(packet), 0, NULL, 0);
     if (ret < 0) {
         err_ret("Failed to recv data", ret);
     }
 
-    if (response.magic_cookie != request.magic_cookie)
+    if (packet.magic_cookie != htonl(MAGIC_COOKIE))
         return -EINVAL;
 
-    if (c_array_cmp(response.transaction_id, request.transaction_id, sizeof(request.transaction_id)))
+    if (c_array_cmp(packet.transaction_id, transaction_id, sizeof(transaction_id)))
         return -EINVAL;
 
-    if (response.msg_type != htons(0x0101))
+    if (IS_ERR_RESP(packet.msg_type)) {
+        if (!auth_packet) {
+            auth_packet = true;
+            goto resend_auth;
+        }
+
         return -EINVAL;
+    }
     
-    attrs = response.attributes;
-    len = min(response.msg_len, sizeof(response.attributes));
+    attrs = packet.attributes;
+    len = std::min(packet.msg_len, (uint16_t)sizeof(packet.attributes));
 
     for (i = 0; i < len; i += (4 + attr_len)) {
-        attr_type = ntohs(*(int16_t*)(&attrs[i]));
-        attr_len = ntohs(*(int16_t*)(&attrs[i + 2]));
+        attr = STUN_ATTR(ntohs(*(int16_t*)(&attrs[i])), ntohs(*(int16_t*)(&attrs[i + 2])), &attrs[i + 5]);
 
-        if (attr_type == 0x020) {
-            ext_ip.sin_port = (*(int16_t *)(&attrs[i + 6]));
-            ext_ip.sin_port ^= ((uint16_t)response.magic_cookie);
-            ext_ip.sin_port = ext_ip.sin_port;
-
-            ext_ip.sin_addr.s_addr = (*(uint32_t *)&attrs[i + 8]);
-            ext_ip.sin_addr.s_addr ^= response.magic_cookie;
+        if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR) {
+            ext_ip.sin_family = (uint16_t )(*(int8_t *)(&attr.value[0]));
+            ext_ip.sin_port = (*(int16_t *)(&attr.value[1]));
+            ext_ip.sin_port ^= ((uint16_t)packet.magic_cookie);
+            ext_ip.sin_addr.s_addr = (*(uint32_t *)&attr.value[3]);
+            ext_ip.sin_addr.s_addr ^= packet.magic_cookie;
             
             return 0;
         }
@@ -92,29 +98,36 @@ int stun_client::stun_request(const char *stun_hostname, short stun_port) {
     char *hostname, *service, hst[512];
     int ret;
     
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
+    if (inet_addr(stun_hostname) == INADDR_ANY) {
 
-    memset(hst, 0, sizeof(hst));
-    memcpy(hst, stun_hostname, min(512, strlen(stun_hostname)));
-    service = strtok_r(hst, ":/", &hostname);
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
 
-    if (hostname[0] == '/' && hostname[1] == '/')
-        hostname = &hostname[2];
+        memset(hst, 0, sizeof(hst));
+        memcpy(hst, stun_hostname, std::min(512, (int)strlen(stun_hostname)));
+        service = strtok_r(hst, ":/", &hostname);
 
-    ret = getaddrinfo(hostname, service, &hints, &servinfo);
-    if (ret != 0) {
-        return ret;
-    }
+        if (hostname[0] == '/' && hostname[1] == '/')
+            hostname = &hostname[2];
+
+        ret = getaddrinfo(hostname, service, &hints, &servinfo);
+        if (ret != 0) {
+            return ret;
+        }
     
-    for (p = servinfo; p != NULL; p = p->ai_next) {
-        addr = (struct sockaddr_in*)p->ai_addr;
-        memcpy(&stun_server, addr, sizeof(stun_server));
-    }
+        for (p = servinfo; p != NULL; p = p->ai_next) {
+            addr = (struct sockaddr_in*)p->ai_addr;
+            memcpy(&stun_server, addr, sizeof(stun_server));
+        }
     
-    freeaddrinfo(servinfo);
-    servinfo = NULL;
+        freeaddrinfo(servinfo);
+        servinfo = NULL;
+    }
+    else
+    {
+        stun_server.sin_addr.s_addr = inet_addr(stun_hostname);
+    }
 
     stun_server.sin_port = htons(stun_port);
     stun_server.sin_family = AF_INET;

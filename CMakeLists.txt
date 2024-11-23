@@ -5,6 +5,11 @@ project(liteP2P  VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
 enable_language(C CXX ASM)
 
+
+add_compile_options(-g -ggdb -O0 -lpthread)
+add_link_options(-g -ggdb -O0 -lpthread)
+
+
 add_library(lite-p2p)
 
 add_executable(stun-client)
