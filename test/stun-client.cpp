@@ -1,9 +1,10 @@
+#include <iostream>
+#include <thread>
+#include <cstdlib>
+#include <time.h>
+#include "cleanup.hpp"
 #include "stun_client.hpp"
 #include "peer_connection.hpp"
-#include <time.h>
-#include <cstdlib>
-#include <thread>
-#include "cleanup.hpp"
 
 
 
@@ -70,7 +71,7 @@ void visichat_sender(void *args) {
 //stun.stunprotocol.org:3478
 int main(int argc, char *argv[]) {
 
-    at_exit_engine __at_exit(SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGSTOP, SIGQUIT, SIGTERM);
+    at_exit_cleanup __at_exit(SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGSTOP, SIGQUIT, SIGTERM);
 
     if (argc < 4) {
         printf("wrong arguments number !\n");
@@ -81,13 +82,13 @@ int main(int argc, char *argv[]) {
     peer_connection conn(atoi(argv[3]));
     stun_client stun(conn.sock_fd);
 
-    __at_exit.on_exit_register(&conn, [](void *ctx){
+    __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
         peer_connection *c = (peer_connection *)ctx;
 
         c->~peer_connection();
     });
 
-    __at_exit.on_exit_register(&stun, [](void *ctx){
+    __at_exit.at_exit_cleanup_add(&stun, [](void *ctx){
         stun_client *c = (stun_client *)ctx;
 
         c->~stun_client();
@@ -114,10 +115,11 @@ int main(int argc, char *argv[]) {
 
     auto thread_cleanup = [](void *ctx) {
         std::thread *t = (std::thread *)ctx;
+        pthread_cancel(t->native_handle());
         t->~thread();
     };
-    __at_exit.on_exit_register(&sender, thread_cleanup);
-    __at_exit.on_exit_register(&recver, thread_cleanup);
+    __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
+    __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
 
     return 0;
 }
