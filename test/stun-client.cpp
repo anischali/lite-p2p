@@ -71,7 +71,7 @@ void visichat_sender(void *args) {
 //stun.stunprotocol.org:3478
 int main(int argc, char *argv[]) {
 
-    at_exit_cleanup __at_exit(SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGSTOP, SIGQUIT, SIGTERM);
+    at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
 
     if (argc < 4) {
         printf("wrong arguments number !\n");
@@ -110,16 +110,16 @@ int main(int argc, char *argv[]) {
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
 
-    recver.join();
-    sender.join();
-
     auto thread_cleanup = [](void *ctx) {
         std::thread *t = (std::thread *)ctx;
         pthread_cancel(t->native_handle());
-        t->~thread();
     };
+
     __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
     __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
+
+    recver.join();
+    sender.join();
 
     return 0;
 }

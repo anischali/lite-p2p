@@ -92,13 +92,14 @@ resend_auth:
 
 
 int stun_client::request(const char *stun_hostname, short stun_port) {
-    struct sockaddr_in *addr;
+    struct sockaddr_in *addr; 
+    sockaddr_in s_addr;
     struct addrinfo hints, *servinfo, *p;
     struct sockaddr_in *h;
     char *hostname, *service, hst[512];
     int ret;
     
-    if (inet_addr(stun_hostname) == INADDR_ANY) {
+    if (!inet_pton(AF_INET, stun_hostname, &s_addr)) {
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_INET;

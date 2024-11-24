@@ -5,7 +5,7 @@
 #include "cstring"
 #include <csignal>
 #include <cstdarg>
-
+#include <vector>
 class at_exit_cleanup {
 private:
     
@@ -35,25 +35,18 @@ private:
     };
 
 public:
-    
 
-    at_exit_cleanup(...) {
-        va_list args;
-        va_start(args, NULL);
-        
+    at_exit_cleanup() {
         INIT_LIST_HEAD(&list);
         
         on_exit(at_exit_cleanup::on_exit_engine_cleanup, &list);
-        int sig;
-        do {
-            sig = va_arg(args, int);
-            if (sig < 0)
-                break;
-            
-            signal(sig, at_exit_cleanup::at_exit_sig_handler);
-        } while (sig > 0);
+    };
 
-        va_end(args);
+    at_exit_cleanup(std::vector<int> signals) : at_exit_cleanup() {
+        
+        for (int i = 0; i < signals.size(); ++i) {
+            signal(signals[i], at_exit_cleanup::at_exit_sig_handler);
+        }
     };
 
     void at_exit_cleanup_add(void *context, void (*cleanup)(void *context)) {
