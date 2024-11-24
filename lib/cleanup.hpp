@@ -31,13 +31,9 @@ private:
                 ctx = NULL;
             }
         }
-
-        printf("Cleanup success!\n");
-
     };
 
     static void at_exit_sig_handler(int sig) {
-        printf("Intercept sig: %d\n", sig);
         exit(sig);
     };
 
@@ -58,7 +54,6 @@ public:
                 break;
             
             signal(sig, at_exit_engine::at_exit_sig_handler);
-            printf("sig: %d\n", sig);
         } while (sig > 0);
 
         va_end(args);
