@@ -1,11 +1,11 @@
 #include "peer_connection.hpp"
 
 
-udp_peer_connection::udp_peer_connection(short port) {
+peer_connection::peer_connection(short port, int type, int protocol) {
     timeval tv = { .tv_sec = 5 };
     int enable = 1;
         
-    sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sock_fd = socket(AF_INET, type, protocol);
     if (sock_fd <= 0) {
         printf("failed to open socket\n");
         return;
@@ -22,6 +22,10 @@ udp_peer_connection::udp_peer_connection(short port) {
     bind(sock_fd, (struct sockaddr *)&local, sizeof(local));
 };
 
-udp_peer_connection::~udp_peer_connection() {
+peer_connection::peer_connection(short port) : peer_connection(port, SOCK_DGRAM, IPPROTO_UDP)
+{
+};
+
+peer_connection::~peer_connection() {
     close(sock_fd);
 };
