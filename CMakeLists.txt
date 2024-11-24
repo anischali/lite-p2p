@@ -6,7 +6,7 @@ enable_language(C CXX ASM)
 
 add_library(lite-p2p)
 
-file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/*.hpp)
+file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/lite-p2p/*.hpp)
 
 set_target_properties(lite-p2p PROPERTIES
     VERSION ${PROJECT_VERSION}

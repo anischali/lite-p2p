@@ -2,9 +2,9 @@
 #include <thread>
 #include <cstdlib>
 #include <time.h>
-#include "cleanup.hpp"
-#include "stun_client.hpp"
-#include "peer_connection.hpp"
+#include "lite-p2p/cleanup.hpp"
+#include "lite-p2p/stun_client.hpp"
+#include "lite-p2p/peer_connection.hpp"
 
 
 

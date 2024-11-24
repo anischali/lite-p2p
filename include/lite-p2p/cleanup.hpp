@@ -1,6 +1,6 @@
 #ifndef __CLEANUP_HPP__
 #define __CLEANUP_HPP__
-#include "list_head.hpp"
+#include "lite-p2p/list_head.hpp"
 #include "cstdlib"
 #include "cstring"
 #include <csignal>
