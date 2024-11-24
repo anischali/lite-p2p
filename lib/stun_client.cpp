@@ -27,7 +27,7 @@ stun_client::~stun_client()
 {
 }
 
-int stun_client::stun_request(struct sockaddr_in stun_server) {
+int stun_client::request(struct sockaddr_in stun_server) {
     struct sockaddr_in laddr;  
     struct stun_packet_t packet(STUN_REQUEST);
     uint8_t transaction_id[12];
@@ -91,7 +91,7 @@ resend_auth:
 }
 
 
-int stun_client::stun_request(const char *stun_hostname, short stun_port) {
+int stun_client::request(const char *stun_hostname, short stun_port) {
     struct sockaddr_in *addr;
     struct addrinfo hints, *servinfo, *p;
     struct sockaddr_in *h;
@@ -132,7 +132,7 @@ int stun_client::stun_request(const char *stun_hostname, short stun_port) {
     stun_server.sin_port = htons(stun_port);
     stun_server.sin_family = AF_INET;
 
-    return stun_request(stun_server);
+    return request(stun_server);
 }
 
 

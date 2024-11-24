@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
         c->~stun_client();
     });
 
-    int ret = stun.stun_request(argv[1], atoi(argv[2]));
+    int ret = stun.request(argv[1], atoi(argv[2]));
     printf("STUN: %s [%d:%d]\n", inet_ntoa(stun.ext_ip.sin_addr), stun.ext_ip.sin_family, ntohs(stun.ext_ip.sin_port));
     if (ret < 0) {
         conn.~peer_connection();

@@ -21,6 +21,14 @@
 enum stun_methods {
     STUN_REQUEST = 0x1,
     STUN_RESPONSE = 0x0101,
+
+    /* Used for TURN service RFC 8656 */
+    STUN_ALLOCATE = 0x0003,
+    STUN_REFRESH = 0x0004,
+    STUN_SEND = 0x0006,
+    STUN_DATA = 0x0007,
+    STUN_CREATE_PERM = 0x0008,
+    STUN_CHANNEL_BIND = 0x0009,
 };
 
 
@@ -69,6 +77,23 @@ Comprehension-required range (0x0000-0x7FFF):
    0x8002: PASSWORD-ALGORITHMS
    0x8003: ALTERNATE-DOMAIN
 
+TURN used attributes RFC 8656
+    0x000C	CHANNEL-NUMBER
+    0x000D	LIFETIME
+    0x0010	Reserved (was BANDWIDTH)
+    0x0012	XOR-PEER-ADDRESS
+    0x0013	DATA
+    0x0016	XOR-RELAYED-ADDRESS
+    0x0017	REQUESTED-ADDRESS-FAMILY
+    0x0018	EVEN-PORT
+    0x0019	REQUESTED-TRANSPORT
+    0x001A	DONT-FRAGMENT
+    0x0021	Reserved (was TIMER-VAL)
+    0x0022	RESERVATION-TOKEN
+    0x8000	ADDITIONAL-ADDRESS-FAMILY
+    0x8001	ADDRESS-ERROR-CODE
+    0x8004	ICMP
+
  */
 
 enum stun_attrs {
@@ -88,6 +113,22 @@ enum stun_attrs {
     STUN_ATTR_SOFTWARE = 0x8022,
     STUN_ATTR_ALT_SERVER = 0x8023,
     STUN_ATTR_FINGERPRINT = 0x8028,
+
+    // TURN used attributes RFC 8656
+
+    STUN_ATTR_CHANNEL_NUM = 0x000C,
+    STUN_ATTR_LIFETIME = 0x000D,
+    STUN_ATTR_XOR_PEER_ADDR = 0x0012,
+    STUN_ATTR_DATA = 0x0013,
+    STUN_ATTR_XOR_RELAYED_ADDR = 0x0016,
+    STUN_ATTR_REQUESTED_ADDR_FAMILY = 0x0017,
+    STUN_ATTR_EVEN_PORT = 0x0018,
+    STUN_ATTR_REQUESTED_TRANSPORT = 0x0019,
+    STUN_ATTR_DONT_FRAGMENT = 0x001A,
+    STUN_ATTR_RESERV_TOKEN = 0x0022,
+    STUN_ATTR_ADDITIONAL_ADDR_FAMILY = 0x8000, 
+    STUN_ATTR_ADDR_ERROR_CODE = 0x8001,
+    STUN_ATTR_ICMP = 0x8004,
 };
 
 struct __attribute__((packed)) stun_packet_t {
@@ -153,6 +194,12 @@ struct __attribute__((packed)) stun_attrs_t {
     // NONCE: MUST be fewer than 128 characters (which can be as long as 509 bytes
     // when encoding them and a long as 763 bytes when decoding them)
     struct stun_attr_t nonce;
+
+
+    struct stun_attr_t passwd_algs;
+    struct stun_attr_t passwd_c_alg;
+    struct stun_attr_t fingerprint;
+
 };
 
 class stun_client
@@ -168,8 +215,8 @@ public:
     stun_client(int socket_fd);
     ~stun_client();
 
-    int stun_request(struct sockaddr_in stun_server);
-    int stun_request(const char *stun_hostname, short stun_port);
+    int request(struct sockaddr_in stun_server);
+    int request(const char *stun_hostname, short stun_port);
 };
 
 #endif

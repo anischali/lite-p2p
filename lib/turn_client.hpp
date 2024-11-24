@@ -1,16 +1,18 @@
 #ifndef __TURN_CLIENT_HPP__
 #define __TURN_CLIENT_HPP__
+#include "stun_client.hpp"
 
-
-class turn_client
+class turn_client : stun_client
 {
 private:
-    const char *hostname;
-    const char *credential;
+
     /* data */
 public:
-    turn_client(/* args */);
+    turn_client();
     ~turn_client();
+
+
+    
 };
 
 #endif
