@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/lite-p2p
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+
+Name: lite-p2p
+Description: "A lite P2P library"
+URL: ""
+Version: @PROJECT_VERSION@
+Libs:-L${libdir} -llite-p2p
+Cflags: -I"${includedir}"
