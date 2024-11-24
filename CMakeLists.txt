@@ -14,7 +14,7 @@ set_target_properties(lite-p2p PROPERTIES
     SOVERSION 1
 )
 
-target_include_directories(lite-p2p PRIVATE
+target_include_directories(lite-p2p PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
