@@ -3,7 +3,7 @@
 #include "list_head.h"
 #include "cstdlib"
 #include "cstring"
-
+#include <csignal> 
 
 struct at_exit_context_t {
     void (*cleanup)(void *context);
@@ -34,10 +34,26 @@ private:
 
     };
 
+    static void at_exit_cleanup(int sig) {
+        printf("Intercept sig: %d\n", sig);
+        exit(sig);
+    };
+
 public:
+    
+
     at_exit_engine() {
         INIT_LIST_HEAD(&list);
+        
         on_exit(at_exit_engine::on_exit_engine_cleanup, &list);
+        
+        signal(SIGABRT, at_exit_engine::at_exit_cleanup);
+        signal(SIGHUP, at_exit_engine::at_exit_cleanup);
+        signal(SIGTERM, at_exit_engine::at_exit_cleanup);
+        signal(SIGKILL, at_exit_engine::at_exit_cleanup);
+        signal(SIGQUIT, at_exit_engine::at_exit_cleanup);
+        signal(SIGINT, at_exit_engine::at_exit_cleanup);
+        signal(SIGSTOP, at_exit_engine::at_exit_cleanup);
     };
 
     void on_exit_register(void *context, void (*cleanup)(void *context)) {
