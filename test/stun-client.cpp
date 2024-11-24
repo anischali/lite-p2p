@@ -3,13 +3,14 @@
 #include <time.h>
 #include <cstdlib>
 #include <thread>
+#include "cleanup.hpp"
 
 
 
 void visichat_listener(void *args) {
     int ret;
     static char buf[512];
-    udp_peer_connection *conn = (udp_peer_connection *)args; 
+    peer_connection *conn = (peer_connection *)args; 
     socklen_t len = sizeof(conn->remote);
     struct sockaddr_in s_addr;
 
@@ -33,7 +34,7 @@ void visichat_sender(void *args) {
     int cnt = 0;
     char c = 0;
     static char buf[512];
-    udp_peer_connection *conn = (udp_peer_connection *)args;
+    peer_connection *conn = (peer_connection *)args;
 
     printf("sender thread start [OK]\n");
 
@@ -52,6 +53,7 @@ void visichat_sender(void *args) {
 
         if (!strncmp("exit", &buf[0], 4)) {
             sleep(1);
+            exit(0);
             printf("sender thread stop [OK]\n");
             return;
         }
@@ -68,19 +70,33 @@ void visichat_sender(void *args) {
 //stun.stunprotocol.org:3478
 int main(int argc, char *argv[]) {
 
+    at_exit_engine __at_exit;
+
     if (argc < 4) {
         printf("wrong arguments number !\n");
         return -1;
     }
-    
+
     srand(time(NULL));
-    udp_peer_connection conn(atoi(argv[3]));
+    peer_connection conn(atoi(argv[3]));
     stun_client stun(conn.sock_fd);
+
+    __at_exit.on_exit_register(&conn, [](void *ctx){
+        peer_connection *c = (peer_connection *)ctx;
+
+        c->~peer_connection();
+    });
+
+    __at_exit.on_exit_register(&stun, [](void *ctx){
+        stun_client *c = (stun_client *)ctx;
+
+        c->~stun_client();
+    });
 
     int ret = stun.stun_request(argv[1], atoi(argv[2]));
     printf("STUN: %s [%d:%d]\n", inet_ntoa(stun.ext_ip.sin_addr), stun.ext_ip.sin_family, ntohs(stun.ext_ip.sin_port));
     if (ret < 0) {
-        conn.~udp_peer_connection();
+        conn.~peer_connection();
         return ret;
     }
 
@@ -93,17 +109,15 @@ int main(int argc, char *argv[]) {
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
 
-    sender.join();
     recver.join();
+    sender.join();
 
-    auto main_clean = [&conn, &stun, &sender, &recver](){
-        conn.~udp_peer_connection();
-        stun.~stun_client();
-        sender.~thread();
-        recver.~thread();
+    auto thread_cleanup = [](void *ctx) {
+        std::thread *t = (std::thread *)ctx;
+        t->~thread();
     };
-
-    main_clean();
+    __at_exit.on_exit_register(&sender, thread_cleanup);
+    __at_exit.on_exit_register(&recver, thread_cleanup);
 
     return 0;
 }
