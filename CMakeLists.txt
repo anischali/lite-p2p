@@ -6,7 +6,7 @@ enable_language(C CXX ASM)
 
 add_library(lite-p2p)
 
-file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/*/*.hpp)
+file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/*.hpp)
 
 set_target_properties(lite-p2p PROPERTIES
     VERSION ${PROJECT_VERSION}
@@ -15,7 +15,7 @@ set_target_properties(lite-p2p PROPERTIES
 )
 
 target_include_directories(lite-p2p PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/lib
+    ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 target_sources(lite-p2p PRIVATE
@@ -31,7 +31,7 @@ endif()
 if (DEFINED STUN_TEST_TOOLS)
 add_executable(stun-client)
 target_include_directories(stun-client PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/lib
+    ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 target_sources(stun-client PRIVATE
