@@ -3,7 +3,9 @@
 #include "list_head.h"
 #include "cstdlib"
 #include "cstring"
-#include <csignal> 
+#include <csignal>
+#include <cstdarg>
+
 
 struct at_exit_context_t {
     void (*cleanup)(void *context);
@@ -34,7 +36,7 @@ private:
 
     };
 
-    static void at_exit_cleanup(int sig) {
+    static void at_exit_sig_handler(int sig) {
         printf("Intercept sig: %d\n", sig);
         exit(sig);
     };
@@ -42,18 +44,24 @@ private:
 public:
     
 
-    at_exit_engine() {
+    at_exit_engine(...) {
+        va_list args;
+        va_start(args, NULL);
+        
         INIT_LIST_HEAD(&list);
         
         on_exit(at_exit_engine::on_exit_engine_cleanup, &list);
-        
-        signal(SIGABRT, at_exit_engine::at_exit_cleanup);
-        signal(SIGHUP, at_exit_engine::at_exit_cleanup);
-        signal(SIGTERM, at_exit_engine::at_exit_cleanup);
-        signal(SIGKILL, at_exit_engine::at_exit_cleanup);
-        signal(SIGQUIT, at_exit_engine::at_exit_cleanup);
-        signal(SIGINT, at_exit_engine::at_exit_cleanup);
-        signal(SIGSTOP, at_exit_engine::at_exit_cleanup);
+        int sig;
+        do {
+            sig = va_arg(args, int);
+            if (sig < 0)
+                break;
+            
+            signal(sig, at_exit_engine::at_exit_sig_handler);
+            printf("sig: %d\n", sig);
+        } while (sig > 0);
+
+        va_end(args);
     };
 
     void on_exit_register(void *context, void (*cleanup)(void *context)) {

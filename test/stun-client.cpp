@@ -70,7 +70,7 @@ void visichat_sender(void *args) {
 //stun.stunprotocol.org:3478
 int main(int argc, char *argv[]) {
 
-    at_exit_engine __at_exit;
+    at_exit_engine __at_exit(SIGABRT, SIGHUP, SIGINT, SIGKILL, SIGSTOP, SIGQUIT, SIGTERM);
 
     if (argc < 4) {
         printf("wrong arguments number !\n");
