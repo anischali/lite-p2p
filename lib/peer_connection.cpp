@@ -33,7 +33,7 @@ peer_connection::peer_connection(int family, short port, std::string addr, int t
     }
     else if (family == AF_INET6) {
         if (addr.length() == 0) {
-            memcpy(&local.ipv6_addr.sin6_addr, &in6addr_any, sizeof(in6_addr));
+            memcpy(&local.ipv6_addr.sin6_addr, &in6addr_any, sizeof(struct in6_addr));
         }
         else {
             inet_pton(AF_INET6, addr.c_str(), &local.ipv6_addr.sin6_addr);
