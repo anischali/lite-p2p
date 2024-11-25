@@ -10,15 +10,16 @@
 #include <sys/socket.h>
 #include "lib_common.hpp"
 
-#define IS_REQUEST(msg_type)       (((msg_type) & 0x0110) == 0x0000)
-#define IS_INDICATION(msg_type)    (((msg_type) & 0x0110) == 0x0010)
-#define IS_SUCCESS_RESP(msg_type)  (((msg_type) & 0x0110) == 0x0100)
-#define IS_ERR_RESP(msg_type)      (((msg_type) & 0x0110) == 0x0110)
+#define IS_REQUEST(msg_type) (((msg_type) & 0x0110) == 0x0000)
+#define IS_INDICATION(msg_type) (((msg_type) & 0x0110) == 0x0010)
+#define IS_SUCCESS_RESP(msg_type) (((msg_type) & 0x0110) == 0x0100)
+#define IS_ERR_RESP(msg_type) (((msg_type) & 0x0110) == 0x0110)
 
 #define MAGIC_COOKIE 0x2112A442
 #define FINGERPRINT_XOR 0x5354554e
 
-enum stun_methods {
+enum stun_methods
+{
     STUN_REQUEST = 0x1,
     STUN_RESPONSE = 0x0101,
 
@@ -31,7 +32,6 @@ enum stun_methods {
     STUN_CHANNEL_BIND = 0x0009,
 };
 
-
 /*
     RFC 8489
    0x0000: Reserved
@@ -39,7 +39,8 @@ enum stun_methods {
    0x0002: SHA-256
    0x0003-0xFFFF: Unassigned
 */
-enum stun_passwd_algs {
+enum stun_passwd_algs
+{
     STUN_PASSWD_ALG_MD5 = 0x0001,
     STUN_PASSWD_ALG_SHA256 = 0x0002,
 };
@@ -96,7 +97,8 @@ TURN used attributes RFC 8656
 
  */
 
-enum stun_attrs {
+enum stun_attrs
+{
     STUN_ATTR_MAPPED_ADDR = 0x0001,
     STUN_ATTR_USERNAME = 0x0006,
     STUN_ATTR_INTEGRITY_MSG = 0x0008,
@@ -126,97 +128,105 @@ enum stun_attrs {
     STUN_ATTR_REQUESTED_TRANSPORT = 0x0019,
     STUN_ATTR_DONT_FRAGMENT = 0x001A,
     STUN_ATTR_RESERV_TOKEN = 0x0022,
-    STUN_ATTR_ADDITIONAL_ADDR_FAMILY = 0x8000, 
+    STUN_ATTR_ADDITIONAL_ADDR_FAMILY = 0x8000,
     STUN_ATTR_ADDR_ERROR_CODE = 0x8001,
     STUN_ATTR_ICMP = 0x8004,
 };
 
-struct __attribute__((packed)) stun_packet_t {
-    stun_packet_t(int method) {
-        memset(attributes, 0x0, sizeof(attributes));
-        for (int i = 0; i < sizeof(transaction_id); ++i) {
-            transaction_id[i] = rand() % 256;   
+namespace lite_p2p
+{
+
+    struct __attribute__((packed)) stun_packet_t
+    {
+        stun_packet_t(int method)
+        {
+            memset(attributes, 0x0, sizeof(attributes));
+            for (int i = 0; i < sizeof(transaction_id); ++i)
+            {
+                transaction_id[i] = rand() % 256;
+            }
+            msg_type = htons(method);
         }
-        msg_type = htons(method);
+
+        uint16_t msg_type;
+        uint16_t msg_len = htons(0);
+        const uint32_t magic_cookie = htonl(MAGIC_COOKIE);
+        uint8_t transaction_id[12];
+        uint8_t attributes[512];
+    };
+
+    struct __attribute__((packed)) stun_attr_t
+    {
+        uint16_t type;
+        uint16_t length;
+        uint8_t *value;
+    };
+#define STUN_ATTR(_type, _len, _val) \
+    {.type = _type, .length = _len, .value = (uint8_t *)_val}
+
+    static inline int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr)
+    {
+        int offset = 0;
+        int padding;
+
+        *(uint16_t *)&attrs[offset] = htons(attr->type);
+        offset += sizeof(attr->type);
+        *(uint16_t *)&attrs[offset] = htons(attr->length);
+        offset += sizeof(attr->length);
+
+        memcpy(&attrs[offset], attr->value, attr->length);
+
+        offset += attr->length;
+
+        padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
+
+        return offset + padding;
     }
 
-    uint16_t msg_type;
-    uint16_t msg_len = htons(0);
-    const uint32_t magic_cookie = htonl(MAGIC_COOKIE);
-    uint8_t transaction_id[12];
-    uint8_t attributes[512];
-};
+    struct __attribute__((packed)) stun_attrs_t
+    {
+        // USERNAME: UTF-8-encoded sequence of fewer than 509 bytes
+        struct stun_attr_t username;
 
-struct __attribute__((packed)) stun_attr_t {
-    uint16_t type;
-    uint16_t length;
-    uint8_t *value;
-};
-#define STUN_ATTR(_type, _len, _val) \
-    { .type = _type, .length = _len, .value = (uint8_t *)_val }
+        // USERHASH: (to support user anonimity)  has a fixed length of 32 bytes
+        struct stun_attr_t user_hash;
 
-static inline int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr) {
-    int offset = 0;
-    int padding;
+        // HMAC-SHA1: (MESSAGE-INTEGRITY) the HMAC will be 20 bytes
+        struct stun_attr_t hmac_sha1;
 
-    *(uint16_t *)&attrs[offset] = htons(attr->type);
-    offset += sizeof(attr->type);
-    *(uint16_t *)&attrs[offset] = htons(attr->length);
-    offset += sizeof(attr->length);
+        // HMAC-SHA256: (MESSAGE-INTEGRITY-SHA256) at most 32 bytes at least 16 bytes
+        struct stun_attr_t hmac_sha256;
 
-    memcpy(&attrs[offset], attr->value, attr->length);
+        // REALM: sequence of fewer than 128 characters (which can be as long
+        // as 509 bytes when encoding them and as long as 763 bytes when
+        // decoding them. presence signify the wish to have long term credentials
+        struct stun_attr_t realm;
 
-    offset += attr->length;
+        // NONCE: MUST be fewer than 128 characters (which can be as long as 509 bytes
+        // when encoding them and a long as 763 bytes when decoding them)
+        struct stun_attr_t nonce;
 
-    padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
+        struct stun_attr_t passwd_algs;
+        struct stun_attr_t passwd_c_alg;
+        struct stun_attr_t fingerprint;
+    };
 
-    return offset + padding;
-}
+    class stun_client
+    {
+    private:
+        int _socket;
 
-struct __attribute__((packed)) stun_attrs_t {
-    // USERNAME: UTF-8-encoded sequence of fewer than 509 bytes
-    struct stun_attr_t username;
+    public:
+        struct sockaddr_in ext_ip;
+        struct sockaddr_in stun_server;
+        struct stun_attrs_t attributes;
 
-    // USERHASH: (to support user anonimity)  has a fixed length of 32 bytes
-    struct stun_attr_t user_hash;
+        stun_client(int socket_fd);
+        ~stun_client();
 
-    // HMAC-SHA1: (MESSAGE-INTEGRITY) the HMAC will be 20 bytes
-    struct stun_attr_t hmac_sha1;
-
-    // HMAC-SHA256: (MESSAGE-INTEGRITY-SHA256) at most 32 bytes at least 16 bytes
-    struct stun_attr_t hmac_sha256;
-    
-    // REALM: sequence of fewer than 128 characters (which can be as long
-    // as 509 bytes when encoding them and as long as 763 bytes when
-    // decoding them. presence signify the wish to have long term credentials
-    struct stun_attr_t realm;
-
-    // NONCE: MUST be fewer than 128 characters (which can be as long as 509 bytes
-    // when encoding them and a long as 763 bytes when decoding them)
-    struct stun_attr_t nonce;
-
-
-    struct stun_attr_t passwd_algs;
-    struct stun_attr_t passwd_c_alg;
-    struct stun_attr_t fingerprint;
-
-};
-
-class stun_client
-{
-private:
-    int _socket;
-
-public:
-    struct sockaddr_in ext_ip;
-    struct sockaddr_in stun_server;
-    struct stun_attrs_t attributes;
-
-    stun_client(int socket_fd);
-    ~stun_client();
-
-    int request(struct sockaddr_in stun_server);
-    int request(const char *stun_hostname, short stun_port);
+        int request(struct sockaddr_in stun_server);
+        int request(const char *stun_hostname, short stun_port);
+    };
 };
 
 #endif

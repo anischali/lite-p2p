@@ -1,4 +1,5 @@
-#include "lite-p2p/stun_client.hpp"
+#include <vector>
+#include <string>
 #include <net/route.h>
 #include <arpa/nameser.h>
 #include <net/if.h>
@@ -12,12 +13,14 @@
 #include <ifaddrs.h>
 #include <string.h>
 #include <errno.h>
-#include <string>
 #include <ifaddrs.h>
+#include "lite-p2p/stun_client.hpp"
 
 #define err_ret(msg, err) \
     printf("%d: %s\n", err, msg); \
     return err
+
+using namespace lite_p2p;
 
 stun_client::stun_client(int socket_fd) : 
     _socket{socket_fd}, ext_ip{0}
@@ -136,67 +139,6 @@ int stun_client::request(const char *stun_hostname, short stun_port) {
     return request(stun_server);
 }
 
-
-
-class net {
-    public:
-        const char *iface;
-        in_addr_t ip;
-        in_addr_t netmask;
-        in_addr_t gateway;
-        in_addr_t broadcast;
-        uint8_t mac[ETH_ALEN];
-        int mtu;
-
-        net(const char *__iface) {
-            int fd;
-            struct ifreq req = {0};
-            struct rtentry rt = {0};
-            struct sockaddr_in *sin;
-
-            iface = __iface;
-            strncpy(req.ifr_name, iface, IFNAMSIZ);
-
-            fd = socket(AF_INET, SOCK_DGRAM, 0);
-            if (fd <= 0)
-                return;
-            
-            ioctl(fd, SIOCGIFADDR, &req);
-            ip = ((struct sockaddr_in *)&req.ifr_addr)->sin_addr.s_addr;
-
-            ioctl(fd, SIOCGIFNETMASK, &req);
-            netmask = ((struct sockaddr_in *)&req.ifr_netmask)->sin_addr.s_addr;
-
-            ioctl(fd, SIOCGIFBRDADDR, &req);
-            broadcast = ((struct sockaddr_in *)&req.ifr_broadaddr)->sin_addr.s_addr;
-
-            ioctl(fd, SIOCGIFMTU, &req);
-            mtu = *(int *)&req.ifr_mtu;
-
-            gateway = ((struct sockaddr_in *)&rt.rt_gateway)->sin_addr.s_addr;
-
-            ioctl(fd, SIOCGIFHWADDR, &req);
-            memcpy(&mac[0], &req.ifr_hwaddr, ETH_ALEN);
-
-            close(fd);
-        };
-
-
-        void print() {
-            printf("mac: ");
-            for (int i = 0; i <= ETH_ALEN - 1; ++i) {
-                printf("%02x%c", mac[i], i < ETH_ALEN - 1 ? ':' : '\n');
-            }
-
-            printf("ip: %s\n", inet_ntoa(in_addr {.s_addr = ip}));
-            printf("netmask: %s\n", inet_ntoa(in_addr {.s_addr = netmask}));
-            printf("broadcast: %s\n", inet_ntoa(in_addr {.s_addr = broadcast}));
-            printf("gateway: %s\n", inet_ntoa(in_addr {.s_addr = gateway}));
-            printf("mtu: %d\n", mtu);
-        }
-
-        ~net() {}
-};
 
 
 class nat_pnp {

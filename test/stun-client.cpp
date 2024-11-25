@@ -11,7 +11,7 @@
 void visichat_listener(void *args) {
     int ret;
     static char buf[512];
-    peer_connection *conn = (peer_connection *)args; 
+    lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     socklen_t len = sizeof(conn->remote);
     struct sockaddr_in s_addr;
 
@@ -35,7 +35,7 @@ void visichat_sender(void *args) {
     int cnt = 0;
     char c = 0;
     static char buf[512];
-    peer_connection *conn = (peer_connection *)args;
+    lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
     printf("sender thread start [OK]\n");
 
@@ -76,7 +76,7 @@ void visichat_sender(void *args) {
 //stun1.l.google.com:5349
 int main(int argc, char *argv[]) {
 
-    at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
+    lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
 
     if (argc < 4) {
         printf("wrong arguments number !\n");
@@ -84,17 +84,17 @@ int main(int argc, char *argv[]) {
     }
 
     srand(time(NULL));
-    peer_connection conn(AF_INET6, atoi(argv[3]));
-    stun_client stun(conn.sock_fd);
+    lite_p2p::peer_connection conn(AF_INET6, atoi(argv[3]));
+    lite_p2p::stun_client stun(conn.sock_fd);
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
-        peer_connection *c = (peer_connection *)ctx;
+        lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
 
         c->~peer_connection();
     });
 
     __at_exit.at_exit_cleanup_add(&stun, [](void *ctx){
-        stun_client *c = (stun_client *)ctx;
+        lite_p2p::stun_client *c = (lite_p2p::stun_client *)ctx;
 
         c->~stun_client();
     });

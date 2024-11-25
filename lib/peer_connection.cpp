@@ -1,6 +1,8 @@
 #include "lite-p2p/peer_connection.hpp"
 #include <vector>
 
+using namespace lite_p2p;
+
 peer_connection::peer_connection(int family, short port, std::string addr, int type, int protocol) : 
     family {family}, type{type}, protocol{protocol}, local_addr{addr} {
     timeval tv = { .tv_sec = 5 };
