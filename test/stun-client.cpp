@@ -2,11 +2,14 @@
 #include <thread>
 #include <cstdlib>
 #include <time.h>
-#include "lite-p2p/cleanup.hpp"
+//#include "lite-p2p/cleanup.hpp"
 #include "lite-p2p/stun_client.hpp"
 #include "lite-p2p/peer_connection.hpp"
 #include "lite-p2p/network.hpp"
-
+#if __WIN32__ || __WIN64__
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 
 
 void visichat_listener(void *args) {
@@ -14,12 +17,12 @@ void visichat_listener(void *args) {
     static char buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     socklen_t len = sizeof(conn->remote);
-    struct sockaddr_in s_addr;
+    struct sockaddr_in saddr;
 
     printf("receiver thread start [OK]\n");
 
     while(true) {
-        ret = recvfrom(conn->sock_fd, buf, 512, 0, (struct sockaddr *)&s_addr, &len);
+        ret = recvfrom(conn->sock_fd, buf, 512, 0, (struct sockaddr *)&saddr, &len);
         if (ret < 0 || buf[0] == 0)
             continue;
 
@@ -28,7 +31,7 @@ void visichat_listener(void *args) {
         if (!strncmp("exit", &buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", inet_ntoa(s_addr.sin_addr), ntohs(s_addr.sin_port), buf);
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", inet_ntoa(saddr.sin_addr), ntohs(saddr.sin_port), buf);
     }
 }
 
@@ -77,7 +80,7 @@ void visichat_sender(void *args) {
 //stun1.l.google.com:5349
 int main(int argc, char *argv[]) {
 
-    lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
+    //lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
 
     auto ifaces = lite_p2p::network::net_interfaces();
 
@@ -96,17 +99,17 @@ int main(int argc, char *argv[]) {
     lite_p2p::peer_connection conn(AF_INET6, atoi(argv[3]));
     lite_p2p::stun_client stun(conn.sock_fd);
 
-    __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
-        lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
+    //__at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
+    //    lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
+//
+    //    c->~peer_connection();
+    //});
 
-        c->~peer_connection();
-    });
-
-    __at_exit.at_exit_cleanup_add(&stun, [](void *ctx){
-        lite_p2p::stun_client *c = (lite_p2p::stun_client *)ctx;
-
-        c->~stun_client();
-    });
+    //__at_exit.at_exit_cleanup_add(&stun, [](void *ctx){
+    //    lite_p2p::stun_client *c = (lite_p2p::stun_client *)ctx;
+//
+    //    c->~stun_client();
+    //});
 
     int ret = stun.request(argv[1], atoi(argv[2]));
     printf("STUN: %s [%d:%d]\n", inet_ntoa(stun.ext_ip.sin_addr), stun.ext_ip.sin_family, ntohs(stun.ext_ip.sin_port));
@@ -129,8 +132,8 @@ int main(int argc, char *argv[]) {
         pthread_cancel(t->native_handle());
     };
 
-    __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
-    __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
+    //__at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
+    //__at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
 
     recver.join();
     sender.join();

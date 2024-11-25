@@ -14,9 +14,8 @@ peer_connection::peer_connection(int family, short port, std::string addr, int t
         return;
     }
     
-    setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-    setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&enable, sizeof(enable));
+    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv));
     
     if (family == AF_INET) {
         if (addr.length() == 0)

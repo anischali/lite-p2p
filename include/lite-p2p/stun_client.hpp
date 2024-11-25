@@ -1,13 +1,19 @@
 #ifndef __STUN_CLIENT_HPP__
 #define __STUN_CLIENT_HPP__
+#if __WIN32__ || __WIN64__
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/socket.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/socket.h>
 #include "lib_common.hpp"
 
 #define IS_REQUEST(msg_type) (((msg_type) & 0x0110) == 0x0000)

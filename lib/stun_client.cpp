@@ -1,19 +1,10 @@
 #include <vector>
 #include <string>
-#include <net/route.h>
-#include <arpa/nameser.h>
-#include <net/if.h>
-#include <resolv.h>
-#include <netinet/in.h>
-#include <netinet/if_ether.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <ifaddrs.h>
 #include <string.h>
 #include <errno.h>
-#include <ifaddrs.h>
 #include "lite-p2p/stun_client.hpp"
 
 #define err_ret(msg, err) \
@@ -48,12 +39,12 @@ resend_auth:
         packet.msg_len = htons(ntohs(packet.msg_len) + offset);
     }
 
-    ret = sendto(_socket, (uint8_t *)&packet, ntohs(packet.msg_len) + 20, 0, (struct sockaddr *)&stun_server, sizeof(stun_server));
+    ret = sendto(_socket, (char *)&packet, ntohs(packet.msg_len) + 20, 0, (struct sockaddr *)&stun_server, sizeof(stun_server));
     if (ret < 0) {
         err_ret("Failed to send data", ret);
     }
 
-    ret = recvfrom(_socket, &packet, sizeof(packet), 0, NULL, 0);
+    ret = recvfrom(_socket, (char *)&packet, sizeof(packet), 0, NULL, 0);
     if (ret < 0) {
         err_ret("Failed to recv data", ret);
     }
@@ -95,14 +86,14 @@ resend_auth:
 
 
 int stun_client::request(const char *stun_hostname, short stun_port) {
-    struct sockaddr_in *addr; 
-    sockaddr_in s_addr;
-    struct addrinfo hints, *servinfo, *p;
-    struct sockaddr_in *h;
-    char *hostname, *service, hst[512];
-    int ret;
+    struct sockaddr_in *addr = NULL; 
+    struct sockaddr_in saddr = {0};
+    struct addrinfo hints = {0}, *servinfo = NULL, *p = NULL;
+    struct sockaddr_in *h = NULL;
+    char *hostname = NULL, *service = NULL, hst[512] = {0};
+    int ret = 0;
     
-    if (!inet_pton(AF_INET, stun_hostname, &s_addr)) {
+    if (!inet_pton(AF_INET, stun_hostname, &saddr)) {
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_INET;
@@ -140,7 +131,7 @@ int stun_client::request(const char *stun_hostname, short stun_port) {
 }
 
 
-
+/*
 class nat_pnp {
     private:
         short s_port, r_port;
@@ -193,3 +184,4 @@ class nat_pnp {
         }; 
 };
 
+*/

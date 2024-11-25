@@ -1,6 +1,16 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#if __WIN32__ || __WIN64__
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <ws2tcpip.h>
+#include <lite-p2p/winnet.h>
+#else
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -10,12 +20,9 @@
 #include <arpa/nameser.h>
 #include <net/route.h>
 #include <net/if.h>
-#include <resolv.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <ifaddrs.h>
-#include <string.h>
-#include <errno.h>
+#include <resolv.h>
+#endif
 #include "lite-p2p/network.hpp"
 
 using namespace lite_p2p;
@@ -26,8 +33,8 @@ network::net_interfaces(void)
 {
     std::set<std::string> uniq_ifaces;
     struct ifaddrs *addrs;
+    
     getifaddrs(&addrs);
-
     for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
     {
         if (addr->ifa_addr && addr->ifa_name != NULL)
@@ -83,19 +90,21 @@ void network::ip_getinfo(void) {
 network::network(const std::string __iface)
 {
     int fd;
+    struct sockaddr_in *sin;
+#if !__WIN32__ && !__WIN64__
     struct ifreq req = {0};
     struct rtentry rt = {0};
-    struct sockaddr_in *sin;
-
+#endif
     iface = __iface;
-    strncpy(req.ifr_name, iface.c_str(), IFNAMSIZ);
+
+   // strncpy(req.ifr_name, iface.c_str(), IFNAMSIZ);
 
     ip_getinfo();
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd <= 0)
         return;
-
+/*
     ioctl(fd, SIOCGIFMTU, &req);
     mtu = *(int *)&req.ifr_mtu;
 
@@ -103,7 +112,7 @@ network::network(const std::string __iface)
 
     ioctl(fd, SIOCGIFHWADDR, &req);
     memcpy(&mac[0], &req.ifr_hwaddr, ETH_ALEN);
-
+*/
     close(fd);
 };
 
@@ -126,11 +135,11 @@ std::string network::to_string()
         str_info += buf;
     }
 
-    snprintf(buf, STR_INFO_SZ, "inet: %s\n", inet_ntoa(in_addr{.s_addr = ip}));
-    str_info += buf;
-    snprintf(buf, STR_INFO_SZ, "netmask: %s\n", inet_ntoa(in_addr{.s_addr = netmask}));
-    str_info += buf;
-    snprintf(buf, STR_INFO_SZ, "broadcast: %s\n", inet_ntoa(in_addr{.s_addr = broadcast}));
+    //snprintf(buf, STR_INFO_SZ, "inet: %s\n", inet_ntoa(in_addr{.s_addr = ip}));
+    //str_info += buf;
+    //snprintf(buf, STR_INFO_SZ, "netmask: %s\n", inet_ntoa(in_addr{.s_addr = netmask}));
+    //str_info += buf;
+    //snprintf(buf, STR_INFO_SZ, "broadcast: %s\n", inet_ntoa(in_addr{.s_addr = broadcast}));
     str_info += buf;
 
     for (auto &&a : ip6)
@@ -141,7 +150,7 @@ std::string network::to_string()
         str_info += buf;
     }
     
-    snprintf(buf, STR_INFO_SZ, "gateway: %s\n", inet_ntoa(in_addr{.s_addr = gateway}));
+    snprintf(buf, STR_INFO_SZ, "gateway: %s\n", "");//inet_ntoa(in_addr{.s_addr = gateway}));
     str_info += buf;
     snprintf(buf, STR_INFO_SZ, "mtu: %d\n", mtu);
     str_info += buf;

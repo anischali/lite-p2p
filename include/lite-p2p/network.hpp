@@ -2,10 +2,19 @@
 #define __LITE_NET_HPP__
 #include <vector>
 #include <string>
-#include <netinet/if_ether.h>
+#include <map>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <map>
+#if __WIN32__ || __WIN64__
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <ws2tcpip.h>
+#include "winnet.h"
+typedef uint32_t in_addr_t;
+#else
+#include <netinet/if_ether.h>
+#endif
 
 namespace lite_p2p
 {

@@ -4,6 +4,11 @@ project(liteP2P VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
 enable_language(C CXX ASM)
 
+if (${OS_TARGET} STREQUAL  "Windows")
+include(build-env/windows.cmake)
+endif()
+
+
 add_library(lite-p2p)
 
 file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/lite-p2p/*.hpp)
@@ -18,7 +23,9 @@ target_include_directories(lite-p2p PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
+
 target_sources(lite-p2p PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/lib/winnet.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/peer_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/stun_client.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
@@ -27,6 +34,7 @@ target_sources(lite-p2p PRIVATE
 
 if (DEFINED STUN_TEST_TOOLS)
 add_executable(stun-client)
+
 target_include_directories(stun-client PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
 )
@@ -36,6 +44,11 @@ target_sources(stun-client PRIVATE
 )
 
 target_link_libraries(stun-client lite-p2p)
+
+if (${OS_TARGET} STREQUAL  "Windows")
+target_link_libraries(stun-client wsock32 ws2_32)
+endif()
+
 endif()
 
 

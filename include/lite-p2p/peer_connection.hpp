@@ -2,6 +2,11 @@
 #define __PEER_CONNECTION_HPP__
 #include "stun_client.hpp"
 #include "string"
+#if __WIN32__ || __WIN64__
+#pragma comment(lib, "wsock32.lib")
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 
 namespace lite_p2p
 {
