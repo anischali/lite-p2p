@@ -21,7 +21,7 @@ target_include_directories(lite-p2p PUBLIC
 target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/peer_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/stun_client.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/net.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
 )
 
 

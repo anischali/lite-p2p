@@ -15,7 +15,7 @@
 #include <ifaddrs.h>
 #include <string.h>
 #include <errno.h>
-#include "lite-p2p/net.hpp"
+#include "lite-p2p/network.hpp"
 
 using namespace lite_p2p;
 
@@ -27,7 +27,7 @@ struct in6_ifreq
 };
 
 std::vector<std::string>
-net::net_interfaces(void)
+network::net_interfaces(void)
 {
     static std::vector<std::string> ifaces;
     struct ifaddrs *addrs;
@@ -47,7 +47,7 @@ net::net_interfaces(void)
 }
 
 
-void net::ip_getinfo(void) {
+void network::ip_getinfo(void) {
 
     struct ifaddrs *addrs;
     getifaddrs(&addrs);
@@ -81,7 +81,7 @@ void net::ip_getinfo(void) {
 
 }
 
-net::net(const std::string __iface)
+network::network(const std::string __iface)
 {
     int fd;
     struct ifreq req = {0};
@@ -109,7 +109,7 @@ net::net(const std::string __iface)
     close(fd);
 };
 
-std::string net::to_string()
+std::string network::to_string()
 {
     #define STR_INFO_SZ 256
     std::string str_info;

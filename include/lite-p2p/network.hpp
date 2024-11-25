@@ -9,7 +9,7 @@
 
 namespace lite_p2p
 {
-    class net
+    class network
     {
     private:
         void ip_getinfo(void);
@@ -26,9 +26,9 @@ namespace lite_p2p
         int mtu;
 
         static std::vector<std::string> net_interfaces(void);
-        net(const std::string __iface);
+        network(const std::string __iface);
         std::string to_string(void);
-        ~net() {}
+        ~network() {}
     };
 };
 #endif
