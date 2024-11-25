@@ -1,5 +1,6 @@
 #include <vector>
 #include <string>
+#include <set>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
@@ -23,20 +24,24 @@ using namespace lite_p2p;
 std::vector<std::string>
 network::net_interfaces(void)
 {
-    static std::vector<std::string> ifaces;
+    std::set<std::string> uniq_ifaces;
     struct ifaddrs *addrs;
     getifaddrs(&addrs);
 
     for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
     {
-        if (addr->ifa_addr && addr->ifa_addr->sa_family == AF_PACKET)
+        if (addr->ifa_addr && addr->ifa_name != NULL)
         {
-            ifaces.push_back(std::string(addr->ifa_name));
+            std::string name(addr->ifa_name);
+            if (name.length() > 0 && name != "lo") {
+                uniq_ifaces.insert(std::string(addr->ifa_name));
+            }
         }
     }
 
     freeifaddrs(addrs);
 
+    static std::vector<std::string> ifaces(uniq_ifaces.begin(), uniq_ifaces.end());
     return ifaces;
 }
 

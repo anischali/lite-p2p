@@ -79,6 +79,14 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
 
+    auto ifaces = lite_p2p::network::net_interfaces();
+
+    for (auto &&i : ifaces)
+    {
+        std::cout << i << std::endl;
+    }
+    
+
     if (argc < 4) {
         printf("wrong arguments number !\n");
         exit(0);
