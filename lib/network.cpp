@@ -19,12 +19,6 @@
 
 using namespace lite_p2p;
 
-struct in6_ifreq
-{
-    struct in6_addr ifr6_addr;
-    uint32_t ifr6_prefixlen;
-    int ifr6_ifindex;
-};
 
 std::vector<std::string>
 network::net_interfaces(void)
@@ -86,7 +80,6 @@ network::network(const std::string __iface)
     int fd;
     struct ifreq req = {0};
     struct rtentry rt = {0};
-    struct in6_ifreq ipv6_req = {0};
     struct sockaddr_in *sin;
 
     iface = __iface;
