@@ -23,10 +23,6 @@ target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/stun_client.cpp
 )
 
-if (DEFINED DEBUG)
-add_compile_definitions(-g -ggdb -O0)
-add_link_options(-g -ggdb -O0)
-endif()
 
 if (DEFINED STUN_TEST_TOOLS)
 add_executable(stun-client)

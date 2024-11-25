@@ -69,6 +69,11 @@ void visichat_sender(void *args) {
 //stun.sipnet.net:3478
 //stun.sipnet.ru:3478
 //stun.stunprotocol.org:3478
+// Authentificated:
+//stun.l.google.com:19302
+//stun.l.google.com:5349
+//stun1.l.google.com:3478
+//stun1.l.google.com:5349
 int main(int argc, char *argv[]) {
 
     at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
@@ -79,7 +84,7 @@ int main(int argc, char *argv[]) {
     }
 
     srand(time(NULL));
-    peer_connection conn(atoi(argv[3]));
+    peer_connection conn(AF_INET6, atoi(argv[3]));
     stun_client stun(conn.sock_fd);
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -101,11 +106,11 @@ int main(int argc, char *argv[]) {
         return ret;
     }
 
-    conn.remote.sin_addr.s_addr = stun.ext_ip.sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
-    conn.remote.sin_family = AF_INET;
-    conn.remote.sin_port = htons(atoi(argv[4]));
+    conn.remote.ipv4_addr.sin_addr.s_addr = stun.ext_ip.sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
+    conn.remote.ipv4_addr.sin_family = AF_INET;
+    conn.remote.ipv4_addr.sin_port = htons(atoi(argv[4]));
 
-    printf("bind: %s [%d]\n", inet_ntoa(conn.local.sin_addr), ntohs(conn.local.sin_port));
+    printf("bind: %s [%d]\n", inet_ntoa(conn.local.ipv4_addr.sin_addr), ntohs(conn.local.ipv4_addr.sin_port));
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
