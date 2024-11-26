@@ -42,9 +42,9 @@ namespace lite_p2p
 
         static std::vector<std::string> network_interfaces(void);
         static std::string addr_to_string(struct sockaddr_t *addr);
+        static int string_to_addr(int family, std::string saddr, struct sockaddr_t *addr);
         static struct sockaddr_in * inet_address(struct sockaddr_t *addr);
         static struct sockaddr_in6 * inet6_address(struct sockaddr_t *addr);
-
 
         network(const std::string __iface);
         std::string to_string(void);

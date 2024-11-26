@@ -114,13 +114,13 @@ int main(int argc, char *argv[]) {
         c->~stun_client();
     });
 
-    int ret = stun.request(argv[1], atoi(argv[2]));
-    printf("STUN: %s [%d:%d]\n", inet_ntoa(stun.ext_ip.sin_addr), stun.ext_ip.sin_family, ntohs(stun.ext_ip.sin_port));
+    int ret = stun.request(argv[1], atoi(argv[2]), AF_INET);
+    printf("external ip: %s\n", lite_p2p::network::addr_to_string(&stun.ext_ip).c_str());
     if (ret < 0)
         exit(ret);
 
     remote = lite_p2p::network::inet_address(&conn.remote);
-    remote->sin_addr.s_addr = stun.ext_ip.sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
+    remote->sin_addr.s_addr = lite_p2p::network::inet_address(&stun.ext_ip)->sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
     remote->sin_family = AF_INET;
     remote->sin_port = htons(atoi(argv[4]));
 

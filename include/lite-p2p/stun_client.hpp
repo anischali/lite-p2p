@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include "lib_common.hpp"
+#include <lite-p2p/network.hpp>
 
 #define IS_REQUEST(msg_type) (((msg_type) & 0x0110) == 0x0000)
 #define IS_INDICATION(msg_type) (((msg_type) & 0x0110) == 0x0010)
@@ -217,15 +218,15 @@ namespace lite_p2p
         int _socket;
 
     public:
-        struct sockaddr_in ext_ip;
-        struct sockaddr_in stun_server;
+        struct sockaddr_t ext_ip;
+        struct sockaddr_t stun_server;
         struct stun_attrs_t attributes;
 
         stun_client(int socket_fd);
         ~stun_client();
 
-        int request(struct sockaddr_in stun_server);
-        int request(const char *stun_hostname, short stun_port);
+        int request(struct sockaddr_t *stun_server);
+        int request(const char *stun_hostname, short stun_port, int family);
     };
 };
 
