@@ -14,8 +14,8 @@ void visichat_listener(void *args) {
     int ret;
     static char buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
-    socklen_t len = sizeof(conn->remote);
-    struct sockaddr_in s_addr;
+    socklen_t len = sizeof(struct sockaddr_in6);
+    struct sockaddr_in6 s_addr;
 
     printf("receiver thread start [OK]\n");
 
@@ -29,7 +29,7 @@ void visichat_listener(void *args) {
         if (!strncmp("exit", &buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", inet_ntoa(s_addr.sin_addr), ntohs(s_addr.sin_port), buf);
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr), ntohs(s_addr.sin6_port), buf);
     }
 }
 
@@ -38,7 +38,7 @@ void visichat_sender(void *args) {
     char c = 0;
     static char buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
-    struct sockaddr_in *remote = lite_p2p::network::inet_address(&conn->remote);
+    struct sockaddr_in6 *remote = lite_p2p::network::inet6_address(&conn->remote);
 
     printf("sender thread start [OK]\n");
 
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     }
 
     srand(time(NULL));
-    lite_p2p::peer_connection conn(AF_INET6, atoi(argv[3]));
+    lite_p2p::peer_connection conn(AF_INET6, "2607:fa49:8c41:2600:d2a2:18a3:ac94:248", atoi(argv[3]));
     lite_p2p::stun_client stun(conn.sock_fd);
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){

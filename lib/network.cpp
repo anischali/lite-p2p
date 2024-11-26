@@ -117,6 +117,32 @@ network::network(const std::string __iface)
 };
 
 std::string network::addr_to_string(struct sockaddr_t *addr) {
+   
+    switch (addr->sa_family)
+    {
+    case AF_INET:
+        return addr_to_string(inet_address(addr));
+    
+    case AF_INET6:
+        return addr_to_string(inet6_address(addr));
+    }
+
+    return "";
+}
+
+std::string network::addr_to_string(struct sockaddr_in *addr) {
+    std::string str;
+    char buf[STR_INFO_SZ];
+
+    memset(buf, 0x0, STR_INFO_SZ);
+
+    snprintf(buf, STR_INFO_SZ, "%s", inet_ntoa(((struct sockaddr_in *)addr)->sin_addr));
+    str += buf;
+
+    return str;
+}
+
+std::string network::addr_to_string(struct sockaddr_in6 *addr) {
     std::string str;
     char buf[STR_INFO_SZ];
     char addr_buf[INET6_ADDRSTRLEN];
@@ -124,18 +150,31 @@ std::string network::addr_to_string(struct sockaddr_t *addr) {
     memset(buf, 0x0, STR_INFO_SZ);
     memset(addr_buf, 0x0, INET6_ADDRSTRLEN);
 
-    if (addr->sa_family == AF_INET6) {
-        struct sockaddr_in6 *in6 = (struct sockaddr_in6*) &addr->sa_addr;
-        inet_ntop(AF_INET6, &in6->sin6_addr, addr_buf, sizeof(addr_buf));
-        snprintf(buf, STR_INFO_SZ, "%s", &addr_buf[0]);
-    }
-    else if (addr->sa_family == AF_INET) {
-       snprintf(buf, STR_INFO_SZ, "%s", inet_ntoa(((struct sockaddr_in *)&addr->sa_addr)->sin_addr));
-    }
+    inet_ntop(AF_INET6, &addr->sin6_addr, addr_buf, sizeof(addr_buf));
+    snprintf(buf, STR_INFO_SZ, "%s", &addr_buf[0]);
 
     str += buf;
 
     return str;
+}
+
+
+int network::string_to_addr(std::string saddr, struct sockaddr_in *addr) {
+    int ret;
+
+    ret = inet_pton(AF_INET, saddr.c_str(),
+            (struct sockaddr *)&addr->sin_addr);
+    
+    return ret;
+}
+
+int network::string_to_addr(std::string saddr, struct sockaddr_in6 *addr) {
+    int ret;
+
+    ret = inet_pton(AF_INET6, saddr.c_str(),
+            (struct sockaddr *)&addr->sin6_addr);
+    
+    return ret;
 }
 
 int network::string_to_addr(int family, std::string saddr, struct sockaddr_t *addr) {
@@ -146,20 +185,14 @@ int network::string_to_addr(int family, std::string saddr, struct sockaddr_t *ad
     {
     case AF_INET:
         addr->sa_addr.addr_in.sin_family = family;
-        break;
+        return string_to_addr(saddr, inet_address(addr));
     case AF_INET6:
         addr->sa_addr.addr_in6.sin6_family = family;
-        break;
-    default:
-        break;
+        return string_to_addr(saddr, inet6_address(addr));
     }
 
-    ret = inet_pton(family, saddr.c_str(),
-            (family == AF_INET6) ? 
-            (struct sockaddr *)&addr->sa_addr.addr_in6.sin6_addr :
-            (struct sockaddr *)&addr->sa_addr.addr_in.sin_addr);
-
-    return ret;
+    errno = EAFNOSUPPORT;
+    return -1;
 }
 
 
