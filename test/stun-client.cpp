@@ -77,10 +77,11 @@ void visichat_sender(void *args) {
 //stun.l.google.com:5349
 //stun1.l.google.com:3478
 //stun1.l.google.com:5349
+//2001:4860:4864:5:8000::1 19302
 int main(int argc, char *argv[]) {
 
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
-    struct sockaddr_in *remote, *local;
+    struct sockaddr_in6 *remote, *local;
 
     lite_p2p::ice_agent ice;
 
@@ -99,7 +100,7 @@ int main(int argc, char *argv[]) {
     }
 
     srand(time(NULL));
-    lite_p2p::peer_connection conn(atoi(argv[3]));
+    lite_p2p::peer_connection conn(AF_INET6, atoi(argv[3]));
     lite_p2p::stun_client stun(conn.sock_fd);
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -114,19 +115,19 @@ int main(int argc, char *argv[]) {
         c->~stun_client();
     });
 
-    int ret = stun.request(argv[1], atoi(argv[2]), AF_INET);
+    int ret = stun.request(argv[1], atoi(argv[2]), AF_INET6);
     printf("external ip: %s\n", lite_p2p::network::addr_to_string(&stun.ext_ip).c_str());
     if (ret < 0)
         exit(ret);
 
-    remote = lite_p2p::network::inet_address(&conn.remote);
-    remote->sin_addr.s_addr = lite_p2p::network::inet_address(&stun.ext_ip)->sin_addr.s_addr;//htonl(inet_network("192.168.0.10"));
-    remote->sin_family = AF_INET;
-    remote->sin_port = htons(atoi(argv[4]));
+    remote = lite_p2p::network::inet6_address(&conn.remote);
+    remote->sin6_addr = lite_p2p::network::inet6_address(&stun.ext_ip)->sin6_addr;//htonl(inet_network("192.168.0.10"));
+    remote->sin6_family = AF_INET6;
+    remote->sin6_port = htons(atoi(argv[4]));
 
-    local = lite_p2p::network::inet_address(&conn.local);
+    local = lite_p2p::network::inet6_address(&conn.local);
 
-    printf("bind: %s [%d]\n", inet_ntoa(local->sin_addr), ntohs(local->sin_port));
+    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), ntohs(local->sin6_port));
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
