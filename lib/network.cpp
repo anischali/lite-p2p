@@ -20,9 +20,10 @@
 
 using namespace lite_p2p;
 
+#define STR_INFO_SZ 256
 
 std::vector<std::string>
-network::net_interfaces(void)
+network::network_interfaces(void)
 {
     std::set<std::string> uniq_ifaces;
     struct ifaddrs *addrs;
@@ -51,25 +52,34 @@ void network::ip_getinfo(void) {
     struct ifaddrs *addrs;
     getifaddrs(&addrs);
     std::string key;
+    char addr_buf[INET6_ADDRSTRLEN];
+    struct sockaddr_t saddr;
 
     for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
     {
         if (!strncmp(iface.c_str(), addr->ifa_name, std::min((int)iface.length(), IFNAMSIZ)))
         {
+            memset(&saddr, 0x0, sizeof(saddr));
+            saddr.sa_family = addr->ifa_addr->sa_family;
+
             if (addr->ifa_addr && addr->ifa_addr->sa_family == AF_INET6) {
-                ip6.push_back(((struct sockaddr_in6 *)addr->ifa_addr)->sin6_addr);
+                memcpy(&saddr.sa_addr, addr->ifa_addr, sizeof(struct sockaddr_in6));
+                ip6.push_back(saddr);
             }
 
             if (addr->ifa_addr && addr->ifa_addr->sa_family == AF_INET) {
-                ip = ((struct sockaddr_in *)addr->ifa_addr)->sin_addr.s_addr;
+                memcpy(&saddr.sa_addr, addr->ifa_addr, sizeof(struct sockaddr_in));
+                ip = saddr;
             }
 
             if (addr->ifa_netmask && addr->ifa_netmask->sa_family == AF_INET) {
-                netmask = ((struct sockaddr_in *)addr->ifa_netmask)->sin_addr.s_addr;
+                memcpy(&saddr.sa_addr, addr->ifa_netmask, sizeof(struct sockaddr_in));
+                netmask = saddr;
             }
 
             if (addr->ifa_ifu.ifu_broadaddr && addr->ifa_ifu.ifu_broadaddr->sa_family == AF_INET) {
-                broadcast = ((struct sockaddr_in *)addr->ifa_ifu.ifu_broadaddr)->sin_addr.s_addr;
+                memcpy(&saddr.sa_addr, addr->ifa_ifu.ifu_broadaddr, sizeof(struct sockaddr_in));
+                broadcast = saddr;
             }
 
         }
@@ -99,7 +109,6 @@ network::network(const std::string __iface)
     ioctl(fd, SIOCGIFMTU, &req);
     mtu = *(int *)&req.ifr_mtu;
 
-    gateway = ((struct sockaddr_in *)&rt.rt_gateway)->sin_addr.s_addr;
 
     ioctl(fd, SIOCGIFHWADDR, &req);
     memcpy(&mac[0], &req.ifr_hwaddr, ETH_ALEN);
@@ -107,14 +116,33 @@ network::network(const std::string __iface)
     close(fd);
 };
 
+std::string network::addr_to_string(struct sockaddr_t *addr) {
+    std::string str;
+    char buf[STR_INFO_SZ];
+    char addr_buf[INET6_ADDRSTRLEN];
+
+    memset(buf, 0x0, STR_INFO_SZ);
+    memset(addr_buf, 0x0, INET6_ADDRSTRLEN);
+
+    if (addr->sa_family == AF_INET6) {
+        struct sockaddr_in6 *in6 = (struct sockaddr_in6*) &addr->sa_addr;
+        inet_ntop(AF_INET6, &in6->sin6_addr, addr_buf, sizeof(addr_buf));
+        snprintf(buf, STR_INFO_SZ, "%s", &addr_buf[0]);
+    }
+    else if (addr->sa_family == AF_INET) {
+       snprintf(buf, STR_INFO_SZ, "%s", inet_ntoa(((struct sockaddr_in *)&addr->sa_addr)->sin_addr));
+    }
+
+    str += buf;
+
+    return str;
+}
+
 std::string network::to_string()
 {
-    #define STR_INFO_SZ 256
     std::string str_info;
 
     char buf[STR_INFO_SZ];
-    char ip6_buf[STR_INFO_SZ/2];
-
 
     snprintf(buf, STR_INFO_SZ, "interface: %s\n", iface.c_str());
     str_info += buf;
@@ -126,22 +154,20 @@ std::string network::to_string()
         str_info += buf;
     }
 
-    snprintf(buf, STR_INFO_SZ, "inet: %s\n", inet_ntoa(in_addr{.s_addr = ip}));
+    snprintf(buf, STR_INFO_SZ, "inet: %s\n", network::addr_to_string(&ip).c_str());
     str_info += buf;
-    snprintf(buf, STR_INFO_SZ, "netmask: %s\n", inet_ntoa(in_addr{.s_addr = netmask}));
+    snprintf(buf, STR_INFO_SZ, "netmask: %s\n", network::addr_to_string(&netmask).c_str());
     str_info += buf;
-    snprintf(buf, STR_INFO_SZ, "broadcast: %s\n", inet_ntoa(in_addr{.s_addr = broadcast}));
+    snprintf(buf, STR_INFO_SZ, "broadcast: %s\n", network::addr_to_string(&broadcast).c_str());
     str_info += buf;
 
     for (auto &&a : ip6)
     {        
-        memset(buf, 0x0, STR_INFO_SZ);
-        inet_ntop(AF_INET6, &a, &ip6_buf[0], STR_INFO_SZ / 2);
-        snprintf(buf, STR_INFO_SZ, "inet6: %s\n", ip6_buf);
+        snprintf(buf, STR_INFO_SZ, "inet6: %s\n", network::addr_to_string(&a).c_str());
         str_info += buf;
     }
     
-    snprintf(buf, STR_INFO_SZ, "gateway: %s\n", inet_ntoa(in_addr{.s_addr = gateway}));
+    snprintf(buf, STR_INFO_SZ, "gateway: %s\n", network::addr_to_string(&gateway).c_str());
     str_info += buf;
     snprintf(buf, STR_INFO_SZ, "mtu: %d\n", mtu);
     str_info += buf;
