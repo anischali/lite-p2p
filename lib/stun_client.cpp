@@ -92,9 +92,9 @@ resend_auth:
                 ((struct sockaddr_in6 *)ext_addr)->sin6_port ^= ((uint16_t)packet.magic_cookie);
                 memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[3], sizeof(struct in6_addr));
                 ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr32[0] ^= packet.magic_cookie;
-                ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr32[1] ^= packet.magic_cookie;
-                ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr32[2] ^= packet.magic_cookie;
-                ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr32[3] ^= packet.magic_cookie;
+                for (int i = 0; i < sizeof(transaction_id); ++i) {
+                    ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr8[i + 4] ^= transaction_id[i];
+                }
             }
             return 0;
         }
