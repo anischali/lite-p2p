@@ -29,7 +29,7 @@ void visichat_listener(void *args) {
         if (!strncmp("exit", &buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr), ntohs(s_addr.sin6_port), buf);
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), ntohs(s_addr.sin6_port), buf);
     }
 }
 
