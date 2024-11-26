@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     }
 
     srand(time(NULL));
-    lite_p2p::peer_connection conn(AF_INET6, "2607:fa49:8c41:2600:d2a2:18a3:ac94:248", atoi(argv[3]));
+    lite_p2p::peer_connection conn(AF_INET6, "::", atoi(argv[3]));
     lite_p2p::stun_client stun(conn.sock_fd);
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
