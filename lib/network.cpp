@@ -174,3 +174,13 @@ std::string network::to_string()
 
     return str_info;
 }
+
+
+struct sockaddr_in * network::inet_address(struct sockaddr_t *addr) {
+    return &addr->sa_addr.addr_in;
+}
+
+
+struct sockaddr_in6 * network::inet6_address(struct sockaddr_t *addr) {
+    return &addr->sa_addr.addr_in6;
+}
