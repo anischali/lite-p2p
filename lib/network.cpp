@@ -57,8 +57,11 @@ void network::ip_getinfo(void) {
 
     for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
     {
+        if (!addr || !addr->ifa_name || !addr->ifa_addr)
+            continue;
+
         if (!strncmp(iface.c_str(), addr->ifa_name, std::min((int)iface.length(), IFNAMSIZ)))
-        {
+        {    
             memset(&saddr, 0x0, sizeof(saddr));
             saddr.sa_family = addr->ifa_addr->sa_family;
 
