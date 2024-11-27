@@ -26,7 +26,7 @@ target_sources(lite-p2p PRIVATE
 )
 
 
-if (DEFINED STUN_TEST_TOOLS)
+if (DEFINED LITE_P2P_TEST_TOOLS)
 add_executable(stun-client)
 target_include_directories(stun-client PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
