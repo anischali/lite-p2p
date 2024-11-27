@@ -37,6 +37,10 @@ target_sources(stun-client PRIVATE
 )
 
 target_link_libraries(stun-client lite-p2p)
+
+install(TARGETS stun-client
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
 endif()
 
 
