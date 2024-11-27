@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
     }
 
     
-    if (argc < 4) {
+    if (argc < 5) {
         printf("wrong arguments number !\n");
         exit(0);
     }
@@ -120,9 +120,8 @@ int main(int argc, char *argv[]) {
     if (ret < 0)
         exit(ret);
 
+    lite_p2p::network::string_to_addr(AF_INET6, argv[5], &conn.remote);
     remote = lite_p2p::network::inet6_address(&conn.remote);
-    remote->sin6_addr = lite_p2p::network::inet6_address(&stun.ext_ip)->sin6_addr;//htonl(inet_network("192.168.0.10"));
-    remote->sin6_family = AF_INET6;
     remote->sin6_port = htons(atoi(argv[4]));
 
     local = lite_p2p::network::inet6_address(&conn.local);
