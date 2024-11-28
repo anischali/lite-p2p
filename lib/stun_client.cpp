@@ -78,21 +78,15 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
 {
     uint8_t transaction_id[12];
     int ret;
-    void *addr;
-    size_t len;
 
     memcpy(transaction_id, packet->transaction_id, sizeof(transaction_id));
-
-    len = stun_server->sa_family == AF_INET6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
-    addr = stun_server->sa_family == AF_INET6 ? (void *)network::inet6_address(stun_server) : (void *)network::inet_address(stun_server);
-
-    ret = sendto(_socket, (uint8_t *)packet, ntohs(packet->msg_len) + 20, 0, (struct sockaddr *)addr, len);
+    ret = network::send_to(_socket, (uint8_t *)packet, ntohs(packet->msg_len) + 20, stun_server);
     if (ret < 0)
     {
         err_ret("Failed to send data", ret);
     }
 
-    ret = recvfrom(_socket, packet, sizeof(*packet), 0, NULL, 0);
+    ret = network::recv_from(_socket, packet, sizeof(*packet));
     if (ret < 0)
     {
         err_ret("Failed to recv data", ret);
