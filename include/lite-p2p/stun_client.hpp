@@ -33,6 +33,16 @@ enum stun_methods
     STUN_CHANNEL_BIND = 0x0009,
 };
 
+#define STUN_ERR(x) (0xff000000 | x)
+enum stun_errors {
+    STUN_ERR_ALT_SERVER = STUN_ERR(300), // should use an other server
+    STUN_ERR_BAD_REQUEST = STUN_ERR(400), // malformed request
+    STUN_ERR_UNAUTH = STUN_ERR(401), // wrong credentials
+    STUN_ERR_UNKNOWN_ATTR = STUN_ERR(420),
+    STUN_ERR_STALE_NONCE = STUN_ERR(438), // retry with the nonce present in response
+    STUN_ERR_SERVER_ERR = STUN_ERR(500), //should try again
+};
+
 /*
     RFC 8489
    0x0000: Reserved
@@ -216,6 +226,7 @@ namespace lite_p2p
     {
     private:
         int _socket;
+        int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
 
     public:
         struct sockaddr_t ext_ip;
@@ -225,8 +236,7 @@ namespace lite_p2p
         stun_client(int socket_fd);
         ~stun_client();
 
-        int request(struct sockaddr_t *stun_server);
-        int request(const char *stun_hostname, short stun_port, int family);
+        int bind_request(const char *stun_hostname, short stun_port, int family);
     };
 };
 

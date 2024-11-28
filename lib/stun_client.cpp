@@ -32,25 +32,20 @@ stun_client::~stun_client()
 {
 }
 
-int stun_client::request(struct sockaddr_t *stun_server) {
-    struct stun_packet_t packet(STUN_REQUEST);
+int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet) {
     uint8_t transaction_id[12];
-    uint16_t attr_len = 0, attr_type = 0;
     int ret, i, offset = 0;
-    uint8_t *attrs = &packet.attributes[0];
-    struct stun_attr_t attr;
     void *addr, *ext_addr;
     size_t len;
     
-    memcpy(transaction_id, packet.transaction_id, sizeof(transaction_id));
+    memcpy(transaction_id, packet->transaction_id, sizeof(transaction_id));
 
     len = stun_server->sa_family == AF_INET6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
     addr = stun_server->sa_family == AF_INET6 ? 
             (void *)network::inet6_address(stun_server) :
             (void *)network::inet_address(stun_server);
 
-resend_auth:
-    ret = sendto(_socket, (uint8_t *)&packet, ntohs(packet.msg_len) + 20, 0, (struct sockaddr *)addr, len);
+    ret = sendto(_socket, (uint8_t *)&packet, ntohs(packet->msg_len) + 20, 0, (struct sockaddr *)addr, len);
     if (ret < 0) {
         err_ret("Failed to send data", ret);
     }
@@ -60,59 +55,33 @@ resend_auth:
         err_ret("Failed to recv data", ret);
     }
 
-    if (packet.magic_cookie != htonl(MAGIC_COOKIE))
+    if (packet->magic_cookie != htonl(MAGIC_COOKIE))
         return -EINVAL;
 
-    if (c_array_cmp(packet.transaction_id, transaction_id, sizeof(transaction_id)))
+    if (c_array_cmp(packet->transaction_id, transaction_id, sizeof(transaction_id)))
         return -EINVAL;
 
-    if (IS_ERR_RESP(packet.msg_type))
-        return -EINVAL;
-    
-    attrs = packet.attributes;
-    len = std::min(packet.msg_len, (uint16_t)sizeof(packet.attributes));
+    if (IS_ERR_RESP(packet->msg_type))
+        return 0;
 
-    for (i = 0; i < len; i += (4 + attr_len)) {
-        attr = STUN_ATTR(ntohs(*(int16_t*)(&attrs[i])), ntohs(*(int16_t*)(&attrs[i + 2])), &attrs[i + 5]);
-
-        if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR) {
-            ext_ip.sa_family = (uint16_t )(*(int8_t *)(&attr.value[0])) == 0x1 ? AF_INET : AF_INET6;
-            if (ext_ip.sa_family == AF_INET) {
-                ext_addr = network::inet_address(&ext_ip);
-                ((struct sockaddr_in *)ext_addr)->sin_family = ext_ip.sa_family;
-                ((struct sockaddr_in *)ext_addr)->sin_port = (*(int16_t *)(&attr.value[1]));
-                ((struct sockaddr_in *)ext_addr)->sin_port ^= ((uint16_t)packet.magic_cookie);
-                ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr = (*(uint32_t *)&attr.value[3]);
-                ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr ^= packet.magic_cookie;
-            }
-            else if (ext_ip.sa_family == AF_INET6) {
-                ext_addr = network::inet6_address(&ext_ip);
-                ((struct sockaddr_in6 *)ext_addr)->sin6_family = ext_ip.sa_family;
-                ((struct sockaddr_in6 *)ext_addr)->sin6_port = (*(int16_t *)(&attr.value[1]));
-                ((struct sockaddr_in6 *)ext_addr)->sin6_port ^= ((uint16_t)packet.magic_cookie);
-                memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[3], sizeof(struct in6_addr));
-                ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr32[0] ^= packet.magic_cookie;
-                for (int i = 0; i < sizeof(transaction_id); ++i) {
-                    ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr8[i + 4] ^= transaction_id[i];
-                }
-            }
-            return 0;
-        }
-    }
-
-    return -ENOENT;
+    return 0;
 }
 
 
-int stun_client::request(const char *stun_hostname, short stun_port, int family) { 
+int stun_client::bind_request(const char *stun_hostname, short stun_port, int family) { 
     void *s_addr;
     struct addrinfo hints, *servinfo, *p;
     struct sockaddr_in *h;
     char *hostname, *service, hst[512];
-    size_t len;
-    int ret;
+    struct stun_packet_t packet(STUN_REQUEST);
+    struct stun_attr_t attr;
+    uint8_t *attrs = &packet.attributes[0];
+    size_t sock_len;
+    uint16_t attr_len = 0, attr_type = 0;
+    void *addr, *ext_addr;
+    int ret, len;
     
-    len = family == AF_INET6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
+    sock_len = family == AF_INET6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
     s_addr = family == AF_INET6 ? 
         (void *)network::inet6_address(&stun_server) : 
         (void *)network::inet_address(&stun_server);
@@ -138,7 +107,7 @@ int stun_client::request(const char *stun_hostname, short stun_port, int family)
     
         for (p = servinfo; p != NULL; p = p->ai_next) {
             if (p->ai_family == family) {
-                memcpy(s_addr, p->ai_addr, len);
+                memcpy(s_addr, p->ai_addr, sock_len);
             }
         }
     
@@ -155,7 +124,42 @@ int stun_client::request(const char *stun_hostname, short stun_port, int family)
         ((struct sockaddr_in *)s_addr)->sin_port = htons(stun_port);
     }
 
-    return request(&stun_server);
+    ret = request(&stun_server, &packet);
+    if (ret < 0)
+        return ret;
+
+    attrs = packet.attributes;
+    len = std::min(packet.msg_len, (uint16_t)sizeof(packet.attributes));
+
+    for (int i = 0; i < len; i += (4 + attr_len)) {
+        attr = STUN_ATTR(ntohs(*(int16_t*)(&attrs[i])), ntohs(*(int16_t*)(&attrs[i + 2])), &attrs[i + 5]);
+
+        if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR) {
+            ext_ip.sa_family = (uint16_t )(*(int8_t *)(&attr.value[0])) == 0x1 ? AF_INET : AF_INET6;
+            if (ext_ip.sa_family == AF_INET) {
+                ext_addr = network::inet_address(&ext_ip);
+                ((struct sockaddr_in *)ext_addr)->sin_family = ext_ip.sa_family;
+                ((struct sockaddr_in *)ext_addr)->sin_port = (*(int16_t *)(&attr.value[1]));
+                ((struct sockaddr_in *)ext_addr)->sin_port ^= ((uint16_t)packet.magic_cookie);
+                ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr = (*(uint32_t *)&attr.value[3]);
+                ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr ^= packet.magic_cookie;
+            }
+            else if (ext_ip.sa_family == AF_INET6) {
+                ext_addr = network::inet6_address(&ext_ip);
+                ((struct sockaddr_in6 *)ext_addr)->sin6_family = ext_ip.sa_family;
+                ((struct sockaddr_in6 *)ext_addr)->sin6_port = (*(int16_t *)(&attr.value[1]));
+                ((struct sockaddr_in6 *)ext_addr)->sin6_port ^= ((uint16_t)packet.magic_cookie);
+                memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[3], sizeof(struct in6_addr));
+                ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr32[0] ^= packet.magic_cookie;
+                for (int i = 0; i < sizeof(packet.transaction_id); ++i) {
+                    ((struct sockaddr_in6 *)ext_addr)->sin6_addr.__in6_u.__u6_addr8[i + 4] ^= packet.transaction_id[i];
+                }
+            }
+            return 0;
+        }
+    }
+
+    return -ENOENT;
 }
 
 

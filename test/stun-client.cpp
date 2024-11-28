@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
         c->~stun_client();
     });
 
-    int ret = stun.request(argv[1], atoi(argv[2]), AF_INET6);
+    int ret = stun.bind_request(argv[1], atoi(argv[2]), AF_INET6);
     printf("external ip: %s\n", lite_p2p::network::addr_to_string(&stun.ext_ip).c_str());
     if (ret < 0)
         exit(ret);
