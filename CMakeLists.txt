@@ -29,21 +29,6 @@ target_sources(lite-p2p PRIVATE
 
 
 if (DEFINED LITE_P2P_TEST_TOOLS)
-add_executable(stun-client6)
-target_include_directories(stun-client6 PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/include
-)
-
-target_sources(stun-client6 PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/test/stun-client6.cpp
-)
-
-target_link_libraries(stun-client6 lite-p2p)
-
-install(TARGETS stun-client6
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
-
 add_executable(stun-client)
 target_include_directories(stun-client PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/include
