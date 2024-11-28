@@ -54,7 +54,15 @@ namespace lite_p2p
         static void set_address(struct sockaddr_t *addr, struct sockaddr_in *__from);
 
         static void set_port(struct sockaddr_t *addr, short port);
+        static short get_port(struct sockaddr_t *addr);
         
+        static ssize_t send_to(int fd, void *buf, size_t len, struct sockaddr_t *remote);
+        static ssize_t send_to(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote);
+
+        static ssize_t recv_from(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote);
+        static ssize_t recv_from(int fd, void *buf, size_t len, struct sockaddr_t *remote);
+        static ssize_t recv_from(int fd, void *buf, size_t len);
+
         static struct sockaddr_in * inet_address(struct sockaddr_t *addr);
         static struct sockaddr_in6 * inet6_address(struct sockaddr_t *addr);
         

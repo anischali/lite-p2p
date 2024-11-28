@@ -284,3 +284,81 @@ void network::set_port(struct sockaddr_t *addr, short port) {
     }
 
 }
+
+short network::get_port(struct sockaddr_t *addr) {
+
+    switch (addr->sa_family)
+    {
+    case AF_INET:
+        return ntohs(inet_address(addr)->sin_port);
+    case AF_INET6:
+        return ntohs(inet6_address(addr)->sin6_port);
+    default:
+        break;
+    }
+
+    return -1;
+}
+
+
+ssize_t network::send_to(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote) {
+
+    switch (remote->sa_family)
+    {
+    case AF_INET6:
+        
+        return sendto(fd, buf, len, flags, 
+            (struct sockaddr *)inet6_address(remote), 
+            sizeof(struct sockaddr_in6));
+    
+    case AF_INET:
+    
+        return sendto(fd, buf, len, flags, 
+            (struct sockaddr *)inet_address(remote), 
+            sizeof(struct sockaddr_in));
+    
+    default:
+        break;
+    }
+
+    return -1;
+}
+
+ssize_t network::send_to(int fd, void *buf, size_t len, struct sockaddr_t *remote) {
+
+    return send_to(fd, buf, len, 0, remote);
+}
+
+
+ssize_t network::recv_from(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote) {
+
+    socklen_t slen;
+    struct sockaddr_in *addr;
+    struct sockaddr_in6 *addr6;
+
+    switch (remote->sa_family)
+    {
+    case AF_INET6:
+        addr6 = network::inet6_address(remote);
+        return recvfrom(fd, buf, len, flags, 
+            (struct sockaddr *)addr6, &slen);
+    
+    case AF_INET:
+        addr = network::inet_address(remote);
+        return recvfrom(fd, buf, len, flags, 
+            (struct sockaddr *)addr, &slen);
+    }
+
+    return -1;
+}
+
+ssize_t network::recv_from(int fd, void *buf, size_t len, struct sockaddr_t *remote) {
+
+    return recv_from(fd, buf, len, 0, remote);
+}
+
+
+ssize_t network::recv_from(int fd, void *buf, size_t len) {
+
+    return recv_from(fd, buf, len, 0, NULL);
+}

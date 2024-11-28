@@ -14,13 +14,13 @@ void visichat_listener(void *args) {
     int ret;
     static char buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
-    socklen_t len = sizeof(struct sockaddr_in);
-    struct sockaddr_in s_addr;
+    struct sockaddr_t s_addr;
+    s_addr.sa_family = conn->family;
 
     printf("receiver thread start [OK]\n");
 
     while(true) {
-        ret = recvfrom(conn->sock_fd, buf, 512, 0, (struct sockaddr *)&s_addr, &len);
+        ret = lite_p2p::network::recv_from(conn->sock_fd, buf, 512, &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
@@ -29,7 +29,7 @@ void visichat_listener(void *args) {
         if (!strncmp("exit", &buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), ntohs(s_addr.sin_port), buf);
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), buf);
     }
 }
 
@@ -38,7 +38,6 @@ void visichat_sender(void *args) {
     char c = 0;
     static char buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
-    struct sockaddr_in *remote = lite_p2p::network::inet_address(&conn->remote);
 
     printf("sender thread start [OK]\n");
 
@@ -52,7 +51,7 @@ void visichat_sender(void *args) {
         if (cnt <= 0)
             continue;
 
-        sendto(conn->sock_fd, buf, cnt, 0, (struct sockaddr *)remote, sizeof(*remote));
+        lite_p2p::network::send_to(conn->sock_fd, buf, cnt, &conn->remote);
         cnt = 0;
 
         if (!strncmp("exit", &buf[0], 4)) {
@@ -80,27 +79,15 @@ void visichat_sender(void *args) {
 //2001:4860:4864:5:8000::1 19302
 int main(int argc, char *argv[]) {
 
-    lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
-    struct sockaddr_in *remote, *local;
-
-    lite_p2p::ice_agent ice;
-
-    ice.gather_addrs();
-
-    auto addrs = ice.get_addrs();
-
-    for (auto &&addr : addrs) {
-        std::cout << lite_p2p::network::addr_to_string(&addr) << std::endl;
-    }
-
-    
     if (argc < 5) {
         printf("wrong arguments number !\n");
         exit(0);
     }
 
+    lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
     srand(time(NULL));
-    lite_p2p::peer_connection conn(AF_INET, atoi(argv[3]));
+    int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
+    lite_p2p::peer_connection conn(family, atoi(argv[4]));
     lite_p2p::stun_client stun(conn.sock_fd);
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -115,18 +102,14 @@ int main(int argc, char *argv[]) {
         c->~stun_client();
     });
 
-    int ret = stun.bind_request(argv[1], atoi(argv[2]), AF_INET);
+    int ret = stun.bind_request(argv[2], atoi(argv[3]), family);
     printf("external ip: %s\n", lite_p2p::network::addr_to_string(&stun.ext_ip).c_str());
     if (ret < 0)
         exit(ret);
 
-    lite_p2p::network::string_to_addr(AF_INET, argv[5], &conn.remote);
-    remote = lite_p2p::network::inet_address(&conn.remote);
-    remote->sin_port = htons(atoi(argv[4]));
-
-    local = lite_p2p::network::inet_address(&conn.local);
-
-    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), ntohs(local->sin_port));
+    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
+    lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
+    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
