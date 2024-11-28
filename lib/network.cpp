@@ -336,6 +336,11 @@ ssize_t network::recv_from(int fd, void *buf, size_t len, int flags, struct sock
     struct sockaddr_in *addr;
     struct sockaddr_in6 *addr6;
 
+    if (!remote) {
+        return recvfrom(fd, buf, len, flags, 
+            NULL, NULL);
+    }
+
     switch (remote->sa_family)
     {
     case AF_INET6:
