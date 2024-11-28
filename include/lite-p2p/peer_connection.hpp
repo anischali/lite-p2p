@@ -14,9 +14,12 @@ namespace lite_p2p
         struct sockaddr_t local;
         struct sockaddr_t remote;
 
-        std::string local_addr;
         stun_client *s_client;
-        int sock_fd, type, protocol, family;
+        int sock_fd; 
+        int family;
+        std::string local_addr;
+        int type;
+        int protocol;
 
         peer_connection(int _family, std::string _addr, short _port, int _type, int _protocol);
         peer_connection(int _family, std::string _addr, short _port);

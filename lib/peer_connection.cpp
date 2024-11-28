@@ -4,7 +4,7 @@
 using namespace lite_p2p;
 
 peer_connection::peer_connection(int _family, std::string _addr, short _port, int _type, int _protocol) : 
-    family {_family}, type{_type}, protocol{_protocol}, local_addr{_addr} {
+    family {_family}, local_addr{_addr}, type{_type}, protocol{_protocol} {
     timeval tv = { .tv_sec = 5 };
     int enable = 1;
         

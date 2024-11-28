@@ -53,7 +53,7 @@ namespace lite_p2p
         at_exit_cleanup(std::vector<int> signals) : at_exit_cleanup()
         {
 
-            for (int i = 0; i < signals.size(); ++i)
+            for (int i = 0; i < (int)signals.size(); ++i)
             {
                 signal(signals[i], at_exit_cleanup::at_exit_sig_handler);
             }

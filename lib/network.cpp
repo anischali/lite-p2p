@@ -52,7 +52,6 @@ void network::ip_getinfo(void) {
     struct ifaddrs *addrs;
     getifaddrs(&addrs);
     std::string key;
-    char addr_buf[INET6_ADDRSTRLEN];
     struct sockaddr_t saddr;
 
     for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
@@ -61,30 +60,23 @@ void network::ip_getinfo(void) {
             continue;
 
         if (!strncmp(iface.c_str(), addr->ifa_name, std::min((int)iface.length(), IFNAMSIZ)))
-        {    
-            memset(&saddr, 0x0, sizeof(saddr));
-            saddr.sa_family = addr->ifa_addr->sa_family;
-
+        {
             if (addr->ifa_addr && addr->ifa_addr->sa_family == AF_INET6) {
-                memcpy(&saddr.sa_addr, addr->ifa_addr, sizeof(struct sockaddr_in6));
+                set_address(AF_INET6, &saddr, addr->ifa_addr);
                 ip6.push_back(saddr);
             }
 
             if (addr->ifa_addr && addr->ifa_addr->sa_family == AF_INET) {
-                memcpy(&saddr.sa_addr, addr->ifa_addr, sizeof(struct sockaddr_in));
-                ip = saddr;
+                set_address(AF_INET, &ip, addr->ifa_addr);
             }
 
             if (addr->ifa_netmask && addr->ifa_netmask->sa_family == AF_INET) {
-                memcpy(&saddr.sa_addr, addr->ifa_netmask, sizeof(struct sockaddr_in));
-                netmask = saddr;
+                set_address(AF_INET, &netmask, addr->ifa_netmask);
             }
 
             if (addr->ifa_ifu.ifu_broadaddr && addr->ifa_ifu.ifu_broadaddr->sa_family == AF_INET) {
-                memcpy(&saddr.sa_addr, addr->ifa_ifu.ifu_broadaddr, sizeof(struct sockaddr_in));
-                broadcast = saddr;
+                set_address(AF_INET, &broadcast, addr->ifa_ifu.ifu_broadaddr);
             }
-
         }
     }
 
@@ -97,8 +89,6 @@ network::network(const std::string __iface)
 {
     int fd;
     struct ifreq req = {0};
-    struct rtentry rt = {0};
-    struct sockaddr_in *sin;
 
     iface = __iface;
     strncpy(req.ifr_name, iface.c_str(), IFNAMSIZ);
@@ -181,7 +171,6 @@ int network::string_to_addr(std::string saddr, struct sockaddr_in6 *addr) {
 }
 
 int network::string_to_addr(int family, std::string saddr, struct sockaddr_t *addr) {
-    int ret;
 
     addr->sa_family = family;
     switch (family)
@@ -244,4 +233,54 @@ struct sockaddr_in * network::inet_address(struct sockaddr_t *addr) {
 
 struct sockaddr_in6 * network::inet6_address(struct sockaddr_t *addr) {
     return (struct sockaddr_in6 *)&addr->sa_addr;
+}
+
+
+void network::set_address(struct sockaddr_t *addr, struct sockaddr_in *__from) {
+    struct sockaddr_in *s_addr = inet_address(addr);
+
+    s_addr->sin_addr.s_addr = __from->sin_addr.s_addr;
+    s_addr->sin_family = addr->sa_family = AF_INET;
+}
+
+void network::set_address(struct sockaddr_t *addr, struct sockaddr_in6 *__from) {
+    struct sockaddr_in6 *s_addr = inet6_address(addr);
+
+    memcpy(&s_addr->sin6_addr, &__from->sin6_addr, sizeof(struct in6_addr));
+    s_addr->sin6_family = addr->sa_family = AF_INET6;
+}
+
+
+void network::set_address(int family, struct sockaddr_t *addr, struct sockaddr *__from) {
+
+    switch (family)
+    {
+    case AF_INET:
+        set_address(addr, (struct sockaddr_in *)__from);
+        break;
+    
+    case AF_INET6:
+        set_address(addr, (struct sockaddr_in6 *)__from);
+        break;
+    
+    default:
+        break;
+    }
+}
+
+
+void network::set_port(struct sockaddr_t *addr, short port) {
+
+    switch (addr->sa_family)
+    {
+    case AF_INET:
+        inet_address(addr)->sin_port = htons(port);
+        break;
+    case AF_INET6:
+        inet6_address(addr)->sin6_port = htons(port);
+        break;
+    default:
+        break;
+    }
+
 }

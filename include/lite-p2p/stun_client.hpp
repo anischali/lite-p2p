@@ -152,7 +152,7 @@ namespace lite_p2p
         stun_packet_t(int method)
         {
             memset(attributes, 0x0, sizeof(attributes));
-            for (int i = 0; i < sizeof(transaction_id); ++i)
+            for (int i = 0; i < 12; ++i)
             {
                 transaction_id[i] = rand() % 256;
             }
@@ -227,6 +227,7 @@ namespace lite_p2p
     private:
         int _socket;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
+        int resolve(int family, std::string hostname, struct sockaddr_t *hostaddr);
 
     public:
         struct sockaddr_t ext_ip;

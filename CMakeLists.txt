@@ -4,9 +4,11 @@ project(liteP2P VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
 enable_language(C CXX ASM)
 
+add_compile_options(-Wall)
 add_library(lite-p2p)
 
 file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/lite-p2p/*.hpp)
+
 
 set_target_properties(lite-p2p PROPERTIES
     VERSION ${PROJECT_VERSION}
