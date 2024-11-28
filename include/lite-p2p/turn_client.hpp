@@ -12,6 +12,10 @@ namespace lite_p2p
     public:
         turn_client();
         ~turn_client();
+
+        int allocate_request(const char *turn_hostname, short turn_port, int family, int *session_id);
+        int create_channel_request(int session_id);
+        int bind_channel_request(int session_id, int peer_id, int channel_id);
     };
 };
 #endif
