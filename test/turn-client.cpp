@@ -97,9 +97,9 @@ int main(int argc, char *argv[]) {
     });
 
     __at_exit.at_exit_cleanup_add(&turn, [](void *ctx){
-        lite_p2p::stun_client *c = (lite_p2p::stun_client *)ctx;
+        lite_p2p::turn_client *c = (lite_p2p::turn_client *)ctx;
 
-        c->~stun_client();
+        c->~turn_client();
     });
 
     int ret = turn.allocate_request(argv[2], atoi(argv[3]), family);
