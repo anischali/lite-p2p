@@ -13,5 +13,7 @@ int turn_client::allocate_request(const char *turn_hostname, short turn_port, in
     if (ret < 0)
         return ret;
 
+     network::set_port(&stun_server, turn_port);
+
     return request(&stun_server, &packet);
 }

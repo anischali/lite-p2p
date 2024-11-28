@@ -80,7 +80,7 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
     int ret;
 
     memcpy(transaction_id, packet->transaction_id, sizeof(transaction_id));
-    ret = network::send_to(_socket, (uint8_t *)packet, ntohs(packet->msg_len) + 20, stun_server);
+    ret = network::send_to(_socket, (void *)packet, ntohs(packet->msg_len) + 20, stun_server);
     if (ret < 0)
     {
         err_ret("Failed to send data", ret);
