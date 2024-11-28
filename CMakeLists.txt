@@ -23,6 +23,7 @@ target_include_directories(lite-p2p PUBLIC
 target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/peer_connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/stun_client.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/turn_client.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/ice_agent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
 )
@@ -41,6 +42,21 @@ target_sources(stun-client PRIVATE
 target_link_libraries(stun-client lite-p2p)
 
 install(TARGETS stun-client
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+add_executable(turn-client)
+target_include_directories(turn-client PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
+target_sources(turn-client PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/test/turn-client.cpp
+)
+
+target_link_libraries(turn-client lite-p2p)
+
+install(TARGETS turn-client
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 endif()

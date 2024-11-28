@@ -8,10 +8,10 @@ namespace lite_p2p
     class turn_client : stun_client
     {
     private:
-        /* data */
+        int _socket;
     public:
-        turn_client();
-        ~turn_client();
+        turn_client(int sock_fd);
+        ~turn_client() {};
 
         int allocate_request(const char *turn_hostname, short turn_port, int family);
         int create_channel_request(int session_id);

@@ -226,6 +226,7 @@ namespace lite_p2p
     {
     private:
         int _socket;
+    protected:
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
         int resolve(int family, std::string hostname, struct sockaddr_t *hostaddr);
 
