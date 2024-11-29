@@ -2,6 +2,7 @@
 #define __CRYPTO_HPP__
 #include <openssl/bio.h>
 #include <openssl/sha.h>
+#include <openssl/evp.h>
 
 namespace lite_p2p {
 
