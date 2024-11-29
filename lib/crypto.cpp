@@ -37,11 +37,6 @@ out_err:
     return {};
 }
 
-#define goto_print(msg, label) {\
-    printf("%s\n", msg); \
-    goto label; \
-}
-
 std::vector<uint8_t> crypto::hmac_compute_buffer(const EVP_MD *algorithm, std::vector<uint8_t> &buf, 
                         std::vector<uint8_t> &key) {
 
