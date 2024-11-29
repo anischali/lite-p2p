@@ -46,8 +46,11 @@ namespace lite_p2p
         at_exit_cleanup()
         {
             INIT_LIST_HEAD(&list);
-
+#if defined(__ANDROID__)
+    // not suppot cleanup for now
+#else
             on_exit(at_exit_cleanup::on_exit_engine_cleanup, &list);
+#endif
         };
 
         at_exit_cleanup(std::vector<int> signals) : at_exit_cleanup()
@@ -63,13 +66,18 @@ namespace lite_p2p
         {
             struct at_exit_context_t *ctx = (struct at_exit_context_t *)calloc(1, sizeof(struct at_exit_context_t));
 
-            __glibcxx_assert(ctx != NULL);
+            if (!ctx)
+                return;
 
             INIT_LIST_HEAD(&ctx->list);
             ctx->context = context;
             ctx->cleanup = cleanup;
 
             list_add_tail(&ctx->list, &list);
+        }
+
+        void at_exit() {
+
         }
     };
 };

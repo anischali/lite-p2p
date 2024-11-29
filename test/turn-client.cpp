@@ -117,7 +117,11 @@ int main(int argc, char *argv[]) {
 
     auto thread_cleanup = [](void *ctx) {
         std::thread *t = (std::thread *)ctx;
+#if defined(__ANDROID__)
+        t->~thread();
+#else
         pthread_cancel(t->native_handle());
+#endif
     };
 
     __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);

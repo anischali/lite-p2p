@@ -15,7 +15,6 @@ void visichat_listener(void *args) {
     static char buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     struct sockaddr_t s_addr;
-    s_addr.sa_family = conn->family;
 
     printf("receiver thread start [OK]\n");
 
@@ -109,6 +108,7 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
+
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
 
     std::thread recver(visichat_listener, &conn);
@@ -116,7 +116,11 @@ int main(int argc, char *argv[]) {
 
     auto thread_cleanup = [](void *ctx) {
         std::thread *t = (std::thread *)ctx;
+#if defined(__ANDROID__)
+        t->~thread();
+#else
         pthread_cancel(t->native_handle());
+#endif
     };
 
     __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
