@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <string>
+#include <vector>
 #include "lite-p2p/crypto.hpp"
 
 void print_hexbuf(const char *label, uint8_t *buf, int len) {
@@ -15,28 +17,21 @@ void print_hexbuf(const char *label, uint8_t *buf, int len) {
 
 
 int main(int argc, char *argv[]) {
-    int ret;
-    uint8_t hash[EVP_MAX_MD_SIZE];
-    uint8_t hmac[4096];
+    std::vector<uint8_t> hash;
+    
+    std::string str(argv[1]);
+    std::vector<uint8_t> data;
 
-    memset(hash, 0x0, EVP_MAX_MD_SIZE);
-    ret = lite_p2p::crypto::checksum(SHA_ALGO(sha256), (uint8_t *)argv[1], strlen(argv[1]), hash);
-    print_hexbuf("sha256", hash, ret);
+    data.assign(str.begin(), str.end());
 
+    hash = lite_p2p::crypto::checksum(SHA_ALGO(sha256), data);
+    print_hexbuf("sha256", hash.data(), hash.size());
 
-    memset(hash, 0x0, EVP_MAX_MD_SIZE);
-    ret = lite_p2p::crypto::checksum(SHA_ALGO(sha1), (uint8_t *)argv[1], strlen(argv[1]), hash);
-    print_hexbuf("sha1", hash, ret);
+    hash = lite_p2p::crypto::checksum(SHA_ALGO(sha1), data);
+    print_hexbuf("sha1", hash.data(), hash.size());
 
-    memset(hash, 0x0, EVP_MAX_MD_SIZE);
-    ret = lite_p2p::crypto::checksum(SHA_ALGO(md5), (uint8_t *)argv[1], strlen(argv[1]), hash);
-    print_hexbuf("md5", hash, ret);
-
-    const char *params[] = {"cmac", "aes-128-cbc", "38a1ffb5ccad9612d3d28d99488ca94b"};
-
-    memset(hmac, 0x0, 4096);
-    ret = lite_p2p::crypto::compute_buf_hmac(params, (const uint8_t *)"secret0123456789", 17, (uint8_t *)argv[1], strlen(argv[1]), hmac);
-    print_hexbuf("hmac", hmac, ret);
+    hash = lite_p2p::crypto::checksum(SHA_ALGO(md5), data);
+    print_hexbuf("md5", hash.data(), hash.size());
 
     return 0;
 }
