@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.21.0)
 
+
 project(liteP2P VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
 enable_language(C CXX ASM)
@@ -9,12 +10,33 @@ add_library(lite-p2p)
 
 file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/lite-p2p/*.hpp)
 
+include(FetchContent)
+if (ANDROID)
+    FetchContent_Declare(
+        android_openssl
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+        URL https://github.com/KDAB/android_openssl/archive/refs/heads/master.zip
+    )
+    FetchContent_MakeAvailable(android_openssl)
+    target_include_directories(lite-p2p PUBLIC
+        ${android_openssl_SOURCE_DIR}/ssl_3/${CMAKE_ANDROID_ARCH_ABI}/include
+    )
+    target_link_libraries(lite-p2p PUBLIC
+        ${android_openssl_SOURCE_DIR}/ssl_3/${CMAKE_ANDROID_ARCH_ABI}/libssl.a
+        ${android_openssl_SOURCE_DIR}/ssl_3/${CMAKE_ANDROID_ARCH_ABI}/libcrypto.a
+    )
+    target_compile_definitions(lite-p2p PUBLIC
+        QT_ANDROID_MIN_SDK_VERSION=24
+    )
+endif()
+
 find_package(OpenSSL)
 
+
 set_target_properties(lite-p2p PROPERTIES
-    VERSION ${PROJECT_VERSION}
-    PUBLIC_HEADER "${lite_p2p_HEADERS}"
-    SOVERSION 1
+VERSION ${PROJECT_VERSION}
+PUBLIC_HEADER "${lite_p2p_HEADERS}"
+SOVERSION 1
 )
 
 target_include_directories(lite-p2p PUBLIC
