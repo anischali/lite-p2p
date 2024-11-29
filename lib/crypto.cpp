@@ -11,7 +11,7 @@ std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::vector<uint8
     int ret;
 
     if (!ctx)
-        return digest;
+        return {};
     
     ret = EVP_DigestInit_ex(ctx, algorithm, NULL);
     if (!ret)
