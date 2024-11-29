@@ -28,10 +28,11 @@ if (ANDROID)
     target_compile_definitions(lite-p2p PUBLIC
         QT_ANDROID_MIN_SDK_VERSION=24
     )
+else()
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(OpenSSL REQUIRED openssl)
+target_link_libraries(lite-p2p PUBLIC ${OpenSSL_LIBRARIES})
 endif()
-
-find_package(OpenSSL)
-
 
 set_target_properties(lite-p2p PROPERTIES
 VERSION ${PROJECT_VERSION}
@@ -81,6 +82,21 @@ target_sources(turn-client PRIVATE
 target_link_libraries(turn-client lite-p2p)
 
 install(TARGETS turn-client
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+add_executable(lite-crypto)
+target_include_directories(lite-crypto PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
+target_sources(lite-crypto PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/test/lite-crypto.cpp
+)
+
+target_link_libraries(lite-crypto lite-p2p)
+
+install(TARGETS lite-crypto
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 endif()
