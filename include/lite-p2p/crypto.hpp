@@ -1,11 +1,11 @@
 #ifndef __CRYPTO_HPP__
 #define __CRYPTO_HPP__
 #include <string>
+#include <vector>
 #include <openssl/bio.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include <vector>
 
 #define SHA_ALGO(alg) EVP_##alg()
 

@@ -172,8 +172,14 @@ namespace lite_p2p
         uint16_t length;
         uint8_t *value;
     };
+#define STUN_ATTR_H(_type, _len, _val) \
+    {.type = ntohs(*(uint16_t *)_type), .length = ntohs(*(uint16_t *)_len), .value = (uint8_t *)_val}
+
+#define STUN_ATTR_N(_type, _len, _val) \
+    {.type = htons(*(uint16_t *)_type), .length = htons(*(uint16_t *)_len), .value = (uint8_t *)_val}
+
 #define STUN_ATTR(_type, _len, _val) \
-    {.type = _type, .length = _len, .value = (uint8_t *)_val}
+    {.type = *(uint16_t *)_type, .length = *(uint16_t *)_len, .value = (uint8_t *)_val}
 
     static inline int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr)
     {

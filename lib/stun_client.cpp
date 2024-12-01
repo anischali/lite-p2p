@@ -139,7 +139,7 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
 
     for (int i = 0; i < len; i += (4 + attr_len))
     {
-        attr = STUN_ATTR(ntohs(*(int16_t *)(&attrs[i])), ntohs(*(int16_t *)(&attrs[i + 2])), &attrs[i + 5]);
+        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 5]);
 
         if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
         {
