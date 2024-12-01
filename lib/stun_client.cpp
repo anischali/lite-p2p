@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include "lite-p2p/stun_client.hpp"
+#include "lite-p2p/stun_attrs.hpp"
 
 #define err_ret(msg, err)         \
     printf("%d: %s\n", err, msg); \
@@ -122,13 +123,21 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
     uint8_t *attrs = &packet.attributes[0];
     uint16_t attr_len = 0;
     void *ext_addr;
-    int ret, len;
+    int ret, len, offset = 0;
 
     ret = resolve(family, stun_hostname, &stun_server);
     if (ret < 0)
         return ret;
 
     network::set_port(&stun_server, stun_port);
+
+    offset += stun_attr_user(&attrs[offset], "lite_p2p");
+    offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], "test_pass123");
+    offset += stun_attr_msg_hmac_sha256((uint8_t *)&packet, &attrs[offset], "test_pass123");
+    offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
+    offset += stun_attr_software(&attrs[offset], "lite-p2p");
+
+    packet.msg_len += htons(offset);
 
     ret = request(&stun_server, &packet);
     if (ret < 0)
