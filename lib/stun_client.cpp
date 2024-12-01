@@ -32,6 +32,17 @@ stun_client::~stun_client()
 {
 }
 
+uint32_t stun_client::crc32(uint8_t *buf, size_t len) {
+    uint32_t crc = 0xFFFFFFFF;
+
+    for (size_t i = 0; i < len; i++) {
+        crc = (crc >> 8) ^ ((crc & 0xFF) ^ buf[i]);
+    }
+
+    return crc;
+}
+
+
 int stun_client::resolve(int family, std::string hostname, struct sockaddr_t *hostaddr)
 {
     struct addrinfo hints, *servinfo, *p;
