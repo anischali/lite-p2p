@@ -40,6 +40,13 @@ out_err:
 }
 
 
+std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::string &s) {
+
+    std::vector<uint8_t> buf(s.begin(), s.end());
+
+    return checksum(algorithm, buf);
+}
+
 
 std::vector<uint8_t> crypto::crypto_random_password(int bits) {
     int ret;
@@ -54,7 +61,7 @@ std::vector<uint8_t> crypto::crypto_random_password(int bits) {
 }
 
 
-std::string crypto::crypto_base64_encode(std::vector<uint8_t> &buf) {
+std::string crypto::crypto_base64_encode(std::vector<uint8_t> buf) {
     EVP_ENCODE_CTX *ctx;
     auto b64_size = [](int len) {
         int d_len = 4 * (len / 3 + 2) + 1;

@@ -88,6 +88,8 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, atoi(argv[4]));
     lite_p2p::stun_client stun(conn.sock_fd);
+    struct stun_session_t s_stun;
+    struct sockaddr_t *ext_ip;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
         lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
@@ -101,8 +103,15 @@ int main(int argc, char *argv[]) {
         c->~stun_client();
     });
 
-    int ret = stun.bind_request(argv[2], atoi(argv[3]), family);
-    printf("external ip: %s\n", lite_p2p::network::addr_to_string(&stun.ext_ip).c_str());
+    lite_p2p::network::resolve(&s_stun.server, family, argv[2], atoi(argv[3]));
+    stun.stun_register_session(&s_stun);
+
+    int ret = stun.bind_request(&s_stun.server);
+    if (ret < 0)
+        return ret;
+    
+    ext_ip = stun.stun_get_external_ip(&s_stun.server);
+    printf("external ip: %s\n", lite_p2p::network::addr_to_string(ext_ip).c_str());
     if (ret < 0)
         exit(ret);
 

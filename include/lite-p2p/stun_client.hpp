@@ -1,5 +1,6 @@
 #ifndef __STUN_CLIENT_HPP__
 #define __STUN_CLIENT_HPP__
+#include <map>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -18,6 +19,15 @@
 
 #define MAGIC_COOKIE 0x2112A442
 #define FINGERPRINT_XOR 0x5354554e
+
+struct stun_session_t {
+    std::string user;
+    std::vector<uint8_t> key;
+    std::vector<uint8_t> nonce;
+    struct sockaddr_t server;
+    struct sockaddr_t ext_ip;
+};
+
 
 enum stun_methods
 {
@@ -233,19 +243,17 @@ namespace lite_p2p
     private:
         int _socket;
     protected:
+        std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
-        int resolve(int family, std::string hostname, struct sockaddr_t *hostaddr);
 
     public:
-        struct sockaddr_t ext_ip;
-        struct sockaddr_t stun_server;
-        struct stun_attrs_t attributes;
-
         stun_client(int socket_fd);
         ~stun_client();
 
-        int bind_request(const char *stun_hostname, short stun_port, int family);
-
+        int bind_request(struct sockaddr_t *stun_server);
+        void stun_register_session(struct stun_session_t *session);
+        struct stun_session_t *stun_session_get(struct sockaddr_t *addr);
+        struct sockaddr_t *stun_get_external_ip(struct sockaddr_t *stun_server);
         static uint32_t crc32(uint32_t crc, uint8_t *buf, size_t size);
     };
 };

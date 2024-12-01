@@ -16,6 +16,8 @@
 #include <ifaddrs.h>
 #include <string.h>
 #include <errno.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include "lite-p2p/network.hpp"
 
 using namespace lite_p2p;
@@ -366,4 +368,59 @@ ssize_t network::recv_from(int fd, void *buf, size_t len, struct sockaddr_t *rem
 ssize_t network::recv_from(int fd, void *buf, size_t len) {
 
     return recv_from(fd, buf, len, 0, NULL);
+}
+
+int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname)
+{
+    struct addrinfo hints, *servinfo, *p;
+    char *host, *service, hst[512];
+    int ret;
+
+    ret = network::string_to_addr(family, hostname, hostaddr);
+    if (ret)
+        return 0;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = family;
+    hints.ai_socktype = SOCK_STREAM;
+
+    memset(hst, 0, sizeof(hst));
+    memcpy(hst, hostname.c_str(), std::min(512, (int)hostname.length()));
+    service = strtok_r(hst, ":/", &host);
+
+    if (host[0] == '/' && host[1] == '/')
+        host = &host[2];
+
+    ret = getaddrinfo(host, service, &hints, &servinfo);
+    if (ret != 0)
+    {
+        return ret;
+    }
+
+    for (p = servinfo; p != NULL; p = p->ai_next)
+    {
+        if (p->ai_family == family)
+        {
+            lite_p2p::network::set_address(family, hostaddr, p->ai_addr);
+            return 0;
+        }
+    }
+
+    freeaddrinfo(servinfo);
+    servinfo = NULL;
+
+    return -EINVAL;
+}
+
+
+int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, short port) {
+    int ret;
+
+    ret = resolve(hostaddr, family, hostname);
+    if (ret < 0)
+        return ret;
+
+    lite_p2p::network::set_port(hostaddr, port);
+
+    return 0;
 }

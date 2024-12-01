@@ -9,11 +9,12 @@ namespace lite_p2p
     {
     private:
         int _socket;
+    
     public:
         turn_client(int sock_fd);
         ~turn_client() {};
 
-        int allocate_request(const char *turn_hostname, short turn_port, int family);
+        int allocate_request(struct sockaddr_t *stun_server);
         int create_channel_request(int session_id);
         int bind_channel_request(int session_id, int peer_id, int channel_id);
     };

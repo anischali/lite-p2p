@@ -66,6 +66,8 @@ namespace lite_p2p
         static struct sockaddr_in * inet_address(struct sockaddr_t *addr);
         static struct sockaddr_in6 * inet6_address(struct sockaddr_t *addr);
         
+        static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname);
+        static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, short port);
 
         network(const std::string __iface);
         std::string to_string(void);

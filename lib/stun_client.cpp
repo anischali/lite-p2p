@@ -5,21 +5,21 @@
 #include <net/route.h>
 #include <arpa/nameser.h>
 #include <net/if.h>
-#include <resolv.h>
 #include <netinet/in.h>
 #include <netinet/if_ether.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <ifaddrs.h>
 #include <string.h>
 #include <errno.h>
 #include <ifaddrs.h>
+#include <resolv.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include "lite-p2p/stun_client.hpp"
 #include "lite-p2p/stun_attrs.hpp"
+#include "lite-p2p/network.hpp"
 
 #define err_ret(msg, err)         \
     printf("%d: %s\n", err, msg); \
@@ -27,7 +27,7 @@
 
 using namespace lite_p2p;
 
-stun_client::stun_client(int socket_fd) : _socket{socket_fd}, ext_ip{0}
+stun_client::stun_client(int socket_fd) : _socket{socket_fd}
 {
 }
 
@@ -59,47 +59,45 @@ uint32_t stun_client::crc32(uint32_t crc, uint8_t *buf, size_t len)
     return ~crc;
 }
 
-int stun_client::resolve(int family, std::string hostname, struct sockaddr_t *hostaddr)
-{
-    struct addrinfo hints, *servinfo, *p;
-    char *host, *service, hst[512];
-    int ret;
+struct stun_session_t *stun_client::stun_session_get(struct sockaddr_t *addr) {
+    std::string s_sha, s_tmp = network::addr_to_string(addr) + ":" + 
+                std::to_string(network::get_port(addr)) + ":" +
+                std::to_string(addr->sa_family);
+    
+    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
 
-    ret = network::string_to_addr(family, hostname, hostaddr);
-    if (ret)
-        return 0;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family;
-    hints.ai_socktype = SOCK_STREAM;
-
-    memset(hst, 0, sizeof(hst));
-    memcpy(hst, hostname.c_str(), std::min(512, (int)hostname.length()));
-    service = strtok_r(hst, ":/", &host);
-
-    if (host[0] == '/' && host[1] == '/')
-        host = &host[2];
-
-    ret = getaddrinfo(host, service, &hints, &servinfo);
-    if (ret != 0)
-    {
-        return ret;
+    if (auto s = session_db.find(s_sha); s != session_db.end()) {
+        return s->second;
     }
 
-    for (p = servinfo; p != NULL; p = p->ai_next)
-    {
-        if (p->ai_family == family)
-        {
-            lite_p2p::network::set_address(family, hostaddr, p->ai_addr);
-            return 0;
-        }
-    }
-
-    freeaddrinfo(servinfo);
-    servinfo = NULL;
-
-    return -EINVAL;
+    return nullptr;
 }
+
+void stun_client::stun_register_session(struct stun_session_t *session) {
+
+    std::string s_sha, s_tmp = network::addr_to_string(&session->server) + ":" + 
+                std::to_string(network::get_port(&session->server)) + ":" +
+                std::to_string(session->server.sa_family);
+    
+    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
+
+    session_db[s_sha] = session;
+}
+
+struct sockaddr_t * stun_client::stun_get_external_ip(struct sockaddr_t *stun_server) {
+    std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" + 
+                std::to_string(network::get_port(stun_server)) + ":" +
+                std::to_string(stun_server->sa_family);
+    
+    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
+
+    if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end()) {
+        return &s->second->ext_ip;
+    }
+
+    return nullptr;
+}
+
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
 {
@@ -131,19 +129,17 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
     return 0;
 }
 
-int stun_client::bind_request(const char *stun_hostname, short stun_port, int family)
+int stun_client::bind_request(struct sockaddr_t *stun_server)
 {
     struct stun_packet_t packet(STUN_REQUEST);
+    struct stun_session_t *session;
     struct stun_attr_t attr;
     uint8_t *attrs = &packet.attributes[0];
-    uint16_t attr_len = 0;
     int ret, len, offset = 0;
 
-    ret = resolve(family, stun_hostname, &stun_server);
-    if (ret < 0)
-        return ret;
-
-    network::set_port(&stun_server, stun_port);
+    session = stun_session_get(stun_server);
+    if (!session)
+        return -ENOENT;
 
     offset += stun_attr_user(&attrs[offset], "bayaz");
     offset += stun_attr_software(&attrs[offset], "lite-p2p");
@@ -151,19 +147,19 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
     packet.msg_len += htons(offset + 8);
     offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
 
-    ret = request(&stun_server, &packet);
+    ret = request(stun_server, &packet);
     if (ret < 0)
         return ret;
 
     attrs = packet.attributes;
     len = std::min(packet.msg_len, (uint16_t)sizeof(packet.attributes));
 
-    for (int i = 0; i < len; i += (4 + attr_len))
+    for (int i = 0; i < len; i += (4 + attr.length))
     {
         attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 5]);
         if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
         {
-            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &ext_ip);
+            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &session->ext_ip);
         }
     }
 

@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, atoi(argv[4]));
     lite_p2p::turn_client turn(conn.sock_fd);
+    struct stun_session_t s_turn;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
         lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
@@ -102,7 +103,9 @@ int main(int argc, char *argv[]) {
         c->~turn_client();
     });
 
-    int ret = turn.allocate_request(argv[2], atoi(argv[3]), family);
+    lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
+
+    int ret = turn.allocate_request(&s_turn.server);
     if (ret < 0)
         exit(ret);
 
