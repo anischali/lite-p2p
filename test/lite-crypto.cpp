@@ -53,5 +53,12 @@ int main(int argc, char *argv[]) {
 
     print_hexbuf("hmacsha1 - verify", (uint8_t *)&valid, 1);
 
+    std::vector<uint8_t> vpass = lite_p2p::crypto::crypto_random_password(128);
+    print_hexbuf("password", (uint8_t *)vpass.data(), vpass.size());
+
+    std::string b64_pass = lite_p2p::crypto::crypto_base64_encode(vpass); // echo -n b33283b4055e919f700f08f65328c75ec87938d5d22b17520df5ad7532908ed9 | xxd -r -p | base64
+    printf("%s\n", b64_pass.c_str());
+    std::vector<uint8_t> rpass = lite_p2p::crypto::crypto_base64_decode(b64_pass);
+    print_hexbuf("pass-decode", rpass.data(), rpass.size());
     return 0;
 }

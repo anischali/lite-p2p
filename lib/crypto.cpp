@@ -41,7 +41,7 @@ out_err:
 
 
 
-std::vector<uint8_t> crypto_rand_password(int bits) {
+std::vector<uint8_t> crypto::crypto_random_password(int bits) {
     int ret;
     size_t byte_len = (bits / 8);
     std::vector<uint8_t> pass(byte_len);
@@ -56,7 +56,15 @@ std::vector<uint8_t> crypto_rand_password(int bits) {
 
 std::string crypto::crypto_base64_encode(std::vector<uint8_t> &buf) {
     EVP_ENCODE_CTX *ctx;
-    int ret, len = (int)(4 * ((buf.size() + 4) / 3));
+    auto b64_size = [](int len) {
+        int d_len = 4 * (len / 3 + 2) + 1;
+        if (len % 3) {
+            d_len += 4 - (len % 4);
+        }
+
+        return d_len;
+    };
+    int ret, len = b64_size(buf.size());
     std::vector<uint8_t> out(len);    
 
     ctx = EVP_ENCODE_CTX_new();
