@@ -239,6 +239,8 @@ namespace lite_p2p
         ~stun_client();
 
         int bind_request(const char *stun_hostname, short stun_port, int family);
+
+        static uint32_t crc32(uint8_t *buf, size_t size);
     };
 };
 
