@@ -40,15 +40,53 @@ static inline int stun_attr_software(uint8_t *attrs, std::string soft) {
     return stun_add_attr(attrs, &attr);
 }
 
+
+uint32_t
+rc_crc32(uint32_t crc, const char *buf, size_t len)
+{
+	static uint32_t table[256];
+	static int have_table = 0;
+	uint32_t rem;
+	uint8_t octet;
+	int i, j;
+	const char *p, *q;
+
+	/* This check is not thread safe; there is no mutex. */
+	if (have_table == 0) {
+		/* Calculate CRC table. */
+		for (i = 0; i < 256; i++) {
+			rem = i;  /* remainder from polynomial division */
+			for (j = 0; j < 8; j++) {
+				if (rem & 1) {
+					rem >>= 1;
+					rem ^= 0xedb88320;
+				} else
+					rem >>= 1;
+			}
+			table[i] = rem;
+		}
+		have_table = 1;
+	}
+
+	crc = ~crc;
+	q = buf + len;
+	for (p = buf; p < q; p++) {
+		octet = *p;  /* Cast to unsigned octet. */
+		crc = (crc >> 8) ^ table[(crc & 0xff) ^ octet];
+	}
+	return ~crc;
+}
+
 static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs) {
     uint32_t crc = 0;
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_FINGERPRINT,
         .length = sizeof(uint32_t),
     };
-
-    crc = stun_client::crc32(msg, (size_t)(attrs - msg));
+    
+    crc = stun_client::crc32(0, msg, (size_t)(attrs - msg));
     crc ^= FINGERPRINT_XOR;
+    crc = htonl(crc);
     attr.value = (uint8_t *)&crc;
 
     return stun_add_attr(attrs, &attr);
@@ -60,8 +98,9 @@ static inline bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs) {
     struct stun_attr_t s_attr = STUN_ATTR(&attrs[0], &attrs[2], &attrs[4]);
 
     s_crc = *(uint32_t *)s_attr.value;
-    crc = stun_client::crc32(msg, (size_t)(attrs - msg));
+    crc = stun_client::crc32(FINGERPRINT_XOR, msg, (size_t)(attrs - msg));
     crc ^= FINGERPRINT_XOR;
+    crc = htonl(crc);
 
     return crc == s_crc;
 }

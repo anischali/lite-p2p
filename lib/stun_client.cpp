@@ -1,5 +1,7 @@
 #include <vector>
 #include <string>
+#include <ranges>
+#include <algorithm>
 #include <net/route.h>
 #include <arpa/nameser.h>
 #include <net/if.h>
@@ -33,16 +35,29 @@ stun_client::~stun_client()
 {
 }
 
-uint32_t stun_client::crc32(uint8_t *buf, size_t len) {
-    uint32_t crc = 0xFFFFFFFF;
+uint32_t stun_client::crc32(uint32_t crc, uint8_t *buf, size_t len)
+{
+    static const std::vector<uint32_t> crc_table = []()
+    {
+        std::vector<uint32_t> table(256);
+        std::generate(table.begin(), table.end(), [n = std::uint32_t{0}]() mutable
+                      {
+            uint32_t tval = n++;
+            for (int j = 0; j < 8; ++j) {
+                tval = (tval & 1) ? ((tval >> 1) ^ (uint32_t)(0xEDB88320)) : (tval >> 1);
+            }
+            return tval; });
+        return table;
+    }();
 
-    for (size_t i = 0; i < len; i++) {
-        crc = (crc >> 8) ^ ((crc & 0xFF) ^ buf[i]);
+    crc = ~crc;
+    for (size_t i = 0; i < len; i++)
+    {
+        crc = (crc >> 8) ^ crc_table[(crc & 0xFF) ^ buf[i]];
     }
 
-    return crc;
+    return ~crc;
 }
-
 
 int stun_client::resolve(int family, std::string hostname, struct sockaddr_t *hostaddr)
 {
@@ -132,12 +147,11 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
     network::set_port(&stun_server, stun_port);
 
     offset += stun_attr_user(&attrs[offset], "lite_p2p");
-    offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], "test_pass123");
-    offset += stun_attr_msg_hmac_sha256((uint8_t *)&packet, &attrs[offset], "test_pass123");
-    offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
     offset += stun_attr_software(&attrs[offset], "lite-p2p");
-
-    packet.msg_len += htons(offset);
+    offset += stun_attr_msg_hmac_sha256((uint8_t *)&packet, &attrs[offset], "test_pass123");
+    offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], "test_pass123");
+    packet.msg_len += htons(offset + 8);
+    offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
 
     ret = request(&stun_server, &packet);
     if (ret < 0)
