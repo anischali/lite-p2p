@@ -38,13 +38,19 @@ int main(int argc, char *argv[]) {
     struct crypto_mac_ctx_t ctx_hmacsha256("hmac", "", "sha256", key);
     sign = lite_p2p::crypto::crypto_mac_sign(&ctx_hmacsha256, data); // echo -n "test" | sha256hmac -K "pass123" -h sha256
     print_hexbuf("hmacsha256", sign.data(), sign.size());
-
+    
+    std::string b64 = lite_p2p::crypto::crypto_base64_encode(sign); // echo -n b33283b4055e919f700f08f65328c75ec87938d5d22b17520df5ad7532908ed9 | xxd -r -p | base64
+    printf("%s\n", b64.c_str());
+    std::vector<uint8_t> rb64 = lite_p2p::crypto::crypto_base64_decode(b64);
+    print_hexbuf("hmacsha1 - b64", rb64.data(), rb64.size());
     
     struct crypto_mac_ctx_t ctx_hmacsha1("hmac", "", "sha1", key);
     sign = lite_p2p::crypto::crypto_mac_sign(&ctx_hmacsha1, data); // echo -n "test" | sha256hmac -K "pass123" -h sha1
     print_hexbuf("hmacsha1", sign.data(), sign.size());
 
+
     bool valid = lite_p2p::crypto::crypto_mac_verify(&ctx_hmacsha1, data, sign);
+
     print_hexbuf("hmacsha1 - verify", (uint8_t *)&valid, 1);
 
     return 0;

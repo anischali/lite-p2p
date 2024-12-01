@@ -145,9 +145,8 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
 
     network::set_port(&stun_server, stun_port);
 
-    offset += stun_attr_user(&attrs[offset], "lite_p2p");
+    offset += stun_attr_user(&attrs[offset], "bayaz");
     offset += stun_attr_software(&attrs[offset], "lite-p2p");
-    offset += stun_attr_msg_hmac_sha256((uint8_t *)&packet, &attrs[offset], "test_pass123");
     offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], "test_pass123");
     packet.msg_len += htons(offset + 8);
     offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);

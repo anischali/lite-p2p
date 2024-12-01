@@ -42,6 +42,8 @@ namespace lite_p2p {
 
     class crypto {
     public:
+        static std::string crypto_base64_encode(std::vector<uint8_t> &buf);
+        static std::vector<uint8_t> crypto_base64_decode(std::string &str);
 
         static std::vector<uint8_t> checksum(const EVP_MD *algorithm, std::vector<uint8_t> &buf);
         static struct crypto_mac_ctx_t * crypto_mac_new(const char *algorithm, const char *_cipher,
@@ -49,6 +51,8 @@ namespace lite_p2p {
         static void crypto_mac_free(crypto_mac_ctx_t *ctx);
         static std::vector<uint8_t> crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf);
         static bool crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf, std::vector<uint8_t> &digest);
+
+        static std::vector<uint8_t> crypto_random_password(int encoder, int bits);
     };
 
 };

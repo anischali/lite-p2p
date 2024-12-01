@@ -1,4 +1,5 @@
 #include "lite-p2p/crypto.hpp"
+#include <openssl/rand.h>
 #include <cerrno>
 #include <cstdlib>
 
@@ -37,6 +38,76 @@ out_err:
 
     return {};
 }
+
+
+
+std::vector<uint8_t> crypto_rand_password(int bits) {
+    int ret;
+    size_t byte_len = (bits / 8);
+    std::vector<uint8_t> pass(byte_len);
+
+    ret = RAND_bytes(pass.data(), byte_len);
+    if (!ret)
+        return {};
+
+    return pass;
+}
+
+
+std::string crypto::crypto_base64_encode(std::vector<uint8_t> &buf) {
+    EVP_ENCODE_CTX *ctx;
+    int ret, len = (int)(4 * ((buf.size() + 4) / 3));
+    std::vector<uint8_t> out(len);    
+
+    ctx = EVP_ENCODE_CTX_new();
+    if (!ctx)
+        return "";
+
+    EVP_EncodeInit(ctx);
+    
+    ret = EVP_EncodeUpdate(ctx, out.data(), &len, buf.data(), buf.size());
+    if (ret < 0)
+        goto clean_ctx;
+
+    EVP_EncodeFinal(ctx, out.data(), &len);
+    EVP_ENCODE_CTX_free(ctx);
+    out.resize(len);
+
+    return std::string(out.begin(), out.end());
+
+clean_ctx:
+    EVP_ENCODE_CTX_free(ctx);
+    return "";
+}
+
+
+std::vector<uint8_t> crypto::crypto_base64_decode(std::string &str) {
+    EVP_ENCODE_CTX *ctx;
+    std::vector<uint8_t> out((int)(str.length() * 3 / 4));    
+    int ret, len;
+    
+    ctx = EVP_ENCODE_CTX_new();
+    if (!ctx)
+        return {};
+
+    EVP_DecodeInit(ctx);
+    
+    ret = EVP_DecodeUpdate(ctx, out.data(), &len, (uint8_t *)str.data(), str.length());
+    if (ret < 0)
+        goto clean_ctx;
+
+    out.resize(len);
+    EVP_DecodeFinal(ctx, out.data() + len, &len);
+    EVP_ENCODE_CTX_free(ctx);
+
+    return out;
+
+clean_ctx:
+    EVP_ENCODE_CTX_free(ctx);
+    return {};
+}
+
+
 
 struct crypto_mac_ctx_t * crypto::crypto_mac_new(const char *algorithm, const char *_cipher,
                                 const char *_digest, std::vector<uint8_t> &_key) {
