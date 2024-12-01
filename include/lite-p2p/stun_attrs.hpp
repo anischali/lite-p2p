@@ -5,7 +5,8 @@
 
 using namespace lite_p2p;
 
-static inline int stun_attr_user(uint8_t *attrs, std::string user_realm) {
+static inline int stun_attr_user(uint8_t *attrs, std::string user_realm)
+{
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_USERNAME,
     };
@@ -16,8 +17,8 @@ static inline int stun_attr_user(uint8_t *attrs, std::string user_realm) {
     return stun_add_attr(attrs, &attr);
 }
 
-
-static inline int atun_attr_user(uint8_t *attrs, std::vector<uint8_t> nonce) {
+static inline int atun_attr_user(uint8_t *attrs, std::vector<uint8_t> nonce)
+{
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_NONCE,
     };
@@ -28,8 +29,8 @@ static inline int atun_attr_user(uint8_t *attrs, std::vector<uint8_t> nonce) {
     return stun_add_attr(attrs, &attr);
 }
 
-
-static inline int stun_attr_software(uint8_t *attrs, std::string soft) {
+static inline int stun_attr_software(uint8_t *attrs, std::string soft)
+{
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_SOFTWARE,
     };
@@ -40,50 +41,56 @@ static inline int stun_attr_software(uint8_t *attrs, std::string soft) {
     return stun_add_attr(attrs, &attr);
 }
 
-
 uint32_t
 rc_crc32(uint32_t crc, const char *buf, size_t len)
 {
-	static uint32_t table[256];
-	static int have_table = 0;
-	uint32_t rem;
-	uint8_t octet;
-	int i, j;
-	const char *p, *q;
+    static uint32_t table[256];
+    static int have_table = 0;
+    uint32_t rem;
+    uint8_t octet;
+    int i, j;
+    const char *p, *q;
 
-	/* This check is not thread safe; there is no mutex. */
-	if (have_table == 0) {
-		/* Calculate CRC table. */
-		for (i = 0; i < 256; i++) {
-			rem = i;  /* remainder from polynomial division */
-			for (j = 0; j < 8; j++) {
-				if (rem & 1) {
-					rem >>= 1;
-					rem ^= 0xedb88320;
-				} else
-					rem >>= 1;
-			}
-			table[i] = rem;
-		}
-		have_table = 1;
-	}
+    /* This check is not thread safe; there is no mutex. */
+    if (have_table == 0)
+    {
+        /* Calculate CRC table. */
+        for (i = 0; i < 256; i++)
+        {
+            rem = i; /* remainder from polynomial division */
+            for (j = 0; j < 8; j++)
+            {
+                if (rem & 1)
+                {
+                    rem >>= 1;
+                    rem ^= 0xedb88320;
+                }
+                else
+                    rem >>= 1;
+            }
+            table[i] = rem;
+        }
+        have_table = 1;
+    }
 
-	crc = ~crc;
-	q = buf + len;
-	for (p = buf; p < q; p++) {
-		octet = *p;  /* Cast to unsigned octet. */
-		crc = (crc >> 8) ^ table[(crc & 0xff) ^ octet];
-	}
-	return ~crc;
+    crc = ~crc;
+    q = buf + len;
+    for (p = buf; p < q; p++)
+    {
+        octet = *p; /* Cast to unsigned octet. */
+        crc = (crc >> 8) ^ table[(crc & 0xff) ^ octet];
+    }
+    return ~crc;
 }
 
-static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs) {
+static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs)
+{
     uint32_t crc = 0;
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_FINGERPRINT,
         .length = sizeof(uint32_t),
     };
-    
+
     crc = stun_client::crc32(0, msg, (size_t)(attrs - msg));
     crc ^= FINGERPRINT_XOR;
     crc = htonl(crc);
@@ -92,8 +99,8 @@ static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs) {
     return stun_add_attr(attrs, &attr);
 }
 
-
-static inline bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs) {
+static inline bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs)
+{
     uint32_t crc = 0, s_crc = 0;
     struct stun_attr_t s_attr = STUN_ATTR(&attrs[0], &attrs[2], &attrs[4]);
 
@@ -105,13 +112,14 @@ static inline bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs) {
     return crc == s_crc;
 }
 
-static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::string password) {
+static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::string password)
+{
     std::vector<uint8_t> raw_key(password.begin(), password.end());
     std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(20);
     struct crypto_mac_ctx_t ctx("hmac", "", "sha1", key);
-    
+
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_INTEGRITY_MSG,
         .length = 20,
@@ -124,7 +132,8 @@ static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::str
     return stun_add_attr(attrs, &attr);
 }
 
-static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::string password) {
+static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::string password)
+{
     std::vector<uint8_t> raw_key(password.begin(), password.end());
     std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
@@ -139,14 +148,14 @@ static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::
     return digest.size() == s_digest.size() && !CRYPTO_memcmp(digest.data(), s_digest.data(), digest.size());
 }
 
-
-static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::string password) {
+static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::string password)
+{
     std::vector<uint8_t> raw_key(password.begin(), password.end());
     std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(32);
     struct crypto_mac_ctx_t ctx("hmac", "", "sha256", key);
-    
+
     static struct stun_attr_t attr = {
         .type = STUN_ATTR_INTEGRITY_MSG_SHA256,
         .length = 32,
@@ -159,7 +168,8 @@ static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::s
     return stun_add_attr(attrs, &attr);
 }
 
-static inline bool stun_attr_check_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::string password) {
+static inline bool stun_attr_check_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::string password)
+{
     std::vector<uint8_t> raw_key(password.begin(), password.end());
     std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
@@ -174,5 +184,33 @@ static inline bool stun_attr_check_hmac_sha256(uint8_t *msg, uint8_t *attrs, std
     return digest.size() == s_digest.size() && !CRYPTO_memcmp(digest.data(), s_digest.data(), digest.size());
 }
 
+static inline void stun_attr_get_mapped_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr)
+{
+    void *ext_addr;
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[5]);
+    addr->sa_family = (uint16_t)(*(int8_t *)(&attr.value[0])) == 0x1 ? AF_INET : AF_INET6;
+    if (addr->sa_family == AF_INET)
+    {
+        ext_addr = network::inet_address(addr);
+        ((struct sockaddr_in *)ext_addr)->sin_family = addr->sa_family;
+        ((struct sockaddr_in *)ext_addr)->sin_port = (*(int16_t *)(&attr.value[1]));
+        ((struct sockaddr_in *)ext_addr)->sin_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
+        ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr = (*(uint32_t *)&attr.value[3]);
+        ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr ^= htonl(MAGIC_COOKIE);
+    }
+    else if (addr->sa_family == AF_INET6)
+    {
+        ext_addr = network::inet6_address(addr);
+        ((struct sockaddr_in6 *)ext_addr)->sin6_family = addr->sa_family;
+        ((struct sockaddr_in6 *)ext_addr)->sin6_port = (*(int16_t *)(&attr.value[1]));
+        ((struct sockaddr_in6 *)ext_addr)->sin6_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
+        memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[3], sizeof(struct in6_addr));
+        ((struct sockaddr_in6 *)ext_addr)->sin6_addr.s6_addr32[0] ^= htonl(MAGIC_COOKIE);
+        for (int i = 0; i < 12; ++i)
+        {
+            ((struct sockaddr_in6 *)ext_addr)->sin6_addr.s6_addr[i + 4] ^= transaction_id[i];
+        }
+    }
+}
 
 #endif

@@ -137,7 +137,6 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
     struct stun_attr_t attr;
     uint8_t *attrs = &packet.attributes[0];
     uint16_t attr_len = 0;
-    void *ext_addr;
     int ret, len, offset = 0;
 
     ret = resolve(family, stun_hostname, &stun_server);
@@ -163,37 +162,13 @@ int stun_client::bind_request(const char *stun_hostname, short stun_port, int fa
     for (int i = 0; i < len; i += (4 + attr_len))
     {
         attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 5]);
-
         if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
         {
-            ext_ip.sa_family = (uint16_t)(*(int8_t *)(&attr.value[0])) == 0x1 ? AF_INET : AF_INET6;
-            if (ext_ip.sa_family == AF_INET)
-            {
-                ext_addr = network::inet_address(&ext_ip);
-                ((struct sockaddr_in *)ext_addr)->sin_family = ext_ip.sa_family;
-                ((struct sockaddr_in *)ext_addr)->sin_port = (*(int16_t *)(&attr.value[1]));
-                ((struct sockaddr_in *)ext_addr)->sin_port ^= ((uint16_t)packet.magic_cookie);
-                ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr = (*(uint32_t *)&attr.value[3]);
-                ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr ^= packet.magic_cookie;
-            }
-            else if (ext_ip.sa_family == AF_INET6)
-            {
-                ext_addr = network::inet6_address(&ext_ip);
-                ((struct sockaddr_in6 *)ext_addr)->sin6_family = ext_ip.sa_family;
-                ((struct sockaddr_in6 *)ext_addr)->sin6_port = (*(int16_t *)(&attr.value[1]));
-                ((struct sockaddr_in6 *)ext_addr)->sin6_port ^= ((uint16_t)packet.magic_cookie);
-                memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[3], sizeof(struct in6_addr));
-                ((struct sockaddr_in6 *)ext_addr)->sin6_addr.s6_addr32[0] ^= packet.magic_cookie;
-                for (int i = 0; i < 12; ++i)
-                {
-                    ((struct sockaddr_in6 *)ext_addr)->sin6_addr.s6_addr[i + 4] ^= packet.transaction_id[i];
-                }
-            }
-            return 0;
+            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &ext_ip);
         }
     }
 
-    return -ENOENT;
+    return 0;
 }
 
 class nat_pnp
