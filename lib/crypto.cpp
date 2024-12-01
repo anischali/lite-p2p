@@ -102,3 +102,12 @@ clean_mac:
 
     return {};
 }
+
+
+bool crypto::crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf, std::vector<uint8_t> &digest) {
+    std::vector<uint8_t> tmp;
+
+    tmp = crypto_mac_sign(ctx, buf);
+
+    return ((digest.size() == tmp.size()) && !CRYPTO_memcmp(digest.data(), tmp.data(), digest.size()));
+}

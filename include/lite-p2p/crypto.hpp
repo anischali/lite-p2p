@@ -48,6 +48,7 @@ namespace lite_p2p {
                                 const char *_digest, std::vector<uint8_t> &_key); 
         static void crypto_mac_free(crypto_mac_ctx_t *ctx);
         static std::vector<uint8_t> crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf);
+        static bool crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf, std::vector<uint8_t> &digest);
     };
 
 };

@@ -44,5 +44,8 @@ int main(int argc, char *argv[]) {
     sign = lite_p2p::crypto::crypto_mac_sign(&ctx_hmacsha1, data); // echo -n "test" | sha256hmac -K "pass123" -h sha1
     print_hexbuf("hmacsha1", sign.data(), sign.size());
 
+    bool valid = lite_p2p::crypto::crypto_mac_verify(&ctx_hmacsha1, data, sign);
+    print_hexbuf("hmacsha1 - verify", (uint8_t *)&valid, 1);
+
     return 0;
 }
