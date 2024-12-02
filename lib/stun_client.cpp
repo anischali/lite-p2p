@@ -130,7 +130,8 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
         print_hexbuf("key:", session->key[i].data(), session->key[i].size());
     }
 
-    
+    session->algorithms = {htons(STUN_PASSWD_ALG_MD5), htons(STUN_PASSWD_ALG_SHA256)};
+    session->selected_algo = htons(STUN_PASSWD_ALG_SHA256);
 }
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
@@ -173,15 +174,16 @@ int stun_client::bind_request(struct stun_session_t *session)
 
 retry:
     if (retry_attrs) {
+        packet.msg_type = htons(STUN_REQUEST);
         offset = packet.msg_len = 0;
-        offset += stun_attr_user(&attrs[offset], session->user + ":" + session->realm);
-        offset += stun_attr_software(&attrs[offset], session->software);//"lite-p2p v 1.0");
+        offset += stun_attr_user(&attrs[offset], session->user);
         offset += stun_attr_realm(&attrs[offset], session->realm);
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
-        packet.msg_len += offset + 8 + 24;
+        offset += stun_attr_software(&attrs[offset], session->software);
+        packet.msg_len += htons(offset + 24);
         offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA1]);
+        packet.msg_len += htons(8);
         offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
-        packet.msg_len = htons(packet.msg_len);
     }
 
     ret = request(&session->server, &packet);

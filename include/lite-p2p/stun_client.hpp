@@ -36,10 +36,11 @@ struct stun_session_t {
     std::string software;
     std::string realm;
     std::vector<uint8_t> key[SHA_ALGO_MAX];
+    std::vector<uint32_t> algorithms;
     std::vector<uint8_t> nonce;
     struct sockaddr_t server;
     struct sockaddr_t ext_ip;
-    sha_algo_type_t selected_algo;
+    uint32_t selected_algo;
     bool lt_cred_mech;
 };
 

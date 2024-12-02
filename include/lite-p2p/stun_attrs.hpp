@@ -5,29 +5,84 @@
 
 using namespace lite_p2p;
 
-static inline int stun_attr_user(uint8_t *attrs, std::string user_realm)
-{
-    static struct stun_attr_t attr = {
-        .type = STUN_ATTR_USERNAME,
+static inline int stun_attr_add_string(uint8_t *attrs, uint16_t attr_type, std::string s) {
+    struct stun_attr_t attr = {
+        .type = attr_type,
     };
 
-    attr.value = (uint8_t *)user_realm.c_str();
-    attr.length = user_realm.length();
+    attr.value = (uint8_t *)s.c_str();
+    attr.length = s.length();
 
     return stun_add_attr(attrs, &attr);
 }
 
-static inline int stun_attr_nonce(uint8_t *attrs, std::vector<uint8_t> nonce)
+static inline int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint8_t> vec)
 {
     static struct stun_attr_t attr = {
-        .type = STUN_ATTR_NONCE,
+        .type = attr_type,
     };
 
-    attr.value = (uint8_t *)nonce.data();
-    attr.length = nonce.size();
+    attr.value = (uint8_t *)vec.data();
+    attr.length = vec.size();
 
     return stun_add_attr(attrs, &attr);
 }
+
+static inline int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint16_t> vec)
+{
+    static struct stun_attr_t attr = {
+        .type = attr_type,
+    };
+
+    attr.value = (uint8_t *)vec.data();
+    attr.length = vec.size() * sizeof(uint16_t);
+
+    return stun_add_attr(attrs, &attr);
+}
+
+static inline int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint32_t> vec)
+{
+    static struct stun_attr_t attr = {
+        .type = attr_type,
+    };
+
+    attr.value = (uint8_t *)vec.data();
+    attr.length = vec.size() * sizeof(uint32_t);
+
+    return stun_add_attr(attrs, &attr);
+}
+
+static inline int stun_attr_add_u16(uint8_t *attrs, uint16_t attr_type, uint16_t val)
+{
+    static struct stun_attr_t attr = {
+        .type = attr_type,
+    };
+
+    attr.value = (uint8_t *)&val;
+    attr.length = sizeof(val);
+
+    return stun_add_attr(attrs, &attr);
+}
+
+static inline int stun_attr_add_u32(uint8_t *attrs, uint16_t attr_type, uint32_t val)
+{
+    static struct stun_attr_t attr = {
+        .type = attr_type,
+    };
+
+    attr.value = (uint8_t *)&val;
+    attr.length = sizeof(val);
+
+    return stun_add_attr(attrs, &attr);
+}
+
+#define stun_attr_user(attrs, user) stun_attr_add_string(attrs, STUN_ATTR_USERNAME, user)
+
+#define stun_attr_nonce(attrs, nonce) stun_attr_add_u8_vector(attrs, STUN_ATTR_NONCE, nonce)
+
+#define stun_attr_pass_algorithms(attrs, algs) stun_attr_add_u32_vector(attrs, STUN_ATTR_PASSWD_ALGS, algs)
+
+#define stun_attr_pass_algorithm(attrs, alg) stun_attr_add_u32(attrs, STUN_ATTR_PASSWD_ALG, alg)
 
 static inline std::vector<uint8_t> stun_attr_get_nonce(struct stun_attr_t *attr)
 {
@@ -42,29 +97,9 @@ static inline std::vector<uint8_t> stun_attr_get_nonce(struct stun_attr_t *attr)
     return nonce;
 }
 
-static inline int stun_attr_software(uint8_t *attrs, std::string soft)
-{
-    static struct stun_attr_t attr = {
-        .type = STUN_ATTR_SOFTWARE,
-    };
+#define stun_attr_software(attrs, soft) stun_attr_add_string(attrs, STUN_ATTR_SOFTWARE, soft)
 
-    attr.value = (uint8_t *)soft.c_str();
-    attr.length = soft.length();
-
-    return stun_add_attr(attrs, &attr);
-}
-
-static inline int stun_attr_realm(uint8_t *attrs, std::string realm)
-{
-    static struct stun_attr_t attr = {
-        .type = STUN_ATTR_REALM,
-    };
-
-    attr.value = (uint8_t *)realm.c_str();
-    attr.length = realm.length();
-
-    return stun_add_attr(attrs, &attr);
-}
+#define stun_attr_realm(attrs, realm) stun_attr_add_string(attrs, STUN_ATTR_REALM, realm)
 
 static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs)
 {

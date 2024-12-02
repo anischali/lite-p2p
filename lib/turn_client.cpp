@@ -20,10 +20,13 @@ retry:
     offset += stun_attr_user(&attrs[offset], session->user);
     offset += stun_attr_realm(&attrs[offset], session->realm);
     offset += stun_attr_nonce(&attrs[offset], session->nonce);
+    offset += stun_attr_pass_algorithm(&attrs[offset], session->selected_algo);
     offset += stun_attr_software(&attrs[offset], session->software);
-    packet.msg_len += htons(offset + 8 + 24 + 36);
+    packet.msg_len += htons(offset + 24);
     offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA1]);
+    packet.msg_len += htons(36);
     offset += stun_attr_msg_hmac_sha256((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA256]);
+    packet.msg_len += htons(8);
     offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
 
     ret = request(&session->server, &packet);
