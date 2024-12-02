@@ -15,7 +15,7 @@ std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::vector<uint8
     if (!ctx)
         return {};
     
-    ret = EVP_DigestInit_ex(ctx, algorithm, NULL);
+    ret = EVP_DigestInit(ctx, algorithm);
     if (!ret)
         goto out_err;
 
@@ -23,7 +23,7 @@ std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::vector<uint8
     if (!ret)
         goto out_err;
 
-    ret = EVP_DigestFinal_ex(ctx, digest.data(), &out_len);
+    ret = EVP_DigestFinal(ctx, digest.data(), &out_len);
     if (!ret)
         goto out_err;
 
