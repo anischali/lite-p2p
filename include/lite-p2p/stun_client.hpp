@@ -63,9 +63,17 @@ enum stun_errors {
     STUN_ERR_ALT_SERVER = STUN_ERR(3, 0), // should use an other server
     STUN_ERR_BAD_REQUEST = STUN_ERR(4, 0), // malformed request
     STUN_ERR_UNAUTH = STUN_ERR(4, 1), // wrong credentials
-    STUN_ERR_UNKNOWN_ATTR = STUN_ERR(4, 20),
+    STUN_ERR_FORBIDDEN = STUN_ERR(4, 3), // stun error forbidden
+    STUN_ERR_REQ_TIMEOUT = STUN_ERR(4, 8), // Request timed out
+    STUN_ERR_UNKNOWN_ATTR = STUN_ERR(4, 20), //Unkown attribute
+    STUN_ERR_ALLOC_MISMATCH = STUN_ERR(4, 37), // allocation mismatch
     STUN_ERR_STALE_NONCE = STUN_ERR(4, 38), // retry with the nonce present in response
+    STUN_ERR_ADDR_NOTSUPP = STUN_ERR(4, 40), // address not supported
+    STUN_ERR_WRONG_CRED = STUN_ERR(4, 41), // Wrong credentials
+    STUN_ERR_UNSUPP_TRANSP_ADDR = STUN_ERR(4, 42), //Unsupported Transport Address
+    STUN_ERR_QUOTA_REACHED = STUN_ERR(4, 86), // Allocation Quota Reached
     STUN_ERR_SERVER_ERR = STUN_ERR(5, 0), //should try again
+    STUN_ERR_INSUFF_CAPACITY = STUN_ERR(5, 8), // Insufficient Capacity
 };
 
 /*
