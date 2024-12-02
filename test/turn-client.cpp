@@ -105,10 +105,12 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
 
+    turn.stun_register_session(&s_turn);
+
     int ret = turn.allocate_request(&s_turn.server);
     if (ret < 0)
         exit(ret);
-
+    
     //printf("external ip: %s\n", lite_p2p::network::addr_to_string(&turn).c_str());
     lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));

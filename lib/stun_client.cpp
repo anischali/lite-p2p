@@ -99,6 +99,8 @@ struct sockaddr_t * stun_client::stun_get_external_ip(struct sockaddr_t *stun_se
 }
 
 
+
+
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
 {
     uint8_t transaction_id[12];

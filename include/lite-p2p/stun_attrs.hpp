@@ -37,7 +37,7 @@ static inline std::vector<uint8_t> stun_attr_get_nonce(struct stun_attr_t *attr)
         return {};
     
     nonce.resize(attr->length);
-    nonce.assign(&attr->value[0], &attr->value[attr->length - 1]);
+    memcpy(nonce.data(), &attr->value[0], attr->length);
 
     return nonce;
 }
