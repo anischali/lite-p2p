@@ -8,22 +8,25 @@ using namespace lite_p2p;
 turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 
 
-int turn_client::allocate_request(struct sockaddr_t *stun_server) {
+int turn_client::allocate_request(struct stun_session_t *session) {
     struct stun_packet_t packet(STUN_ALLOCATE);
     struct stun_attr_t attr = {0};
     uint8_t *attrs = &packet.attributes[0];
     int ret, len = 0, err_code = 0, offset = 0;
-    struct stun_session_t *session;
 
-    session = stun_session_get(stun_server);
-    if (!session)
-        return -ENONET;
 retry:
-    offset = 0;
-    attrs = &packet.attributes[0];
-    offset += stun_attr_nonce(attrs, session->nonce);
+    packet.msg_type = htons(STUN_ALLOCATE);
+    offset = packet.msg_len = 0;
+    offset += stun_attr_user(&attrs[offset], session->user);
+    offset += stun_attr_realm(&attrs[offset], session->realm);
+    offset += stun_attr_nonce(&attrs[offset], session->nonce);
+    offset += stun_attr_software(&attrs[offset], session->software);
+    packet.msg_len += htons(offset + 8 + 24 + 36);
+    offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA1]);
+    offset += stun_attr_msg_hmac_sha256((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA256]);
+    offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
 
-    ret = request(stun_server, &packet);
+    ret = request(&session->server, &packet);
     if (ret < 0)
         return ret;
 
@@ -36,17 +39,17 @@ retry:
         switch (attr.type)
         {
         case STUN_ATTR_ERR_CODE:
-            err_code = *(int *)&attr.value[0];
+            err_code = ntohl(*(uint32_t *)&attr.value[0]);
             break;
         case STUN_ATTR_NONCE:
             auto nonce = stun_attr_get_nonce(&attr);
-            if (err_code != 0 && session->nonce != nonce) {
+            if (err_code == STUN_ERR_STALE_NONCE && session->nonce != nonce) {
                 session->nonce = nonce;
                 goto retry;
             }
             break;
         }
     }
-
+    printf("err: %d\n", err_code);
     return 0;
 }

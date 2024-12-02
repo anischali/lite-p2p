@@ -89,7 +89,11 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, atoi(argv[4]));
     lite_p2p::turn_client turn(conn.sock_fd);
-    struct stun_session_t s_turn;
+    struct stun_session_t s_turn = {
+        .user = "visi",
+        .software = "lite-p2p v 1.0",
+        .realm = "visibog.org",
+    };
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
         lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
@@ -105,9 +109,11 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
 
+    turn.stun_generate_keys(&s_turn, "Z6OjD52Q4rZqgGmmCXE3xA==", true);
+
     turn.stun_register_session(&s_turn);
 
-    int ret = turn.allocate_request(&s_turn.server);
+    int ret = turn.allocate_request(&s_turn);
     if (ret < 0)
         exit(ret);
     

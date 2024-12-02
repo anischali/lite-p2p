@@ -20,13 +20,26 @@
 #define MAGIC_COOKIE 0x2112A442
 #define FINGERPRINT_XOR 0x5354554e
 
+enum sha_algo_type {
+    SHA_ALGO_UNKNOWN = -1,
+    SHA_ALGO_MD5 = 0,
+    SHA_ALGO_SHA1 = 1,
+    SHA_ALGO_SHA256 = 2,
+    SHA_ALGO_SHA384 = 3,
+    SHA_ALGO_SHA512 = 4,
+    SHA_ALGO_MAX,
+};
+typedef uint8_t sha_algo_type_t;
+
 struct stun_session_t {
     std::string user;
+    std::string software;
     std::string realm;
-    std::vector<uint8_t> key;
+    std::vector<uint8_t> key[SHA_ALGO_MAX];
     std::vector<uint8_t> nonce;
     struct sockaddr_t server;
     struct sockaddr_t ext_ip;
+    sha_algo_type_t selected_algo;
     bool lt_cred_mech;
 };
 
@@ -45,14 +58,14 @@ enum stun_methods
     STUN_CHANNEL_BIND = 0x0009,
 };
 
-#define STUN_ERR(x) (0xff000000 | x)
+#define STUN_ERR(class, err) (class << 8 | err)
 enum stun_errors {
-    STUN_ERR_ALT_SERVER = STUN_ERR(300), // should use an other server
-    STUN_ERR_BAD_REQUEST = STUN_ERR(400), // malformed request
-    STUN_ERR_UNAUTH = STUN_ERR(401), // wrong credentials
-    STUN_ERR_UNKNOWN_ATTR = STUN_ERR(420),
-    STUN_ERR_STALE_NONCE = STUN_ERR(438), // retry with the nonce present in response
-    STUN_ERR_SERVER_ERR = STUN_ERR(500), //should try again
+    STUN_ERR_ALT_SERVER = STUN_ERR(3, 0), // should use an other server
+    STUN_ERR_BAD_REQUEST = STUN_ERR(4, 0), // malformed request
+    STUN_ERR_UNAUTH = STUN_ERR(4, 1), // wrong credentials
+    STUN_ERR_UNKNOWN_ATTR = STUN_ERR(4, 20),
+    STUN_ERR_STALE_NONCE = STUN_ERR(4, 38), // retry with the nonce present in response
+    STUN_ERR_SERVER_ERR = STUN_ERR(5, 0), //should try again
 };
 
 /*
@@ -252,9 +265,9 @@ namespace lite_p2p
         stun_client(int socket_fd);
         ~stun_client();
 
-        int bind_request(struct sockaddr_t *stun_server);
+        int bind_request(struct stun_session_t *session);
         void stun_register_session(struct stun_session_t *session);
-        void stun_generate_key(struct stun_session_t *session, std::string password, bool lt_cred);
+        void stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred);
         struct stun_session_t *stun_session_get(struct sockaddr_t *addr);
         struct sockaddr_t *stun_get_external_ip(struct sockaddr_t *stun_server);
         static uint32_t crc32(uint32_t crc, uint8_t *buf, size_t size);

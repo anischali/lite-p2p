@@ -81,6 +81,7 @@ void stun_client::stun_register_session(struct stun_session_t *session) {
     
     s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
 
+    session->nonce.assign(16, 0);
     session_db[s_sha] = session;
 }
 
@@ -98,8 +99,39 @@ struct sockaddr_t * stun_client::stun_get_external_ip(struct sockaddr_t *stun_se
     return nullptr;
 }
 
+void print_hexbuf(const char *label, uint8_t *buf, int len) {
 
+    printf("%s (%d): ", label, len);
+    for (int i = 0; i < len; ++i) {
+        printf("%02x", buf[i]);
+    }
 
+    printf("\n");
+}
+
+void stun_client::stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred) {
+    auto algos = [](int i){ 
+        static const EVP_MD *algos[] = {
+            [SHA_ALGO_MD5] = EVP_md5(),
+            [SHA_ALGO_SHA1] = EVP_sha1(),
+            [SHA_ALGO_SHA256] = EVP_sha256(),
+            [SHA_ALGO_SHA384] = EVP_sha384(),
+            [SHA_ALGO_SHA512] = EVP_sha512(),
+        };
+        
+        return algos[i];
+    };
+    std::string s_key = lt_cred ? (session->user + ":" + session->realm + ":" + password) : password; 
+
+    session->lt_cred_mech = lt_cred;
+    printf("pass: %s\n", s_key.c_str());
+    for (int i = 0; i < SHA_ALGO_MAX; ++i) {
+        session->key[i] = crypto::checksum(algos(i), s_key);
+        print_hexbuf("key:", session->key[i].data(), session->key[i].size());
+    }
+
+    
+}
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
 {
@@ -131,25 +163,28 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
     return 0;
 }
 
-int stun_client::bind_request(struct sockaddr_t *stun_server)
+int stun_client::bind_request(struct stun_session_t *session)
 {
     struct stun_packet_t packet(STUN_REQUEST);
-    struct stun_session_t *session;
     struct stun_attr_t attr;
     uint8_t *attrs = &packet.attributes[0];
     int ret, len, offset = 0;
+    bool retry_attrs = false;
 
-    session = stun_session_get(stun_server);
-    if (!session)
-        return -ENOENT;
+retry:
+    if (retry_attrs) {
+        offset = packet.msg_len = 0;
+        offset += stun_attr_user(&attrs[offset], session->user + ":" + session->realm);
+        offset += stun_attr_software(&attrs[offset], session->software);//"lite-p2p v 1.0");
+        offset += stun_attr_realm(&attrs[offset], session->realm);
+        offset += stun_attr_nonce(&attrs[offset], session->nonce);
+        packet.msg_len += offset + 8 + 24;
+        offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA1]);
+        offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
+        packet.msg_len = htons(packet.msg_len);
+    }
 
-    offset += stun_attr_user(&attrs[offset], "bayaz");
-    offset += stun_attr_software(&attrs[offset], "lite-p2p");
-    offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], "test_pass123");
-    packet.msg_len += htons(offset + 8);
-    offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
-
-    ret = request(stun_server, &packet);
+    ret = request(&session->server, &packet);
     if (ret < 0)
         return ret;
 
@@ -158,10 +193,19 @@ int stun_client::bind_request(struct sockaddr_t *stun_server)
 
     for (int i = 0; i < len; i += (4 + attr.length))
     {
-        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 5]);
+        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
         if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
         {
             stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &session->ext_ip);
+        }
+
+        if (attr.type == STUN_ATTR_NONCE)
+        {
+            auto s_nonce = stun_attr_get_nonce(&attr);
+            if (!retry_attrs && session->nonce != s_nonce) {
+                session->nonce = s_nonce; 
+                goto retry;
+            }
         }
     }
 
