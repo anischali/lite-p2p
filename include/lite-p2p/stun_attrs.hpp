@@ -54,6 +54,18 @@ static inline int stun_attr_software(uint8_t *attrs, std::string soft)
     return stun_add_attr(attrs, &attr);
 }
 
+static inline int stun_attr_realm(uint8_t *attrs, std::string realm)
+{
+    static struct stun_attr_t attr = {
+        .type = STUN_ATTR_REALM,
+    };
+
+    attr.value = (uint8_t *)realm.c_str();
+    attr.length = realm.length();
+
+    return stun_add_attr(attrs, &attr);
+}
+
 static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs)
 {
     uint32_t crc = 0;
@@ -83,10 +95,8 @@ static inline bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs)
     return crc == s_crc;
 }
 
-static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::string password)
+static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs,  std::vector<uint8_t> key)
 {
-    std::vector<uint8_t> raw_key(password.begin(), password.end());
-    std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(20);
     struct crypto_mac_ctx_t ctx("hmac", "", "sha1", key);
@@ -103,10 +113,8 @@ static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::str
     return stun_add_attr(attrs, &attr);
 }
 
-static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::string password)
+static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
 {
-    std::vector<uint8_t> raw_key(password.begin(), password.end());
-    std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(32), s_digest;
     struct crypto_mac_ctx_t ctx("hmac", "", "sha1", key);
@@ -119,10 +127,8 @@ static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::
     return digest.size() == s_digest.size() && !CRYPTO_memcmp(digest.data(), s_digest.data(), digest.size());
 }
 
-static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::string password)
+static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
 {
-    std::vector<uint8_t> raw_key(password.begin(), password.end());
-    std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(32);
     struct crypto_mac_ctx_t ctx("hmac", "", "sha256", key);
@@ -139,10 +145,8 @@ static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::s
     return stun_add_attr(attrs, &attr);
 }
 
-static inline bool stun_attr_check_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::string password)
+static inline bool stun_attr_check_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
 {
-    std::vector<uint8_t> raw_key(password.begin(), password.end());
-    std::vector<uint8_t> key = crypto::checksum(SHA_ALGO(md5), raw_key);
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(32), s_digest;
     struct crypto_mac_ctx_t ctx("hmac", "", "sha256", key);
