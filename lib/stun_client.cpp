@@ -281,6 +281,9 @@ int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_
 
         switch (attr.type)
         {
+        case STUN_ATTR_LIFETIME:
+            session->liftime = htonl(*(uint32_t *)attr.value);
+            break;
         case STUN_ATTR_XOR_MAPPED_ADDR:
             stun_attr_get_mapped_addr(&attrs[i], packet->transaction_id, &session->mapped_addr);
             break;
