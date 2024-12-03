@@ -104,7 +104,7 @@ static inline std::vector<uint8_t> stun_attr_get_nonce(struct stun_attr_t *attr)
 static inline int stun_attr_fingerprint(uint8_t *msg, uint8_t *attrs)
 {
     uint32_t crc = 0;
-    static struct stun_attr_t attr = {
+    struct stun_attr_t attr = {
         .type = STUN_ATTR_FINGERPRINT,
         .length = sizeof(uint32_t),
     };
@@ -143,6 +143,17 @@ static inline int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t att
 
     ctx.key = key;
     digest = crypto::crypto_mac_sign(&ctx, msg_buf);
+    auto print_hexbuf = [](const char *label, uint8_t *buf, int len)
+    {
+        printf("%s (%d): ", label, len);
+        for (int i = 0; i < len; ++i)
+        {
+            printf("%02x", buf[i]);
+        }
+        printf("\n");
+    };
+    print_hexbuf("buf", msg_buf.data(), msg_buf.size());
+    print_hexbuf("sha", digest.data(), digest.size());
     attr.value = digest.data();
 
     return stun_add_attr(attrs, &attr);

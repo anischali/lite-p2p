@@ -134,7 +134,7 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
         algos[SHA_ALGO_SHA256].stun_alg,
     };
 
-    session->selected_algo = &algos[SHA_ALGO_SHA256];
+    session->selected_algo = &algos[SHA_ALGO_MD5];
 }
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)

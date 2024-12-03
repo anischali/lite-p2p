@@ -22,9 +22,9 @@ retry:
     offset += stun_attr_nonce(&attrs[offset], session->nonce);
     offset += stun_attr_pass_algorithm(&attrs[offset], session->selected_algo->stun_alg);
     offset += stun_attr_software(&attrs[offset], session->software);
-    packet.msg_len += htons(offset + 36);
-    offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256], 
-                    STUN_ATTR_INTEGRITY_MSG_SHA256, 
+    packet.msg_len += htons(offset + algos[SHA_ALGO_SHA1].length + 4);
+    offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1], 
+                    STUN_ATTR_INTEGRITY_MSG, 
                     (uint8_t *)&packet, &attrs[offset], 
                     session->key[session->selected_algo->type]);
     packet.msg_len += htons(8);
