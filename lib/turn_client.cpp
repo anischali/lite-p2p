@@ -102,8 +102,8 @@ int turn_client::bind_channel_request(struct stun_session_t *session, struct soc
 retry:
     packet.msg_type = htons(STUN_CHANNEL_BIND);
     packet.msg_len = offset = 0;
-    offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
     offset += stun_attr_channel_num(&packet.attributes[offset], chanel_id);
+    offset += stun_attr_peer_addr(&packet.attributes[offset], packet.transaction_id, peer);
     offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
 
     packet.msg_len = htons(offset);
