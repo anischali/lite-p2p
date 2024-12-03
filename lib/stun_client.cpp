@@ -228,7 +228,7 @@ int stun_client::stun_add_attrs(struct stun_session_t *session,
     int offset = 0;
     offset += stun_attr_software(&attrs[offset], session->software);
     if (packet->msg_type == htons(STUN_ALLOCATE)) {
-        offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
+        offset += stun_attr_lifetime(&attrs[offset], htonl(session->liftime)); // one hour
         offset += stun_attr_request_transport(&attrs[offset], session->protocol);
         offset += stun_attr_dont_fragment(&attrs[offset]);
     }
@@ -284,11 +284,13 @@ int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_
             break;
         case STUN_ATTR_ERR_CODE:
             err_code = ntohl(*(uint32_t *)&attr.value[0]);
+            if (err_code == STUN_ERR_ALLOC_MISMATCH)
+                return 0;
             break;
         case STUN_ATTR_NONCE:
             v_tmp = stun_attr_get_nonce(&attr);
             if ((err_code == STUN_ERR_STALE_NONCE ||
-                 (err_code == STUN_ERR_UNAUTH)) &&
+                 err_code == STUN_ERR_UNAUTH) &&
                 session->nonce != v_tmp)
             {
                 session->nonce = v_tmp;

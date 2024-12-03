@@ -9,10 +9,10 @@ using namespace lite_p2p;
 turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 
 int turn_client::allocate_request(struct stun_session_t *session) {
-    struct stun_packet_t packet(STUN_ALLOCATE);
     int ret = 0;
     bool retry_attrs = false;
-
+    struct stun_packet_t packet(STUN_ALLOCATE);
+    session->liftime = 3600;
 retry:
     packet.msg_type = htons(STUN_ALLOCATE);
     packet.msg_len = 0;
@@ -47,9 +47,8 @@ retry:
         return ret;
 
     ret = stun_process_attrs(session, &packet);
-    if (ret == -STUN_ERR_UNAUTH) {
+    if (ret == -STUN_ERR_UNAUTH)
         goto retry;
-    }
 
     return ret;
 }

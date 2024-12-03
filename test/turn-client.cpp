@@ -110,12 +110,12 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
 
-    struct sockaddr_t peer;
-    lite_p2p::network::string_to_addr(AF_INET, "24.48.39.41", &peer);
-
     turn.stun_generate_keys(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==", true);
 
     turn.stun_register_session(&s_turn);
+
+    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
+    lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
 
     int ret = turn.allocate_request(&s_turn);
     if (ret < 0) {
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
     
-    ret = turn.create_permission_request(&s_turn, &peer);
+    ret = turn.create_permission_request(&s_turn, &conn.remote);
 
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
@@ -131,8 +131,6 @@ int main(int argc, char *argv[]) {
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.mapped_addr));
     
-    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
 
