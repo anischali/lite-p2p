@@ -134,7 +134,8 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
         algos[SHA_ALGO_SHA256].stun_alg,
     };
 
-    session->selected_algo = &algos[SHA_ALGO_MD5];
+    session->hmac_algo = SHA_ALGO_SHA256;
+    session->key_algo = SHA_ALGO_MD5;
 }
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
@@ -185,10 +186,10 @@ retry:
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
         offset += stun_attr_software(&attrs[offset], session->software);
         packet.msg_len += htons(offset + 24);
-        offset += stun_attr_msg_hmac(session->selected_algo, 
+        offset += stun_attr_msg_hmac(&algos[session->hmac_algo], 
                             STUN_ATTR_INTEGRITY_MSG,
                             (uint8_t *)&packet, &attrs[offset], 
-                            session->key[session->selected_algo->type]);
+                            session->key[session->key_algo]);
         packet.msg_len += htons(8);
         offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
     }

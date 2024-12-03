@@ -53,7 +53,8 @@ struct stun_session_t {
     std::vector<uint8_t> nonce;
     struct sockaddr_t server;
     struct sockaddr_t ext_ip;
-    const struct algo_type_t *selected_algo;
+    sha_algo_type_t key_algo;
+    sha_algo_type_t hmac_algo;
     bool lt_cred_mech;
 };
 
