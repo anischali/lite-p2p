@@ -27,7 +27,7 @@ namespace lite_p2p
 
             list_for_each_entry_safe(ctx, save, array, list)
             {
-                if (ctx && ctx->cleanup)
+                if (ctx && ctx->cleanup && ctx->context)
                 {
                     ctx->cleanup(ctx->context);
                     list_del(&ctx->list);

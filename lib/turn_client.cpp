@@ -1,4 +1,5 @@
 #include <map>
+#include "lite-p2p/stun_client.hpp"
 #include "lite-p2p/turn_client.hpp"
 #include "lite-p2p/stun_attrs.hpp"
 #include "lite-p2p/crypto.hpp"
@@ -7,40 +8,18 @@ using namespace lite_p2p;
 
 turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 
-
 int turn_client::allocate_request(struct stun_session_t *session) {
     struct stun_packet_t packet(STUN_ALLOCATE);
     std::vector<uint8_t> v_tmp;
     struct stun_attr_t attr = {0};
     uint8_t *attrs = &packet.attributes[0];
     int ret, len = 0, err_code = 0, offset = 0;
-    bool retry_attrs = true;
+    bool retry_attrs = false;
 
 retry:
     packet.msg_type = htons(STUN_ALLOCATE);
     offset = packet.msg_len = 0;
-    offset += stun_attr_software(&attrs[offset], session->software);
-    offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
-    offset += stun_attr_request_transport(&attrs[offset], session->protocol);
-    offset += stun_attr_dont_fragment(&attrs[offset]);
-    if (retry_attrs) {
-        offset += stun_attr_user(&attrs[offset], session->user);
-        offset += stun_attr_realm(&attrs[offset], session->realm);
-        offset += stun_attr_nonce(&attrs[offset], session->nonce);
-        offset += stun_attr_pass_algorithms(&attrs[offset], session->algorithms);
-        //offset += stun_attr_pass_algorithm(&attrs[offset], algos[session->key_algo].stun_alg);
-        offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1], 
-                    STUN_ATTR_INTEGRITY_MSG, 
-                    &packet, &attrs[offset], 
-                    session->key[session->key_algo]);
-        //packet.msg_len = htons(offset + algos[SHA_ALGO_SHA256].length + 4);
-        //offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256], 
-        //            STUN_ATTR_INTEGRITY_MSG_SHA256, 
-        //            (uint8_t *)&packet, &attrs[offset], 
-        //            session->key[session->key_algo]);
-        offset += stun_attr_fingerprint(&packet, &attrs[offset]);
-    }
-
+    offset += stun_add_attrs(session, &packet, retry_attrs);
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);
     if (ret < 0)
@@ -55,10 +34,10 @@ retry:
         switch (attr.type)
         {
         case STUN_ATTR_XOR_MAPPED_ADDR:
-            
+            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &session->mapped_addr);
             break;
         case STUN_ATTR_XOR_RELAYED_ADDR:
-            
+            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &session->relayed_addr);
             break;
         case STUN_ATTR_ERR_CODE:
             err_code = ntohl(*(uint32_t *)&attr.value[0]);
@@ -78,7 +57,9 @@ retry:
                     session->key[session->key_algo]))
                 return -STUN_ERR_UNAUTH;
             break;
-            
+        case STUN_ATTR_PASSWD_ALGS:
+            // TODO: dynamicaly determine algorithms 
+            break;
         case STUN_ATTR_FINGERPRINT:
             if (!stun_attr_check_fingerprint(&packet, &attrs[i]))
                 return -EINVAL;
@@ -90,5 +71,19 @@ retry:
     return 0;
 }
 
+struct sockaddr_t * turn_client::stun_get_relayed_addr(struct sockaddr_t *stun_server) {
+    std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
+                               std::to_string(network::get_port(stun_server)) + ":" +
+                               std::to_string(stun_server->sa_family);
+
+    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
+
+    if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end())
+    {
+        return &s->second->mapped_addr;
+    }
+
+    return nullptr;
+}
 
 

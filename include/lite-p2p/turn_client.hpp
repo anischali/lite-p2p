@@ -9,7 +9,7 @@ namespace lite_p2p
     {
     private:
         int _socket;
-    
+
     public:
         turn_client(int sock_fd);
         ~turn_client() {};

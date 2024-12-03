@@ -222,6 +222,41 @@ retry:
     return 0;
 }
 
+
+int stun_client::stun_add_attrs(struct stun_session_t *session, 
+        struct stun_packet_t *packet, bool session_attrs) {
+    int offset = 0;
+    uint8_t *attrs = &packet->attributes[0];
+
+    offset += stun_attr_software(&attrs[offset], session->software);
+    offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
+    offset += stun_attr_request_transport(&attrs[offset], session->protocol);
+    offset += stun_attr_dont_fragment(&attrs[offset]);
+    if (session_attrs) {
+        offset += stun_attr_user(&attrs[offset], session->user);
+        offset += stun_attr_realm(&attrs[offset], session->realm);
+        offset += stun_attr_nonce(&attrs[offset], session->nonce);
+        if (session->key_algo == SHA_ALGO_SHA256) {
+            offset += stun_attr_pass_algorithms(&attrs[offset], session->algorithms);
+            offset += stun_attr_pass_algorithm(&attrs[offset], algos[session->key_algo].stun_alg);
+            offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256], 
+                        STUN_ATTR_INTEGRITY_MSG_SHA256, 
+                        packet, &attrs[offset], 
+                        session->key[session->key_algo]);
+        }
+        else {
+            offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1], 
+                        STUN_ATTR_INTEGRITY_MSG, 
+                        packet, &attrs[offset], 
+                        session->key[session->key_algo]);
+        }
+        offset += stun_attr_fingerprint(packet, &attrs[offset]);
+    }
+
+    return offset;
+}
+
+
 class nat_pnp
 {
 private:
@@ -272,3 +307,6 @@ public:
         r_port = _rport;
     };
 };
+
+
+

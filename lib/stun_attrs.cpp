@@ -9,6 +9,9 @@ int stun_attr_add_string(uint8_t *attrs, uint16_t attr_type, std::string s)
     attr.value = (uint8_t *)s.c_str();
     attr.length = s.length();
 
+    if (s.length() == 0)
+        return 0;
+
     return stun_add_attr(attrs, &attr);
 }
 
