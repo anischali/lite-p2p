@@ -51,9 +51,9 @@ retry:
 
 int turn_client::send_indication(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
     int ret = 0, offset;
-    struct stun_packet_t packet(STUN_DATA);
+    struct stun_packet_t packet(STUN_SEND_REQUEST);
 retry:
-    packet.msg_type = htons(STUN_DATA);
+    packet.msg_type = htons(STUN_SEND_REQUEST);
     packet.msg_len = offset = 0;
     offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
     offset += stun_attr_data(&packet.attributes[offset], buf);

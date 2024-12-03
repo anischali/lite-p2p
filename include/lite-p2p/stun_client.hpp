@@ -72,8 +72,8 @@ enum stun_methods
     /* Used for TURN service RFC 8656 */
     STUN_ALLOCATE = 0x0003,
     STUN_REFRESH = 0x0004,
-    STUN_SEND = 0x0006,
-    STUN_DATA = 0x0007,
+    STUN_SEND_REQUEST = 0x0006,
+    STUN_DATA_INDICATION = 0x0007,
     STUN_CREATE_PERM = 0x0008,
     STUN_CHANNEL_BIND = 0x0009,
 };
