@@ -42,4 +42,6 @@ bool stun_attr_check_hmac(const struct algo_type_t *alg, struct stun_packet_t *p
 
 void stun_attr_get_mapped_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr);
 
+int stun_attr_peer_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr);
+
 #endif

@@ -200,3 +200,36 @@ void stun_attr_get_mapped_addr(uint8_t *attrs, uint8_t *transaction_id, struct s
         }
     }
 }
+
+int stun_attr_peer_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr)
+{
+    void *ext_addr;
+    int length = addr->sa_family == AF_INET6 ? 16 : 12;
+    std::vector<uint8_t> s_addr(length);
+    struct stun_attr_t attr = {
+        .type = STUN_ATTR_XOR_PEER_ADDR,
+        .length = length,
+        .value = s_addr.data(),
+    };
+
+    *(int16_t *)&attr.value[1] = addr->sa_family == AF_INET6 ? 0x2 : 0x1;
+    if (addr->sa_family == AF_INET)
+    {
+        ext_addr = network::inet_address(addr);
+        *(int16_t *)(&attr.value[2]) = htons(((struct sockaddr_in *)ext_addr)->sin_port) ^ ((uint16_t)htonl(MAGIC_COOKIE));
+        (*(uint32_t *)&attr.value[4]) = htonl(((struct sockaddr_in *)ext_addr)->sin_addr.s_addr) ^ htonl(MAGIC_COOKIE);
+    }
+    else if (addr->sa_family == AF_INET6)
+    {
+        ext_addr = network::inet6_address(addr);
+        (*(int16_t *)(&attr.value[2])) = htons(((struct sockaddr_in6 *)ext_addr)->sin6_port) ^ ((uint16_t)htonl(MAGIC_COOKIE));
+        memcpy((uint8_t *)&attr.value[4], &((struct sockaddr_in6 *)ext_addr)->sin6_addr, sizeof(struct in6_addr));
+        *(uint32_t *)&attr.value[4] ^= htonl(MAGIC_COOKIE);
+        for (int i = 0; i < 12; ++i)
+        {
+            attr.value[i + 8] ^= transaction_id[i];
+        }
+    }
+
+    return stun_add_attr(attrs, &attr);
+}

@@ -223,11 +223,9 @@ retry:
 }
 
 int stun_client::stun_add_attrs(struct stun_session_t *session,
-                                struct stun_packet_t *packet, bool session_attrs)
+    struct stun_packet_t *packet, uint8_t *attrs, bool session_attrs)
 {
     int offset = 0;
-    uint8_t *attrs = &packet->attributes[0];
-
     offset += stun_attr_software(&attrs[offset], session->software);
     offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
     offset += stun_attr_request_transport(&attrs[offset], session->protocol);

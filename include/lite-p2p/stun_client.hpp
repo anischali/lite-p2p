@@ -298,7 +298,7 @@ namespace lite_p2p
         std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
         int stun_add_attrs(struct stun_session_t *session, 
-            struct stun_packet_t *packet, bool session_attrs);
+            struct stun_packet_t *packet, uint8_t *attrs, bool session_attrs);
         int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet);
     public:
         stun_client(int socket_fd);

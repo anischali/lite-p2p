@@ -15,9 +15,9 @@ namespace lite_p2p
         ~turn_client() {};
 
         int allocate_request(struct stun_session_t *session);
-        struct sockaddr_t *stun_get_relayed_addr(struct sockaddr_t *stun_server);
-        int create_channel_request(int session_id);
+        int create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer);
         int bind_channel_request(int session_id, int peer_id, int channel_id);
+        struct sockaddr_t *stun_get_relayed_addr(struct sockaddr_t *stun_server);
     };
 };
 #endif

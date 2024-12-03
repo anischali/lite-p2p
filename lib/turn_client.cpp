@@ -16,7 +16,7 @@ int turn_client::allocate_request(struct stun_session_t *session) {
 retry:
     packet.msg_type = htons(STUN_ALLOCATE);
     packet.msg_len = 0;
-    packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, retry_attrs));
+    packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], retry_attrs));
     ret = request(&session->server, &packet);
     if (ret < 0)
         return ret;
@@ -29,6 +29,33 @@ retry:
 
     return ret;
 }
+
+
+int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
+    struct stun_packet_t packet(STUN_CREATE_PERM);
+    int ret, offset;
+    bool retry_attrs = false;
+
+retry:
+    packet.msg_type = htons(STUN_CREATE_PERM);
+    packet.msg_len = offset = 0;
+    offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
+    offset += htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[offset], retry_attrs));
+
+    packet.msg_len = htons(offset);
+    ret = request(&session->server, &packet);
+    if (ret < 0)
+        return ret;
+
+    ret = stun_process_attrs(session, &packet);
+    if (ret == -STUN_ERR_UNAUTH) {
+        retry_attrs = true;
+        goto retry;
+    }
+
+    return ret;
+}
+
 
 struct sockaddr_t * turn_client::stun_get_relayed_addr(struct sockaddr_t *stun_server) {
     std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
