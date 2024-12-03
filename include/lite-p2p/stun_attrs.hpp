@@ -32,6 +32,8 @@ int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type);
 
 #define stun_attr_request_ex_family(attrs, family) stun_attr_add_u32(attrs, STUN_ATTR_ADDITIONAL_ADDR_FAMILY, family)
 
+#define stun_attr_channel_num(attrs, channel_id) stun_attr_add_u32(attrs, STUN_ATTR_CHANNEL_NUM, channel_id)
+
 #define stun_attr_dont_fragment(attrs) stun_attr_add_bool(attrs, STUN_ATTR_DONT_FRAGMENT)
 
 std::vector<uint8_t> stun_attr_get_nonce(struct stun_attr_t *attr);

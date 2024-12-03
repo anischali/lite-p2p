@@ -34,7 +34,7 @@ int turn_client::refresh_request(struct stun_session_t *session) {
     int ret = 0;
     struct stun_packet_t packet(STUN_REFRESH);
     session->liftime = 3600;
-
+retry:
     packet.msg_type = htons(STUN_REFRESH);
     packet.msg_len = 0;
     packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], true));
@@ -43,9 +43,8 @@ int turn_client::refresh_request(struct stun_session_t *session) {
         return ret;
 
     ret = stun_process_attrs(session, &packet);
-    if (ret < 0) {
-        return ret;
-    }
+    if (ret == -STUN_ERR_UNAUTH)
+        goto retry;
 
     return ret;
 }
@@ -72,6 +71,29 @@ retry:
     return ret;
 }
 
+
+int turn_client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, int chanel_id) {
+    struct stun_packet_t packet(STUN_CHANNEL_BIND);
+    int ret, offset;
+
+retry:
+    packet.msg_type = htons(STUN_CHANNEL_BIND);
+    packet.msg_len = offset = 0;
+    offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
+    offset += stun_attr_channel_num(&packet.attributes[offset], chanel_id);
+    offset += (uint16_t)stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+
+    packet.msg_len = htons(offset);
+    ret = request(&session->server, &packet);
+    if (ret < 0)
+        return ret;
+
+    ret = stun_process_attrs(session, &packet);
+    if (ret == -STUN_ERR_UNAUTH)
+        goto retry;
+
+    return ret;
+}
 
 struct sockaddr_t * turn_client::stun_get_relayed_addr(struct sockaddr_t *stun_server) {
     std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
