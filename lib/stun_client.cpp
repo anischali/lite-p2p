@@ -116,22 +116,6 @@ void print_hexbuf(const char *label, uint8_t *buf, int len)
     printf("\n");
 }
 
-const struct algo_type_t *get_algo_type(int i_type)
-{
-    static const std::vector<struct algo_type_t> algos = {
-        ALGO_TYPE(SHA_ALGO_MD5, EVP_md5(), htons(STUN_PASSWD_ALG_MD5), "md5", 16),
-        ALGO_TYPE(SHA_ALGO_SHA1, EVP_sha1(), htons(STUN_PASSWD_ALG_SHA256), "sha1", 20),
-        ALGO_TYPE(SHA_ALGO_SHA256, EVP_sha256(), htons(STUN_PASSWD_ALG_SHA256), "sha256", 32),
-        ALGO_TYPE(SHA_ALGO_SHA384, EVP_sha384(), htons(STUN_PASSWD_ALG_SHA256), "sha384", 48),
-        ALGO_TYPE(SHA_ALGO_SHA512, EVP_sha512(), htons(STUN_PASSWD_ALG_SHA256), "sha512", 64),
-    };
-
-    if (i_type < 0 || i_type > (int)algos.size())
-        return NULL;
-
-    return &algos[i_type];
-}
-
 void stun_client::stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred)
 {
     std::string s_key = lt_cred ? (session->user + ":" + session->realm + ":" + password) : password;
@@ -140,16 +124,17 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
     printf("pass: %s\n", s_key.c_str());
     for (int i = 0; i < SHA_ALGO_MAX; ++i)
     {
-        const struct algo_type_t *alg = get_algo_type(i);
+        const struct algo_type_t *alg = &algos[i];
         session->key[i] = crypto::checksum(alg->ossl_alg, s_key);
         print_hexbuf(alg->name.c_str(), session->key[i].data(), session->key[i].size()); 
     }
 
     session->algorithms = {
-        get_algo_type(SHA_ALGO_MD5)->stun_alg,
-        get_algo_type(SHA_ALGO_SHA256)->stun_alg,
+        algos[SHA_ALGO_MD5].stun_alg,
+        algos[SHA_ALGO_SHA256].stun_alg,
     };
-    session->selected_algo = get_algo_type(SHA_ALGO_SHA256);
+
+    session->selected_algo = &algos[SHA_ALGO_SHA256];
 }
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)

@@ -280,6 +280,13 @@ namespace lite_p2p
     private:
         int _socket;
     protected:
+        const std::vector<struct algo_type_t> algos = {
+            ALGO_TYPE(SHA_ALGO_MD5, EVP_md5(), htons(STUN_PASSWD_ALG_MD5), "md5", 16),
+            ALGO_TYPE(SHA_ALGO_SHA1, EVP_sha1(), htons(STUN_PASSWD_ALG_SHA256), "sha1", 20),
+            ALGO_TYPE(SHA_ALGO_SHA256, EVP_sha256(), htons(STUN_PASSWD_ALG_SHA256), "sha256", 32),
+            ALGO_TYPE(SHA_ALGO_SHA384, EVP_sha384(), htons(STUN_PASSWD_ALG_SHA256), "sha384", 48),
+            ALGO_TYPE(SHA_ALGO_SHA512, EVP_sha512(), htons(STUN_PASSWD_ALG_SHA256), "sha512", 64),
+        };
         std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
 
