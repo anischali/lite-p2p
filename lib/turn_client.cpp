@@ -49,6 +49,29 @@ retry:
     return ret;
 }
 
+int turn_client::send_indication(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
+    int ret = 0, offset;
+    struct stun_packet_t packet(STUN_DATA);
+retry:
+    packet.msg_type = htons(STUN_DATA);
+    packet.msg_len = offset = 0;
+    offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
+    offset += stun_attr_data(&packet.attributes[offset], buf);
+    offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    
+    packet.msg_len = htons(offset);
+    ret = request(&session->server, &packet);
+    if (ret < 0)
+        return ret;
+
+    ret = stun_process_attrs(session, &packet);
+    if (ret == -STUN_ERR_UNAUTH)
+        goto retry;
+
+    return ret;
+}
+
+
 int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
     struct stun_packet_t packet(STUN_CREATE_PERM);
     int ret, offset;
@@ -57,7 +80,7 @@ retry:
     packet.msg_type = htons(STUN_CREATE_PERM);
     packet.msg_len = offset = 0;
     offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
-    offset += (uint16_t)stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
 
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);
@@ -81,7 +104,7 @@ retry:
     packet.msg_len = offset = 0;
     offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
     offset += stun_attr_channel_num(&packet.attributes[offset], chanel_id);
-    offset += (uint16_t)stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
 
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);

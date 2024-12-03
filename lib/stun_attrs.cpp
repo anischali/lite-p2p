@@ -15,7 +15,7 @@ int stun_attr_add_string(uint8_t *attrs, uint16_t attr_type, std::string s)
     return stun_add_attr(attrs, &attr);
 }
 
-int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint8_t> vec)
+int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint8_t> &vec)
 {
     struct stun_attr_t attr = {
         .type = attr_type,
@@ -27,7 +27,7 @@ int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint
     return stun_add_attr(attrs, &attr);
 }
 
-int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint16_t> vec)
+int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint16_t> &vec)
 {
     struct stun_attr_t attr = {
         .type = attr_type,
@@ -39,7 +39,7 @@ int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uin
     return stun_add_attr(attrs, &attr);
 }
 
-int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint32_t> vec)
+int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint32_t> &vec)
 {
     struct stun_attr_t attr = {
         .type = attr_type,

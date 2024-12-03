@@ -6,15 +6,17 @@
 using namespace lite_p2p;
 
 int stun_attr_add_string(uint8_t *attrs, uint16_t attr_type, std::string s);
-int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint8_t> vec);
-int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint16_t> vec);
-int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint32_t> vec);
+int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint8_t> &vec);
+int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint16_t> &vec);
+int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint32_t> &vec);
 int stun_attr_add_u32(uint8_t *attrs, uint16_t attr_type, uint32_t val);
 int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type);
 
 #define stun_attr_user(attrs, user) stun_attr_add_string(attrs, STUN_ATTR_USERNAME, user)
 
 #define stun_attr_nonce(attrs, nonce) stun_attr_add_u8_vector(attrs, STUN_ATTR_NONCE, nonce)
+
+#define stun_attr_data(attrs, buf) stun_attr_add_u8_vector(attrs, STUN_ATTR_DATA, buf)
 
 #define stun_attr_pass_algorithms(attrs, algs) stun_attr_add_u32_vector(attrs, STUN_ATTR_PASSWD_ALGS, algs)
 
