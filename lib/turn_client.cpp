@@ -34,13 +34,12 @@ retry:
 int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
     struct stun_packet_t packet(STUN_CREATE_PERM);
     int ret, offset;
-    bool retry_attrs = false;
 
 retry:
     packet.msg_type = htons(STUN_CREATE_PERM);
     packet.msg_len = offset = 0;
     offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
-    offset += htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[offset], retry_attrs));
+    offset += (uint16_t)stun_add_attrs(session, &packet, &packet.attributes[offset], true);
 
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);
@@ -49,7 +48,6 @@ retry:
 
     ret = stun_process_attrs(session, &packet);
     if (ret == -STUN_ERR_UNAUTH) {
-        retry_attrs = true;
         goto retry;
     }
 

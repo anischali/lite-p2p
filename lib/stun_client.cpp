@@ -227,11 +227,13 @@ int stun_client::stun_add_attrs(struct stun_session_t *session,
 {
     int offset = 0;
     offset += stun_attr_software(&attrs[offset], session->software);
-    offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
-    offset += stun_attr_request_transport(&attrs[offset], session->protocol);
-    offset += stun_attr_dont_fragment(&attrs[offset]);
-    if (session_attrs)
-    {
+    if (packet->msg_type == htons(STUN_ALLOCATE)) {
+        offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
+        offset += stun_attr_request_transport(&attrs[offset], session->protocol);
+        offset += stun_attr_dont_fragment(&attrs[offset]);
+    }
+
+    if (session_attrs) {
         offset += stun_attr_user(&attrs[offset], session->user);
         offset += stun_attr_realm(&attrs[offset], session->realm);
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
