@@ -30,6 +30,25 @@ retry:
     return ret;
 }
 
+int turn_client::refresh_request(struct stun_session_t *session) {
+    int ret = 0;
+    struct stun_packet_t packet(STUN_REFRESH);
+    session->liftime = 3600;
+
+    packet.msg_type = htons(STUN_REFRESH);
+    packet.msg_len = 0;
+    packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], true));
+    ret = request(&session->server, &packet);
+    if (ret < 0)
+        return ret;
+
+    ret = stun_process_attrs(session, &packet);
+    if (ret < 0) {
+        return ret;
+    }
+
+    return ret;
+}
 
 int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
     struct stun_packet_t packet(STUN_CREATE_PERM);

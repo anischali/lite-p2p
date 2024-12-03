@@ -231,6 +231,11 @@ int stun_client::stun_add_attrs(struct stun_session_t *session,
         offset += stun_attr_lifetime(&attrs[offset], htonl(session->liftime)); // one hour
         offset += stun_attr_request_transport(&attrs[offset], session->protocol);
         offset += stun_attr_dont_fragment(&attrs[offset]);
+        offset += stun_attr_request_family(&attrs[offset], 
+            session->server.sa_family == AF_INET6 ? 0x2 : 0x1);
+        if (session->server.sa_family == AF_INET) {
+            offset += stun_attr_request_ex_family(&attrs[offset], htonl(0x2));
+        }
     }
 
     if (session_attrs) {

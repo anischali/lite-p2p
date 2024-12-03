@@ -125,6 +125,8 @@ int main(int argc, char *argv[]) {
     
     ret = turn.create_permission_request(&s_turn, &conn.remote);
 
+    ret = turn.refresh_request(&s_turn);
+
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.mapped_addr),
