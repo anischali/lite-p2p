@@ -150,7 +150,7 @@ std::vector<uint8_t> crypto::crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::
     size_t len = 0;
     int ret;
 
-    mac = EVP_MAC_fetch(NULL, ctx->algorithm, NULL);
+    mac = EVP_MAC_fetch(NULL, ctx->algorithm.c_str(), NULL);
     if (!mac)
         return {};
 

@@ -130,15 +130,15 @@ static inline bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs)
     return crc == s_crc;
 }
 
-static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs,  std::vector<uint8_t> key)
+static inline int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
 {
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
-    std::vector<uint8_t> digest(20);
-    struct crypto_mac_ctx_t ctx("hmac", "", "sha1", key);
+    std::vector<uint8_t> digest(alg->length);
+    struct crypto_mac_ctx_t ctx("hmac", "", alg->name, key);
 
-    static struct stun_attr_t attr = {
-        .type = STUN_ATTR_INTEGRITY_MSG,
-        .length = 20,
+    struct stun_attr_t attr = {
+        .type = attr_type,
+        .length = (uint16_t)alg->length,
     };
 
     ctx.key = key;
@@ -148,43 +148,11 @@ static inline int stun_attr_msg_hmac_sha1(uint8_t *msg, uint8_t *attrs,  std::ve
     return stun_add_attr(attrs, &attr);
 }
 
-static inline bool stun_attr_check_hmac_sha1(uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
+static inline bool stun_attr_check_hmac(std::string dgst_algo, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
 {
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
     std::vector<uint8_t> digest(32), s_digest;
-    struct crypto_mac_ctx_t ctx("hmac", "", "sha1", key);
-    struct stun_attr_t s_attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
-
-    s_digest.assign(&s_attr.value[0], &s_attr.value[19]);
-    ctx.key = key;
-    digest = crypto::crypto_mac_sign(&ctx, msg_buf);
-
-    return digest.size() == s_digest.size() && !CRYPTO_memcmp(digest.data(), s_digest.data(), digest.size());
-}
-
-static inline int stun_attr_msg_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
-{
-    std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
-    std::vector<uint8_t> digest(32);
-    struct crypto_mac_ctx_t ctx("hmac", "", "sha256", key);
-
-    static struct stun_attr_t attr = {
-        .type = STUN_ATTR_INTEGRITY_MSG_SHA256,
-        .length = 32,
-    };
-
-    ctx.key = key;
-    digest = crypto::crypto_mac_sign(&ctx, msg_buf);
-    attr.value = digest.data();
-
-    return stun_add_attr(attrs, &attr);
-}
-
-static inline bool stun_attr_check_hmac_sha256(uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
-{
-    std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
-    std::vector<uint8_t> digest(32), s_digest;
-    struct crypto_mac_ctx_t ctx("hmac", "", "sha256", key);
+    struct crypto_mac_ctx_t ctx("hmac", "", dgst_algo, key);
     struct stun_attr_t s_attr = STUN_ATTR(&attrs[0], &attrs[2], &attrs[4]);
 
     s_digest.assign(&s_attr.value[0], &s_attr.value[31]);

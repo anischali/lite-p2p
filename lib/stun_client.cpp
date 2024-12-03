@@ -59,79 +59,97 @@ uint32_t stun_client::crc32(uint32_t crc, uint8_t *buf, size_t len)
     return ~crc;
 }
 
-struct stun_session_t *stun_client::stun_session_get(struct sockaddr_t *addr) {
-    std::string s_sha, s_tmp = network::addr_to_string(addr) + ":" + 
-                std::to_string(network::get_port(addr)) + ":" +
-                std::to_string(addr->sa_family);
-    
+struct stun_session_t *stun_client::stun_session_get(struct sockaddr_t *addr)
+{
+    std::string s_sha, s_tmp = network::addr_to_string(addr) + ":" +
+                               std::to_string(network::get_port(addr)) + ":" +
+                               std::to_string(addr->sa_family);
+
     s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
 
-    if (auto s = session_db.find(s_sha); s != session_db.end()) {
+    if (auto s = session_db.find(s_sha); s != session_db.end())
+    {
         return s->second;
     }
 
     return nullptr;
 }
 
-void stun_client::stun_register_session(struct stun_session_t *session) {
+void stun_client::stun_register_session(struct stun_session_t *session)
+{
 
-    std::string s_sha, s_tmp = network::addr_to_string(&session->server) + ":" + 
-                std::to_string(network::get_port(&session->server)) + ":" +
-                std::to_string(session->server.sa_family);
-    
+    std::string s_sha, s_tmp = network::addr_to_string(&session->server) + ":" +
+                               std::to_string(network::get_port(&session->server)) + ":" +
+                               std::to_string(session->server.sa_family);
+
     s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
 
     session->nonce.assign(16, 0);
     session_db[s_sha] = session;
 }
 
-struct sockaddr_t * stun_client::stun_get_external_ip(struct sockaddr_t *stun_server) {
-    std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" + 
-                std::to_string(network::get_port(stun_server)) + ":" +
-                std::to_string(stun_server->sa_family);
-    
+struct sockaddr_t *stun_client::stun_get_external_ip(struct sockaddr_t *stun_server)
+{
+    std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
+                               std::to_string(network::get_port(stun_server)) + ":" +
+                               std::to_string(stun_server->sa_family);
+
     s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
 
-    if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end()) {
+    if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end())
+    {
         return &s->second->ext_ip;
     }
 
     return nullptr;
 }
 
-void print_hexbuf(const char *label, uint8_t *buf, int len) {
+void print_hexbuf(const char *label, uint8_t *buf, int len)
+{
 
     printf("%s (%d): ", label, len);
-    for (int i = 0; i < len; ++i) {
+    for (int i = 0; i < len; ++i)
+    {
         printf("%02x", buf[i]);
     }
 
     printf("\n");
 }
 
-void stun_client::stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred) {
-    auto algos = [](int i){ 
-        static const EVP_MD *algos[] = {
-            [SHA_ALGO_MD5] = EVP_md5(),
-            [SHA_ALGO_SHA1] = EVP_sha1(),
-            [SHA_ALGO_SHA256] = EVP_sha256(),
-            [SHA_ALGO_SHA384] = EVP_sha384(),
-            [SHA_ALGO_SHA512] = EVP_sha512(),
-        };
-        
-        return algos[i];
+const struct algo_type_t *get_algo_type(int i_type)
+{
+    static const std::vector<struct algo_type_t> algos = {
+        ALGO_TYPE(SHA_ALGO_MD5, EVP_md5(), htons(STUN_PASSWD_ALG_MD5), "md5", 16),
+        ALGO_TYPE(SHA_ALGO_SHA1, EVP_sha1(), htons(STUN_PASSWD_ALG_SHA256), "sha1", 20),
+        ALGO_TYPE(SHA_ALGO_SHA256, EVP_sha256(), htons(STUN_PASSWD_ALG_SHA256), "sha256", 32),
+        ALGO_TYPE(SHA_ALGO_SHA384, EVP_sha384(), htons(STUN_PASSWD_ALG_SHA256), "sha384", 48),
+        ALGO_TYPE(SHA_ALGO_SHA512, EVP_sha512(), htons(STUN_PASSWD_ALG_SHA256), "sha512", 64),
     };
-    std::string s_key = lt_cred ? (session->user + ":" + session->realm + ":" + password) : password; 
+
+    if (i_type < 0 || i_type > (int)algos.size())
+        return NULL;
+
+    return &algos[i_type];
+}
+
+void stun_client::stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred)
+{
+    std::string s_key = lt_cred ? (session->user + ":" + session->realm + ":" + password) : password;
 
     session->lt_cred_mech = lt_cred;
     printf("pass: %s\n", s_key.c_str());
-    for (int i = 0; i < SHA_ALGO_MAX; ++i) {
-        session->key[i] = crypto::checksum(algos(i), s_key);
-        print_hexbuf("key:", session->key[i].data(), session->key[i].size());
+    for (int i = 0; i < SHA_ALGO_MAX; ++i)
+    {
+        const struct algo_type_t *alg = get_algo_type(i);
+        session->key[i] = crypto::checksum(alg->ossl_alg, s_key);
+        print_hexbuf(alg->name.c_str(), session->key[i].data(), session->key[i].size()); 
     }
 
-    session->algorithms = {htons(STUN_PASSWD_ALG_MD5), htons(STUN_PASSWD_ALG_SHA256)};
-    session->selected_algo = htons(STUN_PASSWD_ALG_SHA256);
+    session->algorithms = {
+        get_algo_type(SHA_ALGO_MD5)->stun_alg,
+        get_algo_type(SHA_ALGO_SHA256)->stun_alg,
+    };
+    session->selected_algo = get_algo_type(SHA_ALGO_SHA256);
 }
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
@@ -173,7 +191,8 @@ int stun_client::bind_request(struct stun_session_t *session)
     bool retry_attrs = false;
 
 retry:
-    if (retry_attrs) {
+    if (retry_attrs)
+    {
         packet.msg_type = htons(STUN_REQUEST);
         offset = packet.msg_len = 0;
         offset += stun_attr_user(&attrs[offset], session->user);
@@ -181,7 +200,10 @@ retry:
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
         offset += stun_attr_software(&attrs[offset], session->software);
         packet.msg_len += htons(offset + 24);
-        offset += stun_attr_msg_hmac_sha1((uint8_t *)&packet, &attrs[offset], session->key[SHA_ALGO_SHA1]);
+        offset += stun_attr_msg_hmac(session->selected_algo, 
+                            STUN_ATTR_INTEGRITY_MSG,
+                            (uint8_t *)&packet, &attrs[offset], 
+                            session->key[session->selected_algo->type]);
         packet.msg_len += htons(8);
         offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
     }
@@ -204,8 +226,9 @@ retry:
         if (attr.type == STUN_ATTR_NONCE)
         {
             auto s_nonce = stun_attr_get_nonce(&attr);
-            if (!retry_attrs && session->nonce != s_nonce) {
-                session->nonce = s_nonce; 
+            if (!retry_attrs && session->nonce != s_nonce)
+            {
+                session->nonce = s_nonce;
                 goto retry;
             }
         }

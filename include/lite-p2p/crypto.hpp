@@ -20,19 +20,19 @@ struct crypto_mac_ctx_t {
         params[2] = OSSL_PARAM_construct_end();        
     };
 
-    crypto_mac_ctx_t(const char *_algorithm,
-                    const char *_cipher,
-                    const char *_digest,
+    crypto_mac_ctx_t(std::string _algorithm,
+                    std::string _cipher,
+                    std::string _digest,
                     std::vector<uint8_t> _key) {
         algorithm = _algorithm;
         key = _key;
 
-        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)_cipher, 0);
-        params[1] = OSSL_PARAM_construct_utf8_string("digest", (char *)_digest, 0);
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)_cipher.c_str(), 0);
+        params[1] = OSSL_PARAM_construct_utf8_string("digest", (char *)_digest.c_str(), 0);
         params[2] = OSSL_PARAM_construct_end();
     };
 
-    const char *algorithm;
+    std::string algorithm;
     size_t size;
     OSSL_PARAM params[3];
     std::vector<uint8_t> key;

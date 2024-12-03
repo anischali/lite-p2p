@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include "lib_common.hpp"
 #include <lite-p2p/network.hpp>
+#include <lite-p2p/crypto.hpp>
 
 #define IS_REQUEST(msg_type) (((msg_type) & 0x0110) == 0x0000)
 #define IS_INDICATION(msg_type) (((msg_type) & 0x0110) == 0x0010)
@@ -31,6 +32,18 @@ enum sha_algo_type {
 };
 typedef uint8_t sha_algo_type_t;
 
+#define ALGO_TYPE(t, e, s, n, l) \
+    {.type = t, .ossl_alg = e, .stun_alg = s, .name = n, .length = l}
+struct algo_type_t
+{
+    sha_algo_type_t type;
+    const EVP_MD *ossl_alg;
+    const uint32_t stun_alg;
+    const std::string name;
+    size_t length;
+};
+
+
 struct stun_session_t {
     std::string user;
     std::string software;
@@ -40,7 +53,7 @@ struct stun_session_t {
     std::vector<uint8_t> nonce;
     struct sockaddr_t server;
     struct sockaddr_t ext_ip;
-    uint32_t selected_algo;
+    const struct algo_type_t *selected_algo;
     bool lt_cred_mech;
 };
 
