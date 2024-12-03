@@ -239,7 +239,9 @@ namespace lite_p2p
         *(uint16_t *)&attrs[offset] = htons(attr->length);
         offset += sizeof(attr->length);
 
-        memcpy(&attrs[offset], attr->value, attr->length);
+        if (attr->length > 0 && attr->value) {
+            memcpy(&attrs[offset], attr->value, attr->length);
+        }
 
         offset += attr->length;
 
