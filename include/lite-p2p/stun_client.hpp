@@ -51,11 +51,16 @@ struct stun_session_t {
     std::vector<uint8_t> key[SHA_ALGO_MAX];
     std::vector<uint32_t> algorithms;
     std::vector<uint8_t> nonce;
+    std::vector<uint8_t> transaction_id;
     struct sockaddr_t server;
-    struct sockaddr_t ext_ip;
+    struct sockaddr_t mapped_addr;
+    struct sockaddr_t relayed_addr;
     sha_algo_type_t key_algo;
     sha_algo_type_t hmac_algo;
+    uint32_t protocol;
+    uint32_t liftime;
     bool lt_cred_mech;
+    bool valid;
 };
 
 
@@ -301,7 +306,7 @@ namespace lite_p2p
         void stun_register_session(struct stun_session_t *session);
         void stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred);
         struct stun_session_t *stun_session_get(struct sockaddr_t *addr);
-        struct sockaddr_t *stun_get_external_ip(struct sockaddr_t *stun_server);
+        struct sockaddr_t *stun_get_mapped_addr(struct sockaddr_t *stun_server);
         static uint32_t crc32(uint32_t crc, uint8_t *buf, size_t size);
     };
 };

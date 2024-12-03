@@ -88,7 +88,7 @@ void stun_client::stun_register_session(struct stun_session_t *session)
     session_db[s_sha] = session;
 }
 
-struct sockaddr_t *stun_client::stun_get_external_ip(struct sockaddr_t *stun_server)
+struct sockaddr_t *stun_client::stun_get_mapped_addr(struct sockaddr_t *stun_server)
 {
     std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
                                std::to_string(network::get_port(stun_server)) + ":" +
@@ -98,7 +98,7 @@ struct sockaddr_t *stun_client::stun_get_external_ip(struct sockaddr_t *stun_ser
 
     if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end())
     {
-        return &s->second->ext_ip;
+        return &s->second->mapped_addr;
     }
 
     return nullptr;
@@ -206,7 +206,7 @@ retry:
         attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
         if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
         {
-            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &session->ext_ip);
+            stun_attr_get_mapped_addr(&attrs[i], packet.transaction_id, &session->mapped_addr);
         }
 
         if (attr.type == STUN_ATTR_NONCE)

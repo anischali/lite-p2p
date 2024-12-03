@@ -107,7 +107,7 @@ bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs)
     struct stun_attr_t s_attr = STUN_ATTR(&attrs[0], &attrs[2], &attrs[4]);
 
     s_crc = *(uint32_t *)s_attr.value;
-    crc = stun_client::crc32(FINGERPRINT_XOR, msg, (size_t)(attrs - msg));
+    crc = stun_client::crc32(0, msg, (size_t)(attrs - msg));
     crc ^= FINGERPRINT_XOR;
     crc = htonl(crc);
 
@@ -143,11 +143,11 @@ int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, uint8_
     return stun_add_attr(attrs, &attr);
 }
 
-bool stun_attr_check_hmac(std::string dgst_algo, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
+bool stun_attr_check_hmac(const struct algo_type_t *alg, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key)
 {
     std::vector<uint8_t> msg_buf(&msg[0], &msg[int(attrs - msg)]);
-    std::vector<uint8_t> digest(32), s_digest;
-    struct crypto_mac_ctx_t ctx("hmac", "", dgst_algo, key);
+    std::vector<uint8_t> digest(alg->length), s_digest;
+    struct crypto_mac_ctx_t ctx("hmac", "", alg->name, key);
     struct stun_attr_t s_attr = STUN_ATTR(&attrs[0], &attrs[2], &attrs[4]);
 
     s_digest.assign(&s_attr.value[0], &s_attr.value[31]);

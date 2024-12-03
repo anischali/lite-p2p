@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
         .user = "visi",
         .software = "lite-p2p v 1.0",
         .realm = "visibog.org",
+        .protocol = IPPROTO_UDP
     };
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){

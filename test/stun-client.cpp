@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     if (ret < 0)
         return ret;
     
-    ext_ip = stun.stun_get_external_ip(&s_stun.server);
+    ext_ip = stun.stun_get_mapped_addr(&s_stun.server);
     printf("external ip: %s\n", lite_p2p::network::addr_to_string(ext_ip).c_str());
     if (ret < 0)
         exit(ret);

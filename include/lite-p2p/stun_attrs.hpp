@@ -38,7 +38,7 @@ bool stun_attr_check_fingerprint(uint8_t *msg, uint8_t *attrs);
 
 int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key);
 
-bool stun_attr_check_hmac(std::string dgst_algo, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key);
+bool stun_attr_check_hmac(const struct algo_type_t *alg, uint8_t *msg, uint8_t *attrs, std::vector<uint8_t> key);
 
 void stun_attr_get_mapped_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr);
 
