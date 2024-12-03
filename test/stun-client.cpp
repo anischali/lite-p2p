@@ -107,8 +107,10 @@ int main(int argc, char *argv[]) {
     stun.stun_register_session(&s_stun);
 
     int ret = stun.bind_request(&s_stun);
-    if (ret < 0)
+    if (ret < 0) {
+        printf("request failed with: %d\n", ret);
         return ret;
+    }
     
     ext_ip = stun.stun_get_mapped_addr(&s_stun.server);
     printf("external ip: %s\n", lite_p2p::network::addr_to_string(ext_ip).c_str());

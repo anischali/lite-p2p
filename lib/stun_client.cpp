@@ -185,13 +185,12 @@ retry:
         offset += stun_attr_realm(&attrs[offset], session->realm);
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
         offset += stun_attr_software(&attrs[offset], session->software);
-        packet.msg_len += htons(offset + 24);
         offset += stun_attr_msg_hmac(&algos[session->hmac_algo], 
                             STUN_ATTR_INTEGRITY_MSG,
-                            (uint8_t *)&packet, &attrs[offset], 
+                            &packet, &attrs[offset], 
                             session->key[session->key_algo]);
-        packet.msg_len += htons(8);
-        offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
+        offset += stun_attr_fingerprint(&packet, &attrs[offset]);
+        packet.msg_len = htons(offset);
     }
 
     ret = request(&session->server, &packet);

@@ -14,7 +14,7 @@ int turn_client::allocate_request(struct stun_session_t *session) {
     struct stun_attr_t attr = {0};
     uint8_t *attrs = &packet.attributes[0];
     int ret, len = 0, err_code = 0, offset = 0;
-    bool retry_attrs = false;
+    bool retry_attrs = true;
 
 retry:
     packet.msg_type = htons(STUN_ALLOCATE);
@@ -23,26 +23,22 @@ retry:
     offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
     offset += stun_attr_request_transport(&attrs[offset], session->protocol);
     offset += stun_attr_dont_fragment(&attrs[offset]);
-    packet.msg_len = htons(offset);
     if (retry_attrs) {
         offset += stun_attr_user(&attrs[offset], session->user);
         offset += stun_attr_realm(&attrs[offset], session->realm);
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
         offset += stun_attr_pass_algorithms(&attrs[offset], session->algorithms);
         //offset += stun_attr_pass_algorithm(&attrs[offset], algos[session->key_algo].stun_alg);
-        packet.msg_len = htons(offset + algos[SHA_ALGO_SHA1].length + 4);
         offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1], 
                     STUN_ATTR_INTEGRITY_MSG, 
-                    (uint8_t *)&packet, &attrs[offset], 
+                    &packet, &attrs[offset], 
                     session->key[session->key_algo]);
-
         //packet.msg_len = htons(offset + algos[SHA_ALGO_SHA256].length + 4);
         //offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256], 
         //            STUN_ATTR_INTEGRITY_MSG_SHA256, 
         //            (uint8_t *)&packet, &attrs[offset], 
         //            session->key[session->key_algo]);
-        packet.msg_len = htons(offset + 8);
-        offset += stun_attr_fingerprint((uint8_t *)&packet, &attrs[offset]);
+        offset += stun_attr_fingerprint(&packet, &attrs[offset]);
     }
 
     packet.msg_len = htons(offset);
@@ -78,19 +74,19 @@ retry:
             }
         case STUN_ATTR_INTEGRITY_MSG:
             if (!stun_attr_check_hmac(&algos[SHA_ALGO_SHA1], 
-                    (uint8_t *)&packet, &attrs[i], 
+                    &packet, &attrs[i], 
                     session->key[session->key_algo]))
                 return -STUN_ERR_UNAUTH;
             break;
             
         case STUN_ATTR_FINGERPRINT:
-            if (!stun_attr_check_fingerprint((uint8_t *)&packet, &attrs[i]))
+            if (!stun_attr_check_fingerprint(&packet, &attrs[i]))
                 return -EINVAL;
             break;
         }
     }
 
-    
+
     return 0;
 }
 

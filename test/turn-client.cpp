@@ -115,9 +115,11 @@ int main(int argc, char *argv[]) {
     turn.stun_register_session(&s_turn);
 
     int ret = turn.allocate_request(&s_turn);
-    if (ret < 0)
-        exit(ret);
-    
+    if (ret < 0) {
+        printf("request failed with: %d\n", ret);
+        return ret;
+    }
+        
     //printf("external ip: %s\n", lite_p2p::network::addr_to_string(&turn).c_str());
     lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
