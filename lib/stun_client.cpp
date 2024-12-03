@@ -126,7 +126,7 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
     {
         const struct algo_type_t *alg = &algos[i];
         session->key[i] = crypto::checksum(alg->ossl_alg, s_key);
-        print_hexbuf(alg->name.c_str(), session->key[i].data(), session->key[i].size()); 
+        print_hexbuf(alg->name.c_str(), session->key[i].data(), session->key[i].size());
     }
 
     session->algorithms = {
@@ -185,10 +185,10 @@ retry:
         offset += stun_attr_realm(&attrs[offset], session->realm);
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
         offset += stun_attr_software(&attrs[offset], session->software);
-        offset += stun_attr_msg_hmac(&algos[session->hmac_algo], 
-                            STUN_ATTR_INTEGRITY_MSG,
-                            &packet, &attrs[offset], 
-                            session->key[session->key_algo]);
+        offset += stun_attr_msg_hmac(&algos[session->hmac_algo],
+                                     STUN_ATTR_INTEGRITY_MSG,
+                                     &packet, &attrs[offset],
+                                     session->key[session->key_algo]);
         offset += stun_attr_fingerprint(&packet, &attrs[offset]);
         packet.msg_len = htons(offset);
     }
@@ -222,9 +222,9 @@ retry:
     return 0;
 }
 
-
-int stun_client::stun_add_attrs(struct stun_session_t *session, 
-        struct stun_packet_t *packet, bool session_attrs) {
+int stun_client::stun_add_attrs(struct stun_session_t *session,
+                                struct stun_packet_t *packet, bool session_attrs)
+{
     int offset = 0;
     uint8_t *attrs = &packet->attributes[0];
 
@@ -232,23 +232,26 @@ int stun_client::stun_add_attrs(struct stun_session_t *session,
     offset += stun_attr_lifetime(&attrs[offset], htonl(3600)); // one hour
     offset += stun_attr_request_transport(&attrs[offset], session->protocol);
     offset += stun_attr_dont_fragment(&attrs[offset]);
-    if (session_attrs) {
+    if (session_attrs)
+    {
         offset += stun_attr_user(&attrs[offset], session->user);
         offset += stun_attr_realm(&attrs[offset], session->realm);
         offset += stun_attr_nonce(&attrs[offset], session->nonce);
-        if (session->key_algo == SHA_ALGO_SHA256) {
+        if (session->key_algo == SHA_ALGO_SHA256)
+        {
             offset += stun_attr_pass_algorithms(&attrs[offset], session->algorithms);
             offset += stun_attr_pass_algorithm(&attrs[offset], algos[session->key_algo].stun_alg);
-            offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256], 
-                        STUN_ATTR_INTEGRITY_MSG_SHA256, 
-                        packet, &attrs[offset], 
-                        session->key[session->key_algo]);
+            offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256],
+                                         STUN_ATTR_INTEGRITY_MSG_SHA256,
+                                         packet, &attrs[offset],
+                                         session->key[session->key_algo]);
         }
-        else {
-            offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1], 
-                        STUN_ATTR_INTEGRITY_MSG, 
-                        packet, &attrs[offset], 
-                        session->key[session->key_algo]);
+        else
+        {
+            offset += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1],
+                                         STUN_ATTR_INTEGRITY_MSG,
+                                         packet, &attrs[offset],
+                                         session->key[session->key_algo]);
         }
         offset += stun_attr_fingerprint(packet, &attrs[offset]);
     }
@@ -256,6 +259,59 @@ int stun_client::stun_add_attrs(struct stun_session_t *session,
     return offset;
 }
 
+int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet)
+{
+    std::vector<uint8_t> v_tmp;
+    uint32_t err_code;
+    uint8_t *attrs;
+    struct stun_attr_t attr;
+    int len;
+
+    attrs = &packet->attributes[0];
+    len = std::min((uint16_t)ntohs(packet->msg_len), (uint16_t)sizeof(packet->attributes));
+
+    for (int i = 0; i < len; i += (4 + attr.length))
+    {
+        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
+
+        switch (attr.type)
+        {
+        case STUN_ATTR_XOR_MAPPED_ADDR:
+            stun_attr_get_mapped_addr(&attrs[i], packet->transaction_id, &session->mapped_addr);
+            break;
+        case STUN_ATTR_XOR_RELAYED_ADDR:
+            stun_attr_get_mapped_addr(&attrs[i], packet->transaction_id, &session->relayed_addr);
+            break;
+        case STUN_ATTR_ERR_CODE:
+            err_code = ntohl(*(uint32_t *)&attr.value[0]);
+            break;
+        case STUN_ATTR_NONCE:
+            v_tmp = stun_attr_get_nonce(&attr);
+            if ((err_code == STUN_ERR_STALE_NONCE ||
+                 (err_code == STUN_ERR_UNAUTH)) &&
+                session->nonce != v_tmp)
+            {
+                session->nonce = v_tmp;
+                return -STUN_ERR_UNAUTH;
+            }
+        case STUN_ATTR_INTEGRITY_MSG:
+            if (!stun_attr_check_hmac(&algos[SHA_ALGO_SHA1],
+                                      packet, &attrs[i],
+                                      session->key[session->key_algo]))
+                return -STUN_ERR_BAD_REQUEST;
+            break;
+        case STUN_ATTR_PASSWD_ALGS:
+            // TODO: dynamicaly determine algorithms
+            break;
+        case STUN_ATTR_FINGERPRINT:
+            if (!stun_attr_check_fingerprint(packet, &attrs[i]))
+                return -EINVAL;
+            break;
+        }
+    }
+
+    return 0;
+}
 
 class nat_pnp
 {
@@ -307,6 +363,3 @@ public:
         r_port = _rport;
     };
 };
-
-
-
