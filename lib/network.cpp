@@ -90,7 +90,7 @@ void network::ip_getinfo(void) {
 network::network(const std::string __iface)
 {
     int fd;
-    struct ifreq req = {0};
+    struct ifreq req;
 
     iface = __iface;
     strncpy(req.ifr_name, iface.c_str(), IFNAMSIZ);

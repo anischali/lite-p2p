@@ -8,7 +8,6 @@ namespace lite_p2p
     class turn_client : public stun_client
     {
     private:
-        int _socket;
 
     public:
         turn_client(int sock_fd);

@@ -327,8 +327,7 @@ class nat_pnp
 {
 private:
     short s_port, r_port;
-    struct sockaddr_in gateway;
-
+    
     //(short)(rand() % (0xffff - 0x0fff + 1) + 0x0fff)
 public:
     int request()
