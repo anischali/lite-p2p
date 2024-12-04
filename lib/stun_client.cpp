@@ -267,16 +267,17 @@ int stun_client::stun_add_attrs(struct stun_session_t *session,
 int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet)
 {
     std::vector<uint8_t> v_tmp;
-    uint32_t err_code;
+    uint32_t err_code = 0;
     uint8_t *attrs;
     struct stun_attr_t attr;
-    int len;
+    int len, offset, padding;
 
     attrs = &packet->attributes[0];
     len = std::min((uint16_t)ntohs(packet->msg_len), (uint16_t)sizeof(packet->attributes));
 
-    for (int i = 0; i < len; i += (4 + attr.length))
+    for (int i = 0; i < len; i += offset)
     {
+        offset = 4;
         attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
 
         switch (attr.type)
@@ -292,18 +293,10 @@ int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_
             break;
         case STUN_ATTR_ERR_CODE:
             err_code = ntohl(*(uint32_t *)&attr.value[0]);
-            if (err_code == STUN_ERR_ALLOC_MISMATCH)
-                return 0;
             break;
         case STUN_ATTR_NONCE:
             v_tmp = stun_attr_get_nonce(&attr);
-            if ((err_code == STUN_ERR_STALE_NONCE ||
-                 err_code == STUN_ERR_UNAUTH) &&
-                session->nonce != v_tmp)
-            {
-                session->nonce = v_tmp;
-                return -STUN_ERR_UNAUTH;
-            }
+            break;
         case STUN_ATTR_INTEGRITY_MSG:
             if (!stun_attr_check_hmac(&algos[SHA_ALGO_SHA1],
                                       packet, &attrs[i],
@@ -318,7 +311,23 @@ int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_
                 return -EINVAL;
             break;
         }
+
+        offset += attr.length;
+        padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
+        offset += padding;
     }
+
+    if (err_code == STUN_ERR_ALLOC_MISMATCH)
+        return 0;
+    
+    else if ((err_code == STUN_ERR_STALE_NONCE ||
+        err_code == STUN_ERR_UNAUTH) &&
+            session->nonce != v_tmp && v_tmp.size() > 0)
+    {
+        session->nonce = v_tmp;
+        return -STUN_ERR_UNAUTH;
+    }
+
 
     return 0;
 }

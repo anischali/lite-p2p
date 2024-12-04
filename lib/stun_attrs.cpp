@@ -63,6 +63,18 @@ int stun_attr_add_u32(uint8_t *attrs, uint16_t attr_type, uint32_t val)
     return stun_add_attr(attrs, &attr);
 }
 
+int stun_attr_add_u8(uint8_t *attrs, uint16_t attr_type, uint8_t val)
+{
+    struct stun_attr_t attr = {
+        .type = attr_type,
+    };
+
+    attr.value = (uint8_t *)&val;
+    attr.length = sizeof(val);
+
+    return stun_add_attr(attrs, &attr);
+}
+
 int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type)
 {
     struct stun_attr_t attr = {
@@ -201,13 +213,13 @@ void stun_attr_get_mapped_addr(uint8_t *attrs, uint8_t *transaction_id, struct s
     }
 }
 
-int stun_attr_peer_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr)
+int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, uint8_t *transaction_id, struct sockaddr_t *addr)
 {
     void *ext_addr;
     int length = addr->sa_family == AF_INET6 ? 20 : 12;
     std::vector<uint8_t> s_addr(length);
     struct stun_attr_t attr = {
-        .type = STUN_ATTR_XOR_PEER_ADDR,
+        .type = attr_type,
         .length = (uint16_t)length,
         .value = s_addr.data(),
     };

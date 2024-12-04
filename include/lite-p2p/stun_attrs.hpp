@@ -10,7 +10,9 @@ int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint
 int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint16_t> &vec);
 int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, std::vector<uint32_t> &vec);
 int stun_attr_add_u32(uint8_t *attrs, uint16_t attr_type, uint32_t val);
+int stun_attr_add_u8(uint8_t *attrs, uint16_t attr_type, uint8_t val);
 int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type);
+int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, uint8_t *transaction_id, struct sockaddr_t *addr);
 
 #define stun_attr_user(attrs, user) stun_attr_add_string(attrs, STUN_ATTR_USERNAME, user)
 
@@ -38,6 +40,13 @@ int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type);
 
 #define stun_attr_dont_fragment(attrs) stun_attr_add_bool(attrs, STUN_ATTR_DONT_FRAGMENT)
 
+#define stun_attr_peer_addr(attrs, transaction_id, addr) stun_attr_add_addr(attrs, STUN_ATTR_XOR_PEER_ADDR, transaction_id, addr)
+
+#define stun_attr_relayed_addr(attrs, transaction_id, addr) stun_attr_add_addr(attrs, STUN_ATTR_XOR_RELAYED_ADDR, transaction_id, addr)
+
+#define stun_attr_mapped_addr(attrs, transaction_id, addr) stun_attr_add_addr(attrs, STUN_ATTR_XOR_MAPPED_ADDR, transaction_id, addr)
+
+
 std::vector<uint8_t> stun_attr_get_nonce(struct stun_attr_t *attr);
 
 int stun_attr_fingerprint(struct stun_packet_t *packet, uint8_t *attrs);
@@ -50,6 +59,5 @@ bool stun_attr_check_hmac(const struct algo_type_t *alg, struct stun_packet_t *p
 
 void stun_attr_get_mapped_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr);
 
-int stun_attr_peer_addr(uint8_t *attrs, uint8_t *transaction_id, struct sockaddr_t *addr);
 
 #endif

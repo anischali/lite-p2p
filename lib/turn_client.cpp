@@ -49,7 +49,7 @@ retry:
     return ret;
 }
 
-int turn_client::send_indication(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
+int turn_client::send_request_data(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
     int ret = 0, offset;
     struct stun_packet_t packet(STUN_SEND_REQUEST);
 retry:

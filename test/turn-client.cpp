@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     turn.stun_register_session(&s_turn);
 
-    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
+    lite_p2p::network::string_to_addr(AF_INET, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
 
     int ret = turn.allocate_request(&s_turn);
@@ -126,14 +126,14 @@ int main(int argc, char *argv[]) {
     std::string s = "hello world";
     std::vector<uint8_t> s_buf(s.begin(), s.end());
     ret = turn.create_permission_request(&s_turn, &conn.remote);
-    ret = turn.send_indication(&s_turn, &conn.remote, s_buf);
-    ret = turn.bind_channel_request(&s_turn, &conn.remote, rand_int(1000, 5000));
+    ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
+    //ret = turn.bind_channel_request(&s_turn, &conn.remote, rand_int(1000, 5000));
 
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.mapped_addr),
-        lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
-        lite_p2p::network::get_port(&s_turn.mapped_addr));
+        lite_p2p::network::addr_to_string(&s_turn.relayed_addr).c_str(), 
+        lite_p2p::network::get_port(&s_turn.relayed_addr));
     
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
