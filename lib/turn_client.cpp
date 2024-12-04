@@ -10,20 +10,18 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 
 int turn_client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
-    bool retry_attrs = false;
     struct stun_packet_t packet(STUN_ALLOCATE);
     session->liftime = 3600;
 retry:
     packet.msg_type = htons(STUN_ALLOCATE);
     packet.msg_len = 0;
-    packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], retry_attrs));
+    //packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], retry_attrs));
     ret = request(&session->server, &packet);
     if (ret < 0)
         return ret;
 
     ret = stun_process_attrs(session, &packet);
     if (ret == -STUN_ERR_UNAUTH) {
-        retry_attrs = true;
         goto retry;
     }
 
@@ -37,7 +35,7 @@ int turn_client::refresh_request(struct stun_session_t *session) {
 retry:
     packet.msg_type = htons(STUN_REFRESH);
     packet.msg_len = 0;
-    packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], true));
+    //packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], true));
     ret = request(&session->server, &packet);
     if (ret < 0)
         return ret;
@@ -55,9 +53,9 @@ int turn_client::send_request_data(struct stun_session_t *session, struct sockad
 retry:
     packet.msg_type = htons(STUN_SEND_REQUEST);
     packet.msg_len = offset = 0;
-    offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
-    offset += stun_attr_data(&packet.attributes[offset], buf);
-    offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    //offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
+    //offset += stun_attr_data(&packet.attributes[offset], buf);
+    //offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
     
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);
@@ -79,8 +77,8 @@ int turn_client::create_permission_request(struct stun_session_t *session, struc
 retry:
     packet.msg_type = htons(STUN_CREATE_PERM);
     packet.msg_len = offset = 0;
-    offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
-    offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    //offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
+    //offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
 
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);
@@ -102,9 +100,9 @@ int turn_client::bind_channel_request(struct stun_session_t *session, struct soc
 retry:
     packet.msg_type = htons(STUN_CHANNEL_BIND);
     packet.msg_len = offset = 0;
-    offset += stun_attr_channel_num(&packet.attributes[offset], chanel_id);
-    offset += stun_attr_peer_addr(&packet.attributes[offset], packet.transaction_id, peer);
-    offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    //offset += stun_attr_channel_num(&packet.attributes[offset], chanel_id);
+    //offset += stun_attr_peer_addr(&packet.attributes[offset], packet.transaction_id, peer);
+    //offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
 
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);

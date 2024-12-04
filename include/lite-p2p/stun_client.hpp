@@ -21,6 +21,8 @@
 #define MAGIC_COOKIE 0x2112A442
 #define FINGERPRINT_XOR 0x5354554e
 
+extern const std::vector<struct algo_type_t> algos;
+
 enum sha_algo_type {
     SHA_ALGO_UNKNOWN = -1,
     SHA_ALGO_MD5 = 0,
@@ -58,6 +60,7 @@ struct stun_session_t {
     sha_algo_type_t key_algo;
     sha_algo_type_t hmac_algo;
     uint32_t protocol;
+    uint32_t family;
     uint32_t liftime;
     bool lt_cred_mech;
     bool valid;
@@ -219,86 +222,13 @@ namespace lite_p2p
         uint8_t attributes[512];
     };
 
-    struct __attribute__((packed)) stun_attr_t
-    {
-        uint16_t type;
-        uint16_t length;
-        uint8_t *value;
-    };
-#define STUN_ATTR_H(_type, _len, _val) \
-    {.type = ntohs(*(uint16_t *)_type), .length = ntohs(*(uint16_t *)_len), .value = (uint8_t *)_val}
-
-#define STUN_ATTR_N(_type, _len, _val) \
-    {.type = htons(*(uint16_t *)_type), .length = htons(*(uint16_t *)_len), .value = (uint8_t *)_val}
-
-#define STUN_ATTR(_type, _len, _val) \
-    {.type = *(uint16_t *)_type, .length = *(uint16_t *)_len, .value = (uint8_t *)_val}
-
-    static inline int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr)
-    {
-        int offset = 0;
-        int padding;
-
-        *(uint16_t *)&attrs[offset] = htons(attr->type);
-        offset += sizeof(attr->type);
-        *(uint16_t *)&attrs[offset] = htons(attr->length);
-        offset += sizeof(attr->length);
-
-        if (attr->length > 0 && attr->value) {
-            memcpy(&attrs[offset], attr->value, attr->length);
-        }
-
-        offset += attr->length;
-
-        padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
-
-        return offset + padding;
-    }
-
-    struct __attribute__((packed)) stun_attrs_t
-    {
-        // USERNAME: UTF-8-encoded sequence of fewer than 509 bytes
-        struct stun_attr_t username;
-
-        // USERHASH: (to support user anonimity)  has a fixed length of 32 bytes
-        struct stun_attr_t user_hash;
-
-        // HMAC-SHA1: (MESSAGE-INTEGRITY) the HMAC will be 20 bytes
-        struct stun_attr_t hmac_sha1;
-
-        // HMAC-SHA256: (MESSAGE-INTEGRITY-SHA256) at most 32 bytes at least 16 bytes
-        struct stun_attr_t hmac_sha256;
-
-        // REALM: sequence of fewer than 128 characters (which can be as long
-        // as 509 bytes when encoding them and as long as 763 bytes when
-        // decoding them. presence signify the wish to have long term credentials
-        struct stun_attr_t realm;
-
-        // NONCE: MUST be fewer than 128 characters (which can be as long as 509 bytes
-        // when encoding them and a long as 763 bytes when decoding them)
-        struct stun_attr_t nonce;
-
-        struct stun_attr_t passwd_algs;
-        struct stun_attr_t passwd_c_alg;
-        struct stun_attr_t fingerprint;
-    };
-
     class stun_client
     {
     private:
         int _socket;
     protected:
-        const std::vector<struct algo_type_t> algos = {
-            ALGO_TYPE(SHA_ALGO_MD5, EVP_md5(), htons(STUN_PASSWD_ALG_MD5), "md5", 16),
-            ALGO_TYPE(SHA_ALGO_SHA1, EVP_sha1(), htons(STUN_PASSWD_ALG_SHA256), "sha1", 20),
-            ALGO_TYPE(SHA_ALGO_SHA256, EVP_sha256(), htons(STUN_PASSWD_ALG_SHA256), "sha256", 32),
-            ALGO_TYPE(SHA_ALGO_SHA384, EVP_sha384(), htons(STUN_PASSWD_ALG_SHA256), "sha384", 48),
-            ALGO_TYPE(SHA_ALGO_SHA512, EVP_sha512(), htons(STUN_PASSWD_ALG_SHA256), "sha512", 64),
-        };
         std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
-        int stun_add_attrs(struct stun_session_t *session, 
-            struct stun_packet_t *packet, uint8_t *attrs, bool session_attrs);
         int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet);
     public:
         stun_client(int socket_fd);
