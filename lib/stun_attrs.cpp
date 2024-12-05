@@ -304,20 +304,20 @@ int stun_attr_get_addr(uint8_t *attrs, uint16_t attr_type, void *args)
     if (attr.length == 0 || attr.type != attr_type)
         return -1;
 
-    addr->sa_family = (uint16_t)(*(int8_t *)(&attr.value[0])) == 0x1 ? AF_INET : AF_INET6;
+    addr->sa_family = (uint16_t)(*(int8_t *)(&attr.value[1])) == 0x1 ? AF_INET : AF_INET6;
     if (addr->sa_family == AF_INET)
     {
         ext_addr = network::inet_address(addr);
         ((struct sockaddr_in *)ext_addr)->sin_family = addr->sa_family;
-        ((struct sockaddr_in *)ext_addr)->sin_port = (*(int16_t *)(&attr.value[1]));
-        ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr = (*(uint32_t *)&attr.value[3]);
+        ((struct sockaddr_in *)ext_addr)->sin_port = (*(int16_t *)(&attr.value[2]));
+        ((struct sockaddr_in *)ext_addr)->sin_addr.s_addr = (*(uint32_t *)&attr.value[4]);
     }
     else if (addr->sa_family == AF_INET6)
     {
         ext_addr = network::inet6_address(addr);
         ((struct sockaddr_in6 *)ext_addr)->sin6_family = addr->sa_family;
-        ((struct sockaddr_in6 *)ext_addr)->sin6_port = (*(int16_t *)(&attr.value[1]));
-        memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[3], sizeof(struct in6_addr));
+        ((struct sockaddr_in6 *)ext_addr)->sin6_port = (*(int16_t *)(&attr.value[2]));
+        memcpy(&((struct sockaddr_in6 *)ext_addr)->sin6_addr, (uint8_t *)&attr.value[4], sizeof(struct in6_addr));
     }
 
     return attr.length;
