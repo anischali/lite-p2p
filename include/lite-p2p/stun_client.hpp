@@ -13,10 +13,42 @@
 #include <lite-p2p/network.hpp>
 #include <lite-p2p/crypto.hpp>
 
+enum STUN_PACKET_TYPE {
+    STUN_TYPE_REQUEST,
+    STUN_TYPE_INDICATION,
+    STUN_TYPE_SUCCESS_RESP,
+    STUN_TYPE_ERR_RESP
+};
+
 #define IS_REQUEST(msg_type) (((msg_type) & 0x0110) == 0x0000)
 #define IS_INDICATION(msg_type) (((msg_type) & 0x0110) == 0x0010)
 #define IS_SUCCESS_RESP(msg_type) (((msg_type) & 0x0110) == 0x0100)
 #define IS_ERR_RESP(msg_type) (((msg_type) & 0x0110) == 0x0110)
+
+static inline uint16_t stun_type(uint16_t method, int type) {
+    uint16_t val;
+    method = method & 0x0FFF;
+    val = ((method & 0x000F) | ((method & 0x0070) << 1) | ((method & 0x0380) << 2) | ((method & 0x0C00) << 2));
+    
+    switch(type) {
+        case STUN_TYPE_REQUEST:
+            val &= 0xFEEF;
+            break;
+        case STUN_TYPE_INDICATION:
+            val = ((val & 0xFEEF) | 0x0010);
+            break;
+        case STUN_TYPE_SUCCESS_RESP:
+            val = ((val & 0xFEEF) | 0x0100);
+            break;
+        case STUN_TYPE_ERR_RESP:
+            val = ((val & 0xFEEF) | 0x0110);
+            break;
+
+    }
+
+    return htons(val);
+}
+
 
 #define MAGIC_COOKIE 0x2112A442
 #define FINGERPRINT_XOR 0x5354554e
@@ -210,14 +242,14 @@ namespace lite_p2p
 
     struct __attribute__((packed)) stun_packet_t
     {
-        stun_packet_t(int method)
+        stun_packet_t(int _msg_type)
         {
             memset(attributes, 0x0, sizeof(attributes));
             for (int i = 0; i < 12; ++i)
             {
                 transaction_id[i] = rand() % 256;
             }
-            msg_type = htons(method);
+            msg_type = _msg_type;
         }
 
         uint16_t msg_type;

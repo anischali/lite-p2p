@@ -11,6 +11,7 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 #define STUN_ATTRS_LONG_TERM \
 { \
     STUN_ATTR_USERNAME, \
+    STUN_ATTR_SOFTWARE, \
     STUN_ATTR_REALM, \
     STUN_ATTR_NONCE, \
     STUN_ATTR_INTEGRITY_MSG, \
@@ -27,15 +28,25 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
     STUN_ATTR_DONT_FRAGMENT, \
 }
 
+#define STUN_ATTRS_SEND_REQUEST \
+{ \
+    STUN_ATTR_REALM, \
+    STUN_ATTR_SOFTWARE, \
+    STUN_ATTR_NONCE, \
+    STUN_ATTR_INTEGRITY_MSG, \
+    STUN_ATTR_DONT_FRAGMENT, \
+}
+
 int turn_client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
     session->liftime = 3600;
+    uint16_t msg_type = stun_type(STUN_ALLOCATE, STUN_TYPE_REQUEST);
     std::vector<uint16_t> attrs(STUN_ATTRS_ALLOCATE);
 
 retry_id:
-    struct stun_packet_t packet(STUN_ALLOCATE);
+    struct stun_packet_t packet(msg_type);
 retry:
-    packet.msg_type = htons(STUN_ALLOCATE);
+    packet.msg_type = msg_type;
     packet.msg_len = 0;
     stun_remove_unsupported_attrs(session, attrs);
     packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, attrs, 0));
@@ -55,14 +66,15 @@ retry:
 }
 
 int turn_client::refresh_request(struct stun_session_t *session) {
-    struct stun_packet_t packet(STUN_REFRESH);
+    uint16_t msg_type = stun_type(STUN_REFRESH, STUN_TYPE_REQUEST);
+    struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
     int ret = 0;
 
     session->liftime = 3600;
 retry:
     
-    packet.msg_type = htons(STUN_REFRESH);
+    packet.msg_type = msg_type;
     packet.msg_len = 0;
     stun_remove_unsupported_attrs(session, attrs);
     packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, attrs, 0));
@@ -78,14 +90,15 @@ retry:
 }
 
 int turn_client::send_request_data(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
-    struct stun_packet_t packet(STUN_SEND_REQUEST);
+    uint16_t msg_type = stun_type(STUN_SEND_REQUEST, STUN_TYPE_INDICATION);
+    struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
     struct sockaddr_t a_tmp;
     int ret = 0, offset;
 
     stun_xor_addr(&packet, &a_tmp, peer);
 retry:
-    packet.msg_type = htons(STUN_SEND_REQUEST);
+    packet.msg_type = msg_type;
     packet.msg_len = offset = 0;
     stun_remove_unsupported_attrs(session, attrs);
     offset += stun_attr_add_value(&packet.attributes[offset], STUN_ATTR_XOR_PEER_ADDR, &a_tmp);
@@ -106,14 +119,15 @@ retry:
 
 
 int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
-    struct stun_packet_t packet(STUN_CREATE_PERM);
+    uint16_t msg_type = stun_type(STUN_CREATE_PERM, STUN_TYPE_REQUEST);
+    struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
     struct sockaddr_t a_tmp;
     int ret, offset;
 
     stun_xor_addr(&packet, &a_tmp, peer);
 retry:
-    packet.msg_type = htons(STUN_CREATE_PERM);
+    packet.msg_type = msg_type;
     packet.msg_len = offset = 0;
     stun_remove_unsupported_attrs(session, attrs);
     network::set_port(&a_tmp, 0);
@@ -134,14 +148,15 @@ retry:
 
 
 int turn_client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, int chanel_id) {
-    struct stun_packet_t packet(STUN_CHANNEL_BIND);
+    uint16_t msg_type = stun_type(STUN_CHANNEL_BIND, STUN_TYPE_REQUEST);
+    struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
     struct sockaddr_t a_tmp;
     int ret, offset;
 
     stun_xor_addr(&packet, &a_tmp, peer);
 retry:
-    packet.msg_type = htons(STUN_CHANNEL_BIND);
+    packet.msg_type = msg_type;
     packet.msg_len = offset = 0;
     stun_remove_unsupported_attrs(session, attrs);
     offset += stun_attr_add_value(&packet.attributes[offset], STUN_ATTR_CHANNEL_NUM, &chanel_id);

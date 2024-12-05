@@ -127,8 +127,8 @@ int main(int argc, char *argv[]) {
     std::string s = "hello world";
     std::vector<uint8_t> s_buf(s.begin(), s.end());
     ret = turn.create_permission_request(&s_turn, &conn.remote);
-    //ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
-    ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));
+    ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
+    //ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));
     //ret = turn.refresh_request(&s_turn);
 
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
