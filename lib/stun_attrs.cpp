@@ -292,7 +292,9 @@ void stun_xor_addr(struct stun_packet_t *packet, struct sockaddr_t *d_addr, stru
 {
     void *addr;
 
-    memcpy(d_addr, s_addr, sizeof(struct sockaddr_t));
+    d_addr->sa_family = s_addr->sa_family;
+    memcpy(&d_addr->sa_addr, &s_addr->sa_addr, sizeof(s_addr->sa_addr));
+
     if (d_addr->sa_family == AF_INET)
     {
         addr = network::inet_address(d_addr);
@@ -343,7 +345,7 @@ int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, void *args)
 {
     struct sockaddr_t *addr = reinterpret_cast<struct sockaddr_t *>(args);
     void *ext_addr;
-    int length = addr->sa_family == AF_INET6 ? 20 : 12;
+    int length = addr->sa_family == AF_INET6 ? 16 : 8;
     std::vector<uint8_t> s_addr(length);
     struct stun_attr_t attr = {
         .type = attr_type,
