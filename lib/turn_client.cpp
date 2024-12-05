@@ -8,20 +8,38 @@ using namespace lite_p2p;
 
 turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 
+#define STUN_ATTRS_LONG_TERM \
+{ \
+    STUN_ATTR_USERNAME, \
+    STUN_ATTR_REALM, \
+    STUN_ATTR_NONCE, \
+    STUN_ATTR_INTEGRITY_MSG, \
+    STUN_ATTR_INTEGRITY_MSG_SHA256, \
+    STUN_ATTR_FINGERPRINT \
+}
+
 int turn_client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
     struct stun_packet_t packet(STUN_ALLOCATE);
     session->liftime = 3600;
+    std::vector<uint16_t> attrs = {
+        STUN_ATTR_LIFETIME,
+        STUN_ATTR_REQUESTED_TRANSPORT,
+        STUN_ATTR_DONT_FRAGMENT,
+        STUN_ATTR_REQUESTED_ADDR_FAMILY,
+        STUN_ATTR_ADDITIONAL_ADDR_FAMILY,
+    };
 retry:
     packet.msg_type = htons(STUN_ALLOCATE);
     packet.msg_len = 0;
-    //packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, &packet.attributes[0], retry_attrs));
+    packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, attrs, 0));
     ret = request(&session->server, &packet);
     if (ret < 0)
         return ret;
 
     ret = stun_process_attrs(session, &packet);
     if (ret == -STUN_ERR_UNAUTH) {
+        attrs.insert(attrs.end(), STUN_ATTRS_LONG_TERM);
         goto retry;
     }
 

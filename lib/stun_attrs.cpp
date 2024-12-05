@@ -25,7 +25,7 @@ int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr)
 
 int stun_attr_add_string(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    std::string *s = (std::string *)args;
+    std::string *s = reinterpret_cast<std::string*>(args);
 
     struct stun_attr_t attr = {
         .type = attr_type,
@@ -55,25 +55,25 @@ static inline int stun_attr_add_vector(uint8_t *attrs, uint16_t attr_type, size_
 
 int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, void *vec)
 {
-    std::vector<uint8_t> *v = (std::vector<uint8_t> *)vec;
+    std::vector<uint8_t> *v = reinterpret_cast<std::vector<uint8_t>*>(vec);
     return stun_attr_add_vector(attrs, attr_type, v->size(), sizeof(uint8_t), v->data());
 }
 
 int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, void *vec)
 {
-    std::vector<uint16_t> *v = (std::vector<uint16_t> *)vec;
+    std::vector<uint16_t> *v = reinterpret_cast<std::vector<uint16_t>*>(vec);
     return stun_attr_add_vector(attrs, attr_type, v->size(), sizeof(uint16_t), v->data());
 }
 
 int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, void *vec)
 {
-    std::vector<uint32_t> *v = (std::vector<uint32_t> *)vec;
+    std::vector<uint32_t> *v = reinterpret_cast<std::vector<uint32_t>*>(vec);
     return stun_attr_add_vector(attrs, attr_type, v->size(), sizeof(uint32_t), v->data());
 }
 
 int stun_attr_add_u32(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    uint32_t *val = *(uint32_t **)args;
+    uint32_t *val = reinterpret_cast<uint32_t*>(args);
     struct stun_attr_t attr = {
         .type = attr_type,
     };
@@ -86,19 +86,20 @@ int stun_attr_add_u32(uint8_t *attrs, uint16_t attr_type, void *args)
 
 int stun_attr_get_u32(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    uint32_t *val = *(uint32_t **)args;
-    struct stun_attr_t *attr = (struct stun_attr_t *)attrs;
-    if (attr->type != attr_type || attr->length == 0)
+    uint32_t *val = reinterpret_cast<uint32_t*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
+    
+    if (attr.type != attr_type || attr.length == 0)
         return -1;
 
-    *val = *(uint32_t *)attr->value;
+    *val = *(uint32_t *)attr.value;
 
     return sizeof(uint32_t);
 }
 
 int stun_attr_add_u16(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    uint16_t *val = *(uint16_t **)args;
+    uint16_t *val = reinterpret_cast<uint16_t*>(args);
     struct stun_attr_t attr = {
         .type = attr_type,
     };
@@ -111,19 +112,19 @@ int stun_attr_add_u16(uint8_t *attrs, uint16_t attr_type, void *args)
 
 int stun_attr_get_u16(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    uint16_t *val = *(uint16_t **)args;
-    struct stun_attr_t *attr = (struct stun_attr_t *)attrs;
-    if (attr->type != attr_type || attr->length == 0)
+    uint16_t *val = reinterpret_cast<uint16_t*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
+    if (attr.type != attr_type || attr.length == 0)
         return -1;
 
-    *val = *(uint16_t *)attr->value;
+    *val = *(uint16_t *)attr.value;
 
     return sizeof(uint16_t);
 }
 
 int stun_attr_add_u8(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    uint8_t *val = *(uint8_t **)args;
+    uint8_t *val = reinterpret_cast<uint8_t*>(args);
     struct stun_attr_t attr = {
         .type = attr_type,
     };
@@ -136,12 +137,12 @@ int stun_attr_add_u8(uint8_t *attrs, uint16_t attr_type, void *args)
 
 int stun_attr_get_u8(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    uint8_t *val = *(uint8_t **)args;
-    struct stun_attr_t *attr = (struct stun_attr_t *)attrs;
-    if (attr->type != attr_type || attr->length == 0)
+    uint8_t *val = reinterpret_cast<uint8_t*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
+    if (attr.type != attr_type || attr.length == 0)
         return -1;
 
-    *val = attr->value[0];
+    *val = attr.value[0];
 
     return sizeof(uint8_t);
 }
@@ -158,37 +159,37 @@ int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type, void *args)
     return stun_add_attr(attrs, &attr);
 }
 
-int stun_attr_get_u8_vector(uint8_t *attrs, uint16_t tag, void *args)
+int stun_attr_get_u8_vector(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    std::vector<uint8_t> *vec = *(std::vector<uint8_t> **)args;
-    struct stun_attr_t *attr = (struct stun_attr_t *)attrs;
+    std::vector<uint8_t> *vec = reinterpret_cast<std::vector<uint8_t>*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
 
-    if (attr->type != tag || attr->length == 0)
+    if (attr.type != attr_type || attr.length == 0)
         return -1;
 
-    vec->resize(attr->length);
-    memcpy(vec->data(), &attr->value[0], attr->length);
+    vec->resize(attr.length);
+    memcpy(vec->data(), &attr.value[0], attr.length);
 
     return vec->size();
 }
 
-int stun_attr_get_u32_vector(uint8_t *attrs, uint16_t tag, void *args)
+int stun_attr_get_u32_vector(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    std::vector<uint32_t> *vec = *(std::vector<uint32_t> **)args;
-    struct stun_attr_t *attr = (struct stun_attr_t *)attrs;
+    std::vector<uint32_t> *vec = reinterpret_cast<std::vector<uint32_t>*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
 
-    if (attr->type != tag || attr->length == 0)
+    if (attr.type != attr_type || attr.length == 0)
         return -1;
 
-    vec->resize(attr->length);
-    memcpy(vec->data(), &attr->value[0], attr->length);
+    vec->resize(attr.length);
+    memcpy(vec->data(), &attr.value[0], attr.length);
 
     return vec->size();
 }
 
 int stun_attr_fingerprint(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    struct stun_packet_t *packet = *(struct stun_packet_t **)args;
+    struct stun_packet_t *packet = reinterpret_cast<struct stun_packet_t*>(args);
     uint8_t *msg = (uint8_t *)packet;
     uint32_t crc = 0;
     struct stun_attr_t attr = {
@@ -298,7 +299,7 @@ int stun_attr_get_addr(uint8_t *attrs, uint16_t attr_type, void *args)
 {
     struct sockaddr_t *addr = *(struct sockaddr_t **)args;
     void *ext_addr;
-    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[5]);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
 
     if (attr.length == 0 || attr.type != attr_type)
         return -1;
@@ -442,7 +443,8 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
                     std::vector<uint16_t> s_attrs, int offset)
 {
     uint8_t *attrs = &packet->attributes[offset];
-    
+    struct sockaddr_t a_tmp;
+    uint32_t val;
     int idx = 0;
 
     for (auto &&attr : s_attrs)
@@ -467,7 +469,7 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             }
             break;
         case STUN_ATTR_FINGERPRINT:
-            idx += stun_attr_add_value(&attrs[idx], attr, &packet);
+            idx += stun_attr_add_value(&attrs[idx], attr, packet);
             break;
         case STUN_ATTR_SOFTWARE:
             idx += stun_attr_add_value(&attrs[idx], attr, &session->software);
@@ -488,21 +490,25 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             idx += stun_attr_add_value(&attrs[idx], attr, &session->key_algo);
             break;
         case STUN_ATTR_LIFETIME:
-            idx += stun_attr_add_value(&attrs[idx], attr, &session->liftime);
+            val = htonl(session->liftime);
+            idx += stun_attr_add_value(&attrs[idx], attr, &val);
             break;
         case STUN_ATTR_REQUESTED_TRANSPORT:
             idx += stun_attr_add_value(&attrs[idx], attr, &session->protocol); 
             break;
         case STUN_ATTR_REQUESTED_ADDR_FAMILY:
-            idx += stun_attr_add_value(&attrs[idx], attr, &session->family);
+            val = session->family;
+            idx += stun_attr_add_value(&attrs[idx], attr, &val);
             break;
         case STUN_ATTR_DONT_FRAGMENT:
             idx += stun_attr_add_value(&attrs[idx], attr, NULL);
             break;
         case STUN_ATTR_XOR_RELAYED_ADDR:
-            idx += stun_attr_add_value(&attrs[idx], attr, &session->relayed_addr);
+            stun_xor_addr(packet, &a_tmp, &session->relayed_addr);
+            idx += stun_attr_add_value(&attrs[idx], attr, &a_tmp);
         case STUN_ATTR_XOR_MAPPED_ADDR:
-            idx += stun_attr_add_value(&attrs[idx], attr, &session->relayed_addr);
+            stun_xor_addr(packet, &a_tmp, &session->mapped_addr);
+            idx += stun_attr_add_value(&attrs[idx], attr, &a_tmp);
             break;
         }
     }

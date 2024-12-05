@@ -208,7 +208,7 @@ retry:
 
     for (int i = 0; i < len; i += (4 + attr.length))
     {
-        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
+        attr = STUN_ATTR(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
         if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
         {
             ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_MAPPED_ADDR, &a_tmp);
