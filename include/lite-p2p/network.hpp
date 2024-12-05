@@ -53,8 +53,8 @@ namespace lite_p2p
         static void set_address(struct sockaddr_t *addr, struct sockaddr_in6 *__from);
         static void set_address(struct sockaddr_t *addr, struct sockaddr_in *__from);
 
-        static void set_port(struct sockaddr_t *addr, short port);
-        static short get_port(struct sockaddr_t *addr);
+        static void set_port(struct sockaddr_t *addr, uint16_t port);
+        static uint16_t get_port(struct sockaddr_t *addr);
         
         static ssize_t send_to(int fd, void *buf, size_t len, struct sockaddr_t *remote);
         static ssize_t send_to(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote);
@@ -67,7 +67,7 @@ namespace lite_p2p
         static struct sockaddr_in6 * inet6_address(struct sockaddr_t *addr);
         
         static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname);
-        static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, short port);
+        static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, uint16_t port);
 
         network(const std::string __iface);
         std::string to_string(void);

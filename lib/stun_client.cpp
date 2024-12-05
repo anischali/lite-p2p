@@ -110,18 +110,6 @@ struct sockaddr_t *stun_client::stun_get_mapped_addr(struct sockaddr_t *stun_ser
     return nullptr;
 }
 
-void print_hexbuf(const char *label, uint8_t *buf, int len)
-{
-
-    printf("%s (%d): ", label, len);
-    for (int i = 0; i < len; ++i)
-    {
-        printf("%02x", buf[i]);
-    }
-
-    printf("\n");
-}
-
 void stun_client::stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred)
 {
     std::string s_key = lt_cred ? (session->user + ":" + session->realm + ":" + password) : password;
@@ -132,7 +120,6 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
     {
         const struct algo_type_t *alg = &algos[i];
         session->key[i] = crypto::checksum(alg->ossl_alg, s_key);
-        print_hexbuf(alg->name.c_str(), session->key[i].data(), session->key[i].size());
     }
 
     session->algorithms = {
@@ -144,7 +131,7 @@ void stun_client::stun_generate_keys(struct stun_session_t *session, std::string
     session->key_algo = SHA_ALGO_MD5;
 }
 
-int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet)
+int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait)
 {
     uint8_t transaction_id[12];
     int ret;
@@ -155,6 +142,9 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
     {
         err_ret("Failed to send data", ret);
     }
+
+    if (!wait)
+        return 0;
 
     ret = network::recv_from(_socket, packet, sizeof(*packet));
     if (ret < 0)
@@ -172,6 +162,11 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
         return 0;
 
     return 0;
+}
+
+
+int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet) {
+    return request(stun_server, packet, true);
 }
 
 int stun_client::bind_request(struct stun_session_t *session)

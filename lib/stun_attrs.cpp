@@ -521,7 +521,7 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             idx += stun_attr_add_value(&attrs[idx], attr, &session->key_algo);
             break;
         case STUN_ATTR_LIFETIME:
-            val = htonl(session->liftime);
+            val = htonl(session->lifetime);
             idx += stun_attr_add_value(&attrs[idx], attr, &val);
             break;
         case STUN_ATTR_REQUESTED_TRANSPORT:
@@ -572,7 +572,7 @@ int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *pac
         switch (attr.type)
         {
         case STUN_ATTR_LIFETIME:
-            session->liftime = htonl(*(uint32_t *)attr.value);
+            session->lifetime = htonl(*(uint32_t *)attr.value);
             break;
         case STUN_ATTR_XOR_MAPPED_ADDR:
             ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_MAPPED_ADDR, &a_tmp);

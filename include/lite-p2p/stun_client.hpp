@@ -94,7 +94,7 @@ struct stun_session_t {
     struct sockaddr_t relayed_addr;
     sha_algo_type_t key_algo;
     sha_algo_type_t hmac_algo;
-    uint32_t liftime;
+    uint32_t lifetime;
     int protocol;
     int family;
     bool can_frag;
@@ -266,6 +266,7 @@ namespace lite_p2p
     protected:
         std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
+        int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait);
     public:
         stun_client(int socket_fd);
         ~stun_client();

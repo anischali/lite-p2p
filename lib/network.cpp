@@ -271,7 +271,7 @@ void network::set_address(int family, struct sockaddr_t *addr, struct sockaddr *
 }
 
 
-void network::set_port(struct sockaddr_t *addr, short port) {
+void network::set_port(struct sockaddr_t *addr, uint16_t port) {
 
     switch (addr->sa_family)
     {
@@ -287,7 +287,7 @@ void network::set_port(struct sockaddr_t *addr, short port) {
 
 }
 
-short network::get_port(struct sockaddr_t *addr) {
+uint16_t network::get_port(struct sockaddr_t *addr) {
 
     switch (addr->sa_family)
     {
@@ -413,7 +413,7 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
 }
 
 
-int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, short port) {
+int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, uint16_t port) {
     int ret;
 
     ret = resolve(hostaddr, family, hostname);

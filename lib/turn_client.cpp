@@ -39,7 +39,6 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 
 int turn_client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
-    session->liftime = 3600;
     uint16_t msg_type = stun_type(STUN_ALLOCATE, STUN_TYPE_REQUEST);
     std::vector<uint16_t> attrs(STUN_ATTRS_ALLOCATE);
 
@@ -65,15 +64,14 @@ retry:
     return ret;
 }
 
-int turn_client::refresh_request(struct stun_session_t *session) {
+int turn_client::refresh_request(struct stun_session_t *session, uint32_t lifetime) {
     uint16_t msg_type = stun_type(STUN_REFRESH, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
     int ret = 0;
 
-    session->liftime = 3600;
 retry:
-    
+    session->lifetime = lifetime;
     packet.msg_type = msg_type;
     packet.msg_len = 0;
     stun_remove_unsupported_attrs(session, attrs);

@@ -90,11 +90,12 @@ int main(int argc, char *argv[]) {
     lite_p2p::peer_connection conn(family, atoi(argv[4]));
     lite_p2p::turn_client turn(conn.sock_fd);
     struct stun_session_t s_turn = {
-        .user = "visi",
+        .user = "free",
         .software = "lite-p2p v 1.0",
-        .realm = "visibog.org",
+        .realm = "freestun.net",
         .protocol = IPPROTO_UDP,
         .family = family,
+        .lifetime = 60,
     };
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -111,7 +112,7 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
 
-    turn.stun_generate_keys(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==", true);
+    turn.stun_generate_keys(&s_turn, "free", true);
 
     turn.stun_register_session(&s_turn);
 
@@ -127,9 +128,9 @@ int main(int argc, char *argv[]) {
     std::string s = "hello world";
     std::vector<uint8_t> s_buf(s.begin(), s.end());
     ret = turn.create_permission_request(&s_turn, &conn.remote);
-    ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
-    //ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));
-    //ret = turn.refresh_request(&s_turn);
+    ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));
+    ret = turn.refresh_request(&s_turn, s_turn.lifetime);
+    //ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
 
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
