@@ -208,7 +208,7 @@ int stun_attr_fingerprint(uint8_t *attrs, uint16_t attr_type, void *args)
 
 bool stun_attr_check_fingerprint(struct stun_packet_t *packet, uint8_t *attrs)
 {
-    uint8_t *msg = (uint8_t *)packet;
+    uint8_t *msg = reinterpret_cast<uint8_t *>(packet);
     uint32_t crc = 0, s_crc = 0;
     struct stun_attr_t s_attr = STUN_ATTR(&attrs[0], &attrs[2], &attrs[4]);
 
@@ -223,7 +223,7 @@ bool stun_attr_check_fingerprint(struct stun_packet_t *packet, uint8_t *attrs)
 
 int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, struct stun_packet_t *packet, uint8_t *attrs, std::vector<uint8_t> key)
 {
-    uint8_t *msg = (uint8_t *)packet;
+    uint8_t *msg = reinterpret_cast<uint8_t*>(packet);
     int len = int(attrs - msg);
     std::vector<uint8_t> digest(alg->length);
     struct crypto_mac_ctx_t ctx("hmac", "", alg->name, key);
@@ -256,7 +256,7 @@ int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, struct
 
 bool stun_attr_check_hmac(const struct algo_type_t *alg, struct stun_packet_t *packet, uint8_t *attrs, std::vector<uint8_t> key)
 {
-    uint8_t *msg = (uint8_t *)packet;
+    uint8_t *msg = reinterpret_cast<uint8_t*>(packet);
     int len = int(attrs - msg);
     std::vector<uint8_t> digest(alg->length), s_digest(alg->length);
     struct crypto_mac_ctx_t ctx("hmac", "", alg->name, key);
@@ -297,7 +297,7 @@ void stun_xor_addr(struct stun_packet_t *packet, struct sockaddr_t *d_addr, stru
 
 int stun_attr_get_addr(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    struct sockaddr_t *addr = *(struct sockaddr_t **)args;
+    struct sockaddr_t *addr = reinterpret_cast<struct sockaddr_t *>(args);
     void *ext_addr;
     struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
 
@@ -325,7 +325,7 @@ int stun_attr_get_addr(uint8_t *attrs, uint16_t attr_type, void *args)
 
 int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, void *args)
 {
-    struct sockaddr_t *addr = *(struct sockaddr_t **)args;
+    struct sockaddr_t *addr = reinterpret_cast<struct sockaddr_t *>(args);
     void *ext_addr;
     int length = addr->sa_family == AF_INET6 ? 20 : 12;
     std::vector<uint8_t> s_addr(length);

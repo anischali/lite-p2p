@@ -25,7 +25,6 @@ int turn_client::allocate_request(struct stun_session_t *session) {
     std::vector<uint16_t> attrs = {
         STUN_ATTR_LIFETIME,
         STUN_ATTR_REQUESTED_TRANSPORT,
-        STUN_ATTR_DONT_FRAGMENT,
         STUN_ATTR_REQUESTED_ADDR_FAMILY,
         STUN_ATTR_ADDITIONAL_ADDR_FAMILY,
     };
@@ -90,13 +89,16 @@ retry:
 
 int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
     struct stun_packet_t packet(STUN_CREATE_PERM);
+    struct sockaddr_t a_tmp;
     int ret, offset;
+    std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
 
 retry:
     packet.msg_type = htons(STUN_CREATE_PERM);
     packet.msg_len = offset = 0;
-    //offset += stun_attr_peer_addr(&packet.attributes[0], packet.transaction_id, peer);
-    //offset += stun_add_attrs(session, &packet, &packet.attributes[offset], true);
+    stun_xor_addr(&packet, &a_tmp, peer);
+    offset += stun_attr_add_value(&packet.attributes[0], STUN_ATTR_XOR_PEER_ADDR, &a_tmp);
+    offset += stun_add_attrs(session, &packet, attrs, offset);
 
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);
