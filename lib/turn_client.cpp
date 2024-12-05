@@ -23,7 +23,6 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 { \
     STUN_ATTR_LIFETIME, \
     STUN_ATTR_REQUESTED_TRANSPORT, \
-    STUN_ATTR_REQUESTED_ADDR_FAMILY, \
     STUN_ATTR_ADDITIONAL_ADDR_FAMILY, \
     STUN_ATTR_DONT_FRAGMENT, \
 }
