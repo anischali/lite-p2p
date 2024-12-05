@@ -93,9 +93,9 @@ int main(int argc, char *argv[]) {
         .user = "free",
         .software = "lite-p2p v 1.0",
         .realm = "freestun.net",
+        .lifetime = 60,
         .protocol = IPPROTO_UDP,
         .family = family,
-        .lifetime = 60,
     };
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
