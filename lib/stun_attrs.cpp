@@ -345,7 +345,7 @@ int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, void *args)
 {
     struct sockaddr_t *addr = reinterpret_cast<struct sockaddr_t *>(args);
     void *ext_addr;
-    int length = addr->sa_family == AF_INET6 ? 16 : 8;
+    int length = addr->sa_family == AF_INET6 ? 20 : 8;
     std::vector<uint8_t> s_addr(length);
     struct stun_attr_t attr = {
         .type = attr_type,
@@ -528,7 +528,11 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             idx += stun_attr_add_value(&attrs[idx], attr, &session->protocol); 
             break;
         case STUN_ATTR_REQUESTED_ADDR_FAMILY:
-            val = session->family;
+            val = session->family == AF_INET6 ? 0x2 : 0x01;
+            idx += stun_attr_add_value(&attrs[idx], attr, &val);
+            break;
+        case STUN_ATTR_ADDITIONAL_ADDR_FAMILY:
+            val = session->family == AF_INET6 ? 0x2 : 0x02;
             idx += stun_attr_add_value(&attrs[idx], attr, &val);
             break;
         case STUN_ATTR_DONT_FRAGMENT:

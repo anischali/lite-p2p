@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
         .software = "lite-p2p v 1.0",
         .realm = "visibog.org",
         .protocol = IPPROTO_UDP,
-        .family = 0x1,
+        .family = family,
     };
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
     turn.stun_register_session(&s_turn);
 
-    lite_p2p::network::string_to_addr(AF_INET, argv[6], &conn.remote);
+    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
 
     int ret = turn.allocate_request(&s_turn);

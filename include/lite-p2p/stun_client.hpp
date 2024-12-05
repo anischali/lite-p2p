@@ -94,9 +94,9 @@ struct stun_session_t {
     struct sockaddr_t relayed_addr;
     sha_algo_type_t key_algo;
     sha_algo_type_t hmac_algo;
-    uint32_t protocol;
-    uint32_t family;
     uint32_t liftime;
+    int protocol;
+    int family;
     bool can_frag;
     bool lt_cred_mech;
     bool mobility;
