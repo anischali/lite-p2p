@@ -296,19 +296,13 @@ void stun_xor_addr(struct stun_packet_t *packet, struct sockaddr_t *d_addr, stru
     if (d_addr->sa_family == AF_INET)
     {
         addr = network::inet_address(d_addr);
-        if (((struct sockaddr_in *)addr)->sin_port != 0) {
-            ((struct sockaddr_in *)addr)->sin_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
-        }
-        if (((struct sockaddr_in *)addr)->sin_addr.s_addr != 0) {
-            ((struct sockaddr_in *)addr)->sin_addr.s_addr ^= htonl(MAGIC_COOKIE);
-        }
+        ((struct sockaddr_in *)addr)->sin_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
+        ((struct sockaddr_in *)addr)->sin_addr.s_addr ^= htonl(MAGIC_COOKIE);
     }
     else if (d_addr->sa_family == AF_INET6)
     {
         addr = network::inet6_address(d_addr);
-        if (((struct sockaddr_in6 *)addr)->sin6_port != 0) {
-            ((struct sockaddr_in6 *)addr)->sin6_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
-        }
+        ((struct sockaddr_in6 *)addr)->sin6_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
         ((struct sockaddr_in6 *)addr)->sin6_addr.s6_addr32[0] ^= htonl(MAGIC_COOKIE);
         for (int i = 0; i < 12; ++i)
         {
@@ -361,13 +355,13 @@ int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, void *args)
     if (addr->sa_family == AF_INET)
     {
         ext_addr = network::inet_address(addr);
-        *(int16_t *)(&attr.value[2]) = ((struct sockaddr_in *)ext_addr)->sin_port;
+        (*(int16_t *)&attr.value[2]) = ((struct sockaddr_in *)ext_addr)->sin_port;
         (*(uint32_t *)&attr.value[4]) = (((struct sockaddr_in *)ext_addr)->sin_addr.s_addr);
     }
     else if (addr->sa_family == AF_INET6)
     {
         ext_addr = network::inet6_address(addr);
-        (*(int16_t *)(&attr.value[2])) = ((struct sockaddr_in6 *)ext_addr)->sin6_port;
+        (*(int16_t *)&attr.value[2]) = ((struct sockaddr_in6 *)ext_addr)->sin6_port;
         memcpy((uint8_t *)&attr.value[4], &((struct sockaddr_in6 *)ext_addr)->sin6_addr, sizeof(struct in6_addr));
     }
 
