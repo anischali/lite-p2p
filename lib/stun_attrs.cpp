@@ -254,17 +254,6 @@ int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, struct
     msg_buf.assign(&msg[0], &msg[len]);
     ctx.key = key;
     digest = crypto::crypto_mac_sign(&ctx, msg_buf);
-    auto print_hexbuf = [](const char *label, uint8_t *buf, int len)
-    {
-        printf("%s (%d): ", label, len);
-        for (int i = 0; i < len; ++i)
-        {
-            printf("%02x", buf[i]);
-        }
-        printf("\n");
-    };
-    print_hexbuf("buf", msg_buf.data(), msg_buf.size());
-    print_hexbuf("sha", digest.data(), digest.size());
     attr.value = digest.data();
 
     return stun_add_attr(attrs, &attr);
