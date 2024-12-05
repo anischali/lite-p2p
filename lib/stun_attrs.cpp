@@ -1,4 +1,6 @@
 #include <map>
+#include <vector>
+#include <algorithm>
 #include "lite-p2p/stun_attrs.hpp"
 
 int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr)
@@ -53,16 +55,58 @@ static inline int stun_attr_add_vector(uint8_t *attrs, uint16_t attr_type, size_
     return stun_add_attr(attrs, &attr);
 }
 
+int stun_attr_get_u8_vector(uint8_t *attrs, uint16_t attr_type, void *args)
+{
+    std::vector<uint8_t> *vec = reinterpret_cast<std::vector<uint8_t>*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
+
+    if (attr.type != attr_type || attr.length == 0)
+        return -1;
+
+    vec->resize(attr.length);
+    memcpy(vec->data(), &attr.value[0], attr.length);
+
+    return vec->size();
+}
+
 int stun_attr_add_u8_vector(uint8_t *attrs, uint16_t attr_type, void *vec)
 {
     std::vector<uint8_t> *v = reinterpret_cast<std::vector<uint8_t>*>(vec);
     return stun_attr_add_vector(attrs, attr_type, v->size(), sizeof(uint8_t), v->data());
 }
 
+int stun_attr_get_u16_vector(uint8_t *attrs, uint16_t attr_type, void *args)
+{
+    std::vector<uint16_t> *vec = reinterpret_cast<std::vector<uint16_t>*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
+
+    if (attr.type != attr_type || attr.length == 0)
+        return -1;
+
+    vec->resize(attr.length / sizeof(uint16_t));
+    memcpy((uint8_t *)vec->data(), &attr.value[0], attr.length);
+
+    return vec->size();
+}
+
 int stun_attr_add_u16_vector(uint8_t *attrs, uint16_t attr_type, void *vec)
 {
     std::vector<uint16_t> *v = reinterpret_cast<std::vector<uint16_t>*>(vec);
     return stun_attr_add_vector(attrs, attr_type, v->size(), sizeof(uint16_t), v->data());
+}
+
+int stun_attr_get_u32_vector(uint8_t *attrs, uint16_t attr_type, void *args)
+{
+    std::vector<uint32_t> *vec = reinterpret_cast<std::vector<uint32_t>*>(args);
+    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
+
+    if (attr.type != attr_type || attr.length == 0)
+        return -1;
+
+    vec->resize(attr.length / sizeof(uint32_t));
+    memcpy((uint8_t *)vec->data(), &attr.value[0], attr.length);
+
+    return vec->size();
 }
 
 int stun_attr_add_u32_vector(uint8_t *attrs, uint16_t attr_type, void *vec)
@@ -159,34 +203,6 @@ int stun_attr_add_bool(uint8_t *attrs, uint16_t attr_type, void *args)
     return stun_add_attr(attrs, &attr);
 }
 
-int stun_attr_get_u8_vector(uint8_t *attrs, uint16_t attr_type, void *args)
-{
-    std::vector<uint8_t> *vec = reinterpret_cast<std::vector<uint8_t>*>(args);
-    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
-
-    if (attr.type != attr_type || attr.length == 0)
-        return -1;
-
-    vec->resize(attr.length);
-    memcpy(vec->data(), &attr.value[0], attr.length);
-
-    return vec->size();
-}
-
-int stun_attr_get_u32_vector(uint8_t *attrs, uint16_t attr_type, void *args)
-{
-    std::vector<uint32_t> *vec = reinterpret_cast<std::vector<uint32_t>*>(args);
-    struct stun_attr_t attr = STUN_ATTR_H(&attrs[0], &attrs[2], &attrs[4]);
-
-    if (attr.type != attr_type || attr.length == 0)
-        return -1;
-
-    vec->resize(attr.length);
-    memcpy(vec->data(), &attr.value[0], attr.length);
-
-    return vec->size();
-}
-
 int stun_attr_fingerprint(uint8_t *attrs, uint16_t attr_type, void *args)
 {
     struct stun_packet_t *packet = reinterpret_cast<struct stun_packet_t*>(args);
@@ -280,13 +296,19 @@ void stun_xor_addr(struct stun_packet_t *packet, struct sockaddr_t *d_addr, stru
     if (d_addr->sa_family == AF_INET)
     {
         addr = network::inet_address(d_addr);
-        ((struct sockaddr_in *)addr)->sin_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
-        ((struct sockaddr_in *)addr)->sin_addr.s_addr ^= htonl(MAGIC_COOKIE);
+        if (((struct sockaddr_in *)addr)->sin_port != 0) {
+            ((struct sockaddr_in *)addr)->sin_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
+        }
+        if (((struct sockaddr_in *)addr)->sin_addr.s_addr != 0) {
+            ((struct sockaddr_in *)addr)->sin_addr.s_addr ^= htonl(MAGIC_COOKIE);
+        }
     }
     else if (d_addr->sa_family == AF_INET6)
     {
         addr = network::inet6_address(d_addr);
-        ((struct sockaddr_in6 *)addr)->sin6_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
+        if (((struct sockaddr_in6 *)addr)->sin6_port != 0) {
+            ((struct sockaddr_in6 *)addr)->sin6_port ^= ((uint16_t)htonl(MAGIC_COOKIE));
+        }
         ((struct sockaddr_in6 *)addr)->sin6_addr.s6_addr32[0] ^= htonl(MAGIC_COOKIE);
         for (int i = 0; i < 12; ++i)
         {
@@ -352,6 +374,14 @@ int stun_attr_add_addr(uint8_t *attrs, uint16_t attr_type, void *args)
     return stun_add_attr(attrs, &attr);
 }
 
+
+void stun_remove_unsupported_attrs(struct stun_session_t *session, std::vector<uint16_t> &attrs) {
+    
+    for (auto &&v : session->unkown_attrs) {
+        attrs.erase(std::remove(attrs.begin(), attrs.end(), ntohs(v)), attrs.end());
+    }
+}
+
 struct stun_attr_ops_t
 {
     int (*stun_attr_add)(uint8_t *attrs, uint16_t tag, void *value);
@@ -378,6 +408,11 @@ const struct stun_attr_ops_t stun_attr_u32_vector_ops = {
     .stun_attr_get = stun_attr_get_u32_vector,
 };
 
+const struct stun_attr_ops_t stun_attr_u16_vector_ops = {
+    .stun_attr_add = stun_attr_add_u16_vector,
+    .stun_attr_get = stun_attr_get_u16_vector,
+};
+
 const struct stun_attr_ops_t stun_attr_u32_ops = {
     .stun_attr_add = stun_attr_add_u32,
     .stun_attr_get = stun_attr_get_u32,
@@ -398,7 +433,9 @@ const std::map<uint16_t, const struct stun_attr_ops_t *> attrs_cb = {
     {STUN_ATTR_REALM, &stun_attr_string_ops},
     {STUN_ATTR_USERNAME, &stun_attr_string_ops},
     {STUN_ATTR_NONCE, &stun_attr_u8_vector_ops},
+    {STUN_ATTR_RESERV_TOKEN, &stun_attr_u8_vector_ops},
     {STUN_ATTR_DATA, &stun_attr_u8_vector_ops},
+    {STUN_ATTR_UNKNOWN_ATTRS, &stun_attr_u16_vector_ops},
     {STUN_ATTR_PASSWD_ALGS, &stun_attr_u32_vector_ops},
     {STUN_ATTR_REQUESTED_TRANSPORT, &stun_attr_u32_ops},
     {STUN_ATTR_REQUESTED_ADDR_FAMILY, &stun_attr_u32_ops},
@@ -423,7 +460,7 @@ int stun_attr_add_value(uint8_t *attrs, uint16_t attr_type, void *value)
             return ops->stun_attr_add(attrs, attr_type, value);
     }
 
-    return -ENONET;
+    return 0;
 }
 
 int stun_attr_get_value(uint8_t *attrs, uint16_t attr_type, void *value)
@@ -440,7 +477,7 @@ int stun_attr_get_value(uint8_t *attrs, uint16_t attr_type, void *value)
 }
 
 int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet, 
-                    std::vector<uint16_t> s_attrs, int offset)
+                    std::vector<uint16_t> &s_attrs, int offset)
 {
     uint8_t *attrs = &packet->attributes[offset];
     struct sockaddr_t a_tmp;
@@ -452,21 +489,16 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
         switch (attr)
         {
         case STUN_ATTR_INTEGRITY_MSG_SHA256:
-        case STUN_ATTR_INTEGRITY_MSG:
-            if (session->key_algo == SHA_ALGO_SHA256)
-            {
-                idx += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256],
+            idx += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256],
                                           STUN_ATTR_INTEGRITY_MSG_SHA256,
                                           packet, &attrs[idx],
                                           session->key[session->key_algo]);
-            }
-            else
-            {
-                idx += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1],
+            break;
+        case STUN_ATTR_INTEGRITY_MSG:
+            idx += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1],
                                           STUN_ATTR_INTEGRITY_MSG,
                                           packet, &attrs[idx],
                                           session->key[session->key_algo]);
-            }
             break;
         case STUN_ATTR_FINGERPRINT:
             idx += stun_attr_add_value(&attrs[idx], attr, packet);
@@ -482,6 +514,9 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             break;
         case STUN_ATTR_NONCE:
             idx += stun_attr_add_value(&attrs[idx], attr, &session->nonce);
+            break;
+        case STUN_ATTR_RESERV_TOKEN:
+            idx += stun_attr_add_value(&attrs[idx], attr, &session->reservation_token);
             break;
         case STUN_ATTR_PASSWD_ALGS:
             idx += stun_attr_add_value(&attrs[idx], attr, &session->algorithms);
@@ -514,4 +549,93 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
     }
 
     return idx;
+}
+
+int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet, std::vector<uint16_t> &s_attrs)
+{
+    std::vector<uint8_t> v_tmp;
+    std::vector<uint16_t> v16_tmp;
+    struct sockaddr_t a_tmp;
+    uint32_t err_code = 0;
+    uint8_t *attrs;
+    struct stun_attr_t attr;
+    int len, offset, padding, ret;
+
+    attrs = &packet->attributes[0];
+    len = std::min((uint16_t)ntohs(packet->msg_len), (uint16_t)sizeof(packet->attributes));
+
+    for (int i = 0; i < len; i += offset)
+    {
+        offset = 4;
+        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
+
+        switch (attr.type)
+        {
+        case STUN_ATTR_LIFETIME:
+            session->liftime = htonl(*(uint32_t *)attr.value);
+            break;
+        case STUN_ATTR_XOR_MAPPED_ADDR:
+            ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_MAPPED_ADDR, &a_tmp);
+            if (ret > 0)
+                stun_xor_addr(packet, &session->mapped_addr, &a_tmp);
+            break;
+        case STUN_ATTR_XOR_RELAYED_ADDR:
+            ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_RELAYED_ADDR, &a_tmp);
+            if (ret > 0)
+                stun_xor_addr(packet, &session->relayed_addr, &a_tmp);
+            break;
+        case STUN_ATTR_ERR_CODE:
+            err_code = ntohl(*(uint32_t *)&attr.value[0]);
+            break;
+        case STUN_ATTR_NONCE:
+            stun_attr_get_value(&attrs[i], STUN_ATTR_NONCE, &v_tmp);
+            break;
+        case STUN_ATTR_INTEGRITY_MSG:
+            if (!stun_attr_check_hmac(&algos[SHA_ALGO_SHA1],
+                                      packet, &attrs[i],
+                                      session->key[session->key_algo]))
+                return -STUN_ERR_BAD_REQUEST;
+            break;
+        case STUN_ATTR_PASSWD_ALGS:
+            // TODO: dynamicaly determine algorithms
+            break;
+        case STUN_ATTR_UNKNOWN_ATTRS:
+            stun_attr_get_value(&attrs[i], STUN_ATTR_UNKNOWN_ATTRS, &session->unkown_attrs);
+            if (ret > 0) {
+                for (auto &&v : session->unkown_attrs) {
+                    if (ntohs(v) == STUN_ATTR_DONT_FRAGMENT)
+                        session->can_frag = true;
+                }
+            }
+            break;
+        case STUN_ATTR_RESERV_TOKEN:
+            stun_attr_get_value(&attrs[i], STUN_ATTR_RESERV_TOKEN, &session->reservation_token);
+            break;
+        case STUN_ATTR_FINGERPRINT:
+            if (!stun_attr_check_fingerprint(packet, &attrs[i]))
+                return -EINVAL;
+            break;
+        }
+
+        offset += attr.length;
+        padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
+        offset += padding;
+    }
+
+    if (err_code == STUN_ERR_ALLOC_MISMATCH)
+        return 0;
+    
+    else if ((err_code == STUN_ERR_STALE_NONCE ||
+        err_code == STUN_ERR_UNAUTH) &&
+            session->nonce != v_tmp && v_tmp.size() > 0)
+    {
+        session->nonce = v_tmp;
+        return -STUN_ERR_UNAUTH;
+    }
+
+    if (err_code == STUN_ERR_UNKNOWN_ATTR)
+        return -STUN_ERR_UNKNOWN_ATTR;
+
+
+    return 0;
 }

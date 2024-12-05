@@ -20,11 +20,14 @@ using namespace lite_p2p;
 #define STUN_ATTR(_type, _len, _val) \
     {.type = *(uint16_t *)_type, .length = *(uint16_t *)_len, .value = (uint8_t *)_val}
 
+void stun_remove_unsupported_attrs(struct stun_session_t *session, std::vector<uint16_t> &attrs);
 void stun_xor_addr(struct stun_packet_t *packet, struct sockaddr_t *d_addr, struct sockaddr_t *s_addr);
 int stun_attr_add_value(uint8_t *attrs, uint16_t attr_type, void *value);
 int stun_attr_get_value(uint8_t *attrs, uint16_t attr_type, void *value);
 int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet, 
-                    std::vector<uint16_t> s_attrs, int offset);
+                    std::vector<uint16_t> &s_attrs, int offset);
+int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet, 
+                            std::vector<uint16_t> &s_attrs);
 
 bool stun_attr_check_hmac(const struct algo_type_t *alg, struct stun_packet_t *packet, uint8_t *attrs, std::vector<uint8_t> key);
 int stun_attr_msg_hmac(const struct algo_type_t *alg, uint16_t attr_type, struct stun_packet_t *packet, uint8_t *attrs, std::vector<uint8_t> key);

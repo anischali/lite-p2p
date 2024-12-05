@@ -91,8 +91,6 @@ void stun_client::stun_register_session(struct stun_session_t *session)
                                std::to_string(session->server.sa_family);
 
     s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
-
-    session->nonce.assign(16, 0);
     session_db[s_sha] = session;
 }
 
@@ -226,79 +224,6 @@ retry:
             }
         }
     }
-
-    return 0;
-}
-
-int stun_client::stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet)
-{
-    std::vector<uint8_t> v_tmp;
-    struct sockaddr_t a_tmp;
-    uint32_t err_code = 0;
-    uint8_t *attrs;
-    struct stun_attr_t attr;
-    int len, offset, padding, ret;
-
-    attrs = &packet->attributes[0];
-    len = std::min((uint16_t)ntohs(packet->msg_len), (uint16_t)sizeof(packet->attributes));
-
-    for (int i = 0; i < len; i += offset)
-    {
-        offset = 4;
-        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
-
-        switch (attr.type)
-        {
-        case STUN_ATTR_LIFETIME:
-            session->liftime = htonl(*(uint32_t *)attr.value);
-            break;
-        case STUN_ATTR_XOR_MAPPED_ADDR:
-            ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_MAPPED_ADDR, &a_tmp);
-            if (ret > 0)
-                stun_xor_addr(packet, &session->mapped_addr, &a_tmp);
-            break;
-        case STUN_ATTR_XOR_RELAYED_ADDR:
-            ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_RELAYED_ADDR, &a_tmp);
-            if (ret > 0)
-                stun_xor_addr(packet, &session->relayed_addr, &a_tmp);
-            break;
-        case STUN_ATTR_ERR_CODE:
-            err_code = ntohl(*(uint32_t *)&attr.value[0]);
-            break;
-        case STUN_ATTR_NONCE:
-            stun_attr_get_value(&attrs[i], STUN_ATTR_NONCE, &v_tmp);
-            break;
-        case STUN_ATTR_INTEGRITY_MSG:
-            if (!stun_attr_check_hmac(&algos[SHA_ALGO_SHA1],
-                                      packet, &attrs[i],
-                                      session->key[session->key_algo]))
-                return -STUN_ERR_BAD_REQUEST;
-            break;
-        case STUN_ATTR_PASSWD_ALGS:
-            // TODO: dynamicaly determine algorithms
-            break;
-        case STUN_ATTR_FINGERPRINT:
-            if (!stun_attr_check_fingerprint(packet, &attrs[i]))
-                return -EINVAL;
-            break;
-        }
-
-        offset += attr.length;
-        padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
-        offset += padding;
-    }
-
-    if (err_code == STUN_ERR_ALLOC_MISMATCH)
-        return 0;
-    
-    else if ((err_code == STUN_ERR_STALE_NONCE ||
-        err_code == STUN_ERR_UNAUTH) &&
-            session->nonce != v_tmp && v_tmp.size() > 0)
-    {
-        session->nonce = v_tmp;
-        return -STUN_ERR_UNAUTH;
-    }
-
 
     return 0;
 }

@@ -53,6 +53,9 @@ struct stun_session_t {
     std::vector<uint8_t> key[SHA_ALGO_MAX];
     std::vector<uint32_t> algorithms;
     std::vector<uint8_t> nonce;
+    std::vector<uint8_t> reservation_token;
+    std::vector<uint8_t> mobility_token;
+    std::vector<uint16_t> unkown_attrs;
     std::vector<uint8_t> transaction_id;
     struct sockaddr_t server;
     struct sockaddr_t mapped_addr;
@@ -62,7 +65,9 @@ struct stun_session_t {
     uint32_t protocol;
     uint32_t family;
     uint32_t liftime;
+    bool can_frag;
     bool lt_cred_mech;
+    bool mobility;
     bool valid;
 };
 
@@ -229,7 +234,6 @@ namespace lite_p2p
     protected:
         std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
-        int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet);
     public:
         stun_client(int socket_fd);
         ~stun_client();

@@ -127,9 +127,9 @@ int main(int argc, char *argv[]) {
     std::string s = "hello world";
     std::vector<uint8_t> s_buf(s.begin(), s.end());
     ret = turn.create_permission_request(&s_turn, &conn.remote);
-    ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
+    //ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
     ret = turn.bind_channel_request(&s_turn, &conn.remote, rand_int(1000, 5000));
-    ret = turn.refresh_request(&s_turn);
+    //ret = turn.refresh_request(&s_turn);
 
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
