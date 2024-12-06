@@ -8,6 +8,7 @@
 #include "lite-p2p/peer_connection.hpp"
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/ice_agent.hpp"
+#include "lite-p2p/stun_session.hpp"
 
 
 
@@ -107,9 +108,10 @@ int main(int argc, char *argv[]) {
         .hmac_algo = SHA_ALGO_SHA1,
         .lifetime = 60,
         .protocol = IPPROTO_UDP,
-        .family = family,
+        .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,
     };
+    session_config c;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
         lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
@@ -125,11 +127,11 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
 
-    turn.stun_generate_key(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==");
+    c.stun_generate_key(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==");
 
     print_hexbuf("key", s_turn.key);
 
-    turn.stun_register_session(&s_turn);
+    c.stun_register_session(&s_turn);
 
     lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));

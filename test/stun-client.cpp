@@ -104,8 +104,7 @@ int main(int argc, char *argv[]) {
     });
 
     lite_p2p::network::resolve(&s_stun.server, family, argv[2], atoi(argv[3]));
-    stun.stun_register_session(&s_stun);
-
+    
     int ret = stun.bind_request(&s_stun);
     if (ret < 0) {
         printf("request failed with: %d\n", ret);

@@ -39,6 +39,9 @@ int turn_client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
     uint16_t msg_type = stun_type(STUN_ALLOCATE, STUN_TYPE_REQUEST);
     std::vector<uint16_t> attrs(STUN_ATTRS_ALLOCATE);
+    session->family == INET_BOTH ? 
+        attrs.insert(attrs.begin(), STUN_ATTR_ADDITIONAL_ADDR_FAMILY) : 
+        attrs.insert(attrs.begin(), STUN_ATTR_REQUESTED_ADDR_FAMILY);
 
 retry_id:
     struct stun_packet_t packet(msg_type);
@@ -46,9 +49,6 @@ retry:
     packet.msg_type = msg_type;
     packet.msg_len = 0;
     stun_remove_unsupported_attrs(session, attrs);
-    session->family == INET_BOTH ? 
-        attrs.push_back(STUN_ATTR_ADDITIONAL_ADDR_FAMILY) : 
-        attrs.push_back(STUN_ATTR_REQUESTED_ADDR_FAMILY);
     packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, attrs, 0));
     ret = request(&session->server, &packet);
     if (ret < 0)
@@ -175,18 +175,11 @@ retry:
 }
 
 struct sockaddr_t * turn_client::stun_get_relayed_addr(struct sockaddr_t *stun_server) {
-    std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
-                               std::to_string(network::get_port(stun_server)) + ":" +
-                               std::to_string(stun_server->sa_family);
+    struct stun_session_t *session = sessions.stun_session_get(stun_server);
+    if (session)
+        return &session->relayed_addr;
 
-    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
-
-    if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end())
-    {
-        return &s->second->mapped_addr;
-    }
-
-    return nullptr;
+    return NULL;
 }
 
 

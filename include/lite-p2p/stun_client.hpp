@@ -12,6 +12,7 @@
 #include "lib_common.hpp"
 #include <lite-p2p/network.hpp>
 #include <lite-p2p/crypto.hpp>
+#include <lite-p2p/stun_session.hpp>
 
 enum STUN_PACKET_TYPE {
     STUN_TYPE_REQUEST,
@@ -52,64 +53,6 @@ static inline uint16_t stun_type(uint16_t method, int type) {
 
 #define MAGIC_COOKIE 0x2112A442
 #define FINGERPRINT_XOR 0x5354554e
-
-extern const std::vector<struct algo_type_t> algos;
-
-enum sha_algo_type {
-    SHA_ALGO_CLEAR = -1,
-    SHA_ALGO_MD5 = 0,
-    SHA_ALGO_SHA1 = 1,
-    SHA_ALGO_SHA256 = 2,
-    SHA_ALGO_SHA384 = 3,
-    SHA_ALGO_SHA512 = 4,
-    SHA_ALGO_MAX,
-};
-typedef int8_t sha_algo_type_t;
-
-enum stun_addr_family {
-    INET_BOTH = 0,
-    INET_IPV4,
-    INET_IPV6,
-};
-
-#define ALGO_TYPE(t, e, s, n, l) \
-    {.type = t, .ossl_alg = e, .stun_alg = s, .name = n, .length = l}
-struct algo_type_t
-{
-    sha_algo_type_t type;
-    const EVP_MD *ossl_alg;
-    const uint32_t stun_alg;
-    const std::string name;
-    size_t length;
-};
-
-
-struct stun_session_t {
-    std::string user;
-    std::string software;
-    std::string realm;
-    std::vector<uint8_t> key;
-    std::vector<uint32_t> algorithms;
-    std::vector<uint8_t> nonce;
-    std::vector<uint8_t> reservation_token;
-    std::vector<uint8_t> mobility_token;
-    std::vector<uint16_t> unkown_attrs;
-    std::vector<uint8_t> transaction_id;
-    struct sockaddr_t server;
-    struct sockaddr_t mapped_addr;
-    struct sockaddr_t relayed_addr;
-    sha_algo_type_t key_algo;
-    sha_algo_type_t password_algo;
-    sha_algo_type_t hmac_algo;
-    uint32_t lifetime;
-    int protocol;
-    int family;
-    bool can_frag;
-    bool lt_cred_mech;
-    bool mobility;
-    bool valid;
-};
-
 
 enum stun_methods
 {
@@ -271,17 +214,15 @@ namespace lite_p2p
     private:
         int _socket;
     protected:
-        std::map<std::string, struct stun_session_t *> session_db;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait);
     public:
+        session_config sessions;
+
         stun_client(int socket_fd);
         ~stun_client();
 
         int bind_request(struct stun_session_t *session);
-        void stun_register_session(struct stun_session_t *session);
-        void stun_generate_key(struct stun_session_t *session, std::string password);
-        struct stun_session_t *stun_session_get(struct sockaddr_t *addr);
         struct sockaddr_t *stun_get_mapped_addr(struct sockaddr_t *stun_server);
         static uint32_t crc32(uint32_t crc, uint8_t *buf, size_t size);
     };

@@ -27,14 +27,6 @@
 
 using namespace lite_p2p;
 
-const std::vector<struct algo_type_t> algos = {
-            ALGO_TYPE(SHA_ALGO_MD5, EVP_md5(), htons(STUN_PASSWD_ALG_MD5), "md5", 16),
-            ALGO_TYPE(SHA_ALGO_SHA1, EVP_sha1(), htons(STUN_PASSWD_ALG_SHA256), "sha1", 20),
-            ALGO_TYPE(SHA_ALGO_SHA256, EVP_sha256(), htons(STUN_PASSWD_ALG_SHA256), "sha256", 32),
-            ALGO_TYPE(SHA_ALGO_SHA384, EVP_sha384(), htons(STUN_PASSWD_ALG_SHA256), "sha384", 48),
-            ALGO_TYPE(SHA_ALGO_SHA512, EVP_sha512(), htons(STUN_PASSWD_ALG_SHA256), "sha512", 64),
-};
-
 stun_client::stun_client(int socket_fd) : _socket{socket_fd}
 {
 }
@@ -67,64 +59,15 @@ uint32_t stun_client::crc32(uint32_t crc, uint8_t *buf, size_t len)
     return ~crc;
 }
 
-struct stun_session_t *stun_client::stun_session_get(struct sockaddr_t *addr)
-{
-    std::string s_sha, s_tmp = network::addr_to_string(addr) + ":" +
-                               std::to_string(network::get_port(addr)) + ":" +
-                               std::to_string(addr->sa_family);
-
-    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
-
-    if (auto s = session_db.find(s_sha); s != session_db.end())
-    {
-        return s->second;
-    }
-
-    return nullptr;
-}
-
-void stun_client::stun_register_session(struct stun_session_t *session)
-{
-
-    std::string s_sha, s_tmp = network::addr_to_string(&session->server) + ":" +
-                               std::to_string(network::get_port(&session->server)) + ":" +
-                               std::to_string(session->server.sa_family);
-
-    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
-    session_db[s_sha] = session;
-}
-
 struct sockaddr_t *stun_client::stun_get_mapped_addr(struct sockaddr_t *stun_server)
 {
-    std::string s_sha, s_tmp = network::addr_to_string(stun_server) + ":" +
-                               std::to_string(network::get_port(stun_server)) + ":" +
-                               std::to_string(stun_server->sa_family);
+    struct stun_session_t *session = sessions.stun_session_get(stun_server);
+    if (session)
+        return &session->mapped_addr;
 
-    s_sha = crypto::crypto_base64_encode(crypto::checksum(SHA_ALGO(sha1), s_tmp));
-
-    if (auto s = stun_client::session_db.find(s_sha); s != stun_client::session_db.end())
-    {
-        return &s->second->mapped_addr;
-    }
-
-    return nullptr;
+    return NULL;
 }
 
-void stun_client::stun_generate_key(struct stun_session_t *session, std::string password)
-{
-    const struct algo_type_t *alg;
-    std::string s_key = session->lt_cred_mech ? (session->user + ":" + session->realm + ":" + password) : password;
-
-    if (session->password_algo == SHA_ALGO_CLEAR) {
-        alg = &algos[session->key_algo];
-        session->key = crypto::checksum(alg->ossl_alg, s_key);
-    }
-
-    if (session->algorithms.size() == 0) {
-        session->algorithms.push_back(algos[SHA_ALGO_MD5].stun_alg);
-        session->algorithms.push_back(algos[SHA_ALGO_SHA256].stun_alg);
-    }
-}
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait)
 {
