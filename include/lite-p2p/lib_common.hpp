@@ -19,7 +19,7 @@ static inline bool c_array_cmp(uint8_t a1[], uint8_t a2[], int len) {
 
 static inline void print_hexbuf(const char *label, std::vector<uint8_t> &buf) {
 
-    printf("%s (%ld): ", label, buf.size());
+    printf("%s (%d): ", label, (int)buf.size());
     for (size_t i = 0; i < buf.size(); ++i) {
         printf("%02x", buf[i]);
     }

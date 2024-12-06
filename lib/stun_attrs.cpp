@@ -588,7 +588,7 @@ int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *pac
             // TODO: dynamicaly determine algorithms
             break;
         case STUN_ATTR_UNKNOWN_ATTRS:
-            stun_attr_get_value(&attrs[i], STUN_ATTR_UNKNOWN_ATTRS, &session->unkown_attrs);
+            ret = stun_attr_get_value(&attrs[i], STUN_ATTR_UNKNOWN_ATTRS, &session->unkown_attrs);
             if (ret > 0) {
                 for (auto &&v : session->unkown_attrs) {
                     if (ntohs(v) == STUN_ATTR_DONT_FRAGMENT)
