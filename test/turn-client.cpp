@@ -80,7 +80,7 @@ void visichat_sender(void *args) {
 //2001:4860:4864:5:8000::1 19302
 int main(int argc, char *argv[]) {
 
-    if (argc < 5) {
+    if (argc < 9) {
         printf("wrong arguments number !\n");
         exit(0);
     }
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
         .key_algo = SHA_ALGO_MD5,
         .password_algo = SHA_ALGO_CLEAR,
         .hmac_algo = SHA_ALGO_SHA1,
-        .lifetime = 60,
+        .lifetime = (uint32_t)atoi(argv[8]),
         .protocol = IPPROTO_UDP,
         .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,

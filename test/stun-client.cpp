@@ -52,7 +52,10 @@ void visichat_sender(void *args) {
             continue;
 
         buf.resize(cnt);
-        conn->send(buf);
+        cnt = conn->send(buf);
+        if (cnt < 0)
+            printf("error sending data\n");
+
         cnt = 0;
 
         if (!strncmp("exit", (char *)&buf[0], 4)) {
@@ -122,7 +125,7 @@ int main(int argc, char *argv[]) {
         return ret;
     }
     
-    printf("external ip: %s\n", lite_p2p::network::addr_to_string(&s_stun.mapped_addr).c_str());
+    printf("external ip: %s [%d]\n", lite_p2p::network::addr_to_string(&s_stun.mapped_addr).c_str(), lite_p2p::network::get_port(&s_stun.mapped_addr));
     if (ret < 0)
         exit(ret);
 
@@ -130,7 +133,7 @@ int main(int argc, char *argv[]) {
     lite_p2p::network::set_port(&conn.remote, atoi(argv[7]));
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
-
+    printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.remote).c_str(), lite_p2p::network::get_port(&conn.remote));
     conn.connection_type = PEER_DIRECT_CONNECTION;
 
     std::thread recver(visichat_listener, &conn);
