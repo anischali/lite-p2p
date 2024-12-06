@@ -127,6 +127,8 @@ int main(int argc, char *argv[]) {
 
     turn.stun_generate_key(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==");
 
+    print_hexbuf("key", s_turn.key);
+
     turn.stun_register_session(&s_turn);
 
     lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
