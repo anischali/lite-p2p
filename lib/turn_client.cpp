@@ -23,7 +23,6 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
 { \
     STUN_ATTR_LIFETIME, \
     STUN_ATTR_REQUESTED_TRANSPORT, \
-    STUN_ATTR_ADDITIONAL_ADDR_FAMILY, \
     STUN_ATTR_DONT_FRAGMENT, \
 }
 
@@ -47,6 +46,9 @@ retry:
     packet.msg_type = msg_type;
     packet.msg_len = 0;
     stun_remove_unsupported_attrs(session, attrs);
+    session->family == INET_BOTH ? 
+        attrs.push_back(STUN_ATTR_ADDITIONAL_ADDR_FAMILY) : 
+        attrs.push_back(STUN_ATTR_REQUESTED_ADDR_FAMILY);
     packet.msg_len = htons((uint16_t)stun_add_attrs(session, &packet, attrs, 0));
     ret = request(&session->server, &packet);
     if (ret < 0)

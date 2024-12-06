@@ -110,25 +110,20 @@ struct sockaddr_t *stun_client::stun_get_mapped_addr(struct sockaddr_t *stun_ser
     return nullptr;
 }
 
-void stun_client::stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred)
+void stun_client::stun_generate_key(struct stun_session_t *session, std::string password)
 {
-    std::string s_key = lt_cred ? (session->user + ":" + session->realm + ":" + password) : password;
+    const struct algo_type_t *alg;
+    std::string s_key = session->lt_cred_mech ? (session->user + ":" + session->realm + ":" + password) : password;
 
-    session->lt_cred_mech = lt_cred;
-    printf("pass: %s\n", s_key.c_str());
-    for (int i = 0; i < SHA_ALGO_MAX; ++i)
-    {
-        const struct algo_type_t *alg = &algos[i];
-        session->key[i] = crypto::checksum(alg->ossl_alg, s_key);
+    if (session->password_algo == SHA_ALGO_CLEAR) {
+        alg = &algos[session->key_algo];
+        session->key = crypto::checksum(alg->ossl_alg, s_key);
     }
 
-    session->algorithms = {
-        algos[SHA_ALGO_MD5].stun_alg,
-        algos[SHA_ALGO_SHA256].stun_alg,
-    };
-
-    session->hmac_algo = SHA_ALGO_SHA256;
-    session->key_algo = SHA_ALGO_MD5;
+    if (session->algorithms.size() == 0) {
+        session->algorithms.push_back(algos[SHA_ALGO_MD5].stun_alg);
+        session->algorithms.push_back(algos[SHA_ALGO_SHA256].stun_alg);
+    }
 }
 
 int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait)

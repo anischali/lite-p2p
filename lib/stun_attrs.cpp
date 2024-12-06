@@ -477,13 +477,13 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             idx += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA256],
                                           STUN_ATTR_INTEGRITY_MSG_SHA256,
                                           packet, &attrs[idx],
-                                          session->key[session->key_algo]);
+                                          session->key);
             break;
         case STUN_ATTR_INTEGRITY_MSG:
             idx += stun_attr_msg_hmac(&algos[SHA_ALGO_SHA1],
                                           STUN_ATTR_INTEGRITY_MSG,
                                           packet, &attrs[idx],
-                                          session->key[session->key_algo]);
+                                          session->key);
             break;
         case STUN_ATTR_FINGERPRINT:
             idx += stun_attr_add_value(&attrs[idx], attr, packet);
@@ -517,11 +517,10 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
             idx += stun_attr_add_value(&attrs[idx], attr, &session->protocol); 
             break;
         case STUN_ATTR_REQUESTED_ADDR_FAMILY:
-            val = session->family == AF_INET6 ? 0x2 : 0x01;
-            idx += stun_attr_add_value(&attrs[idx], attr, &val);
+            idx += stun_attr_add_value(&attrs[idx], attr, &session->family);
             break;
         case STUN_ATTR_ADDITIONAL_ADDR_FAMILY:
-            val = session->family == AF_INET6 ? 0x2 : 0x02;
+            val = INET_IPV6;
             idx += stun_attr_add_value(&attrs[idx], attr, &val);
             break;
         case STUN_ATTR_DONT_FRAGMENT:
@@ -582,7 +581,7 @@ int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *pac
         case STUN_ATTR_INTEGRITY_MSG:
             if (!stun_attr_check_hmac(&algos[SHA_ALGO_SHA1],
                                       packet, &attrs[i],
-                                      session->key[session->key_algo]))
+                                      session->key))
                 return -STUN_ERR_BAD_REQUEST;
             break;
         case STUN_ATTR_PASSWD_ALGS:

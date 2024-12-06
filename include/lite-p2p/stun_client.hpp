@@ -56,7 +56,7 @@ static inline uint16_t stun_type(uint16_t method, int type) {
 extern const std::vector<struct algo_type_t> algos;
 
 enum sha_algo_type {
-    SHA_ALGO_UNKNOWN = -1,
+    SHA_ALGO_CLEAR = -1,
     SHA_ALGO_MD5 = 0,
     SHA_ALGO_SHA1 = 1,
     SHA_ALGO_SHA256 = 2,
@@ -64,7 +64,13 @@ enum sha_algo_type {
     SHA_ALGO_SHA512 = 4,
     SHA_ALGO_MAX,
 };
-typedef uint8_t sha_algo_type_t;
+typedef int8_t sha_algo_type_t;
+
+enum stun_addr_family {
+    INET_BOTH = 0,
+    INET_IPV4,
+    INET_IPV6,
+};
 
 #define ALGO_TYPE(t, e, s, n, l) \
     {.type = t, .ossl_alg = e, .stun_alg = s, .name = n, .length = l}
@@ -82,7 +88,7 @@ struct stun_session_t {
     std::string user;
     std::string software;
     std::string realm;
-    std::vector<uint8_t> key[SHA_ALGO_MAX];
+    std::vector<uint8_t> key;
     std::vector<uint32_t> algorithms;
     std::vector<uint8_t> nonce;
     std::vector<uint8_t> reservation_token;
@@ -93,6 +99,7 @@ struct stun_session_t {
     struct sockaddr_t mapped_addr;
     struct sockaddr_t relayed_addr;
     sha_algo_type_t key_algo;
+    sha_algo_type_t password_algo;
     sha_algo_type_t hmac_algo;
     uint32_t lifetime;
     int protocol;
@@ -273,7 +280,7 @@ namespace lite_p2p
 
         int bind_request(struct stun_session_t *session);
         void stun_register_session(struct stun_session_t *session);
-        void stun_generate_keys(struct stun_session_t *session, std::string password, bool lt_cred);
+        void stun_generate_key(struct stun_session_t *session, std::string password);
         struct stun_session_t *stun_session_get(struct sockaddr_t *addr);
         struct sockaddr_t *stun_get_mapped_addr(struct sockaddr_t *stun_server);
         static uint32_t crc32(uint32_t crc, uint8_t *buf, size_t size);
