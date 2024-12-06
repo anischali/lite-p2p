@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21.0)
+cmake_minimum_required(VERSION 3.0)
 
 project(liteP2P VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
