@@ -3,7 +3,7 @@
 
 using namespace lite_p2p;
 
-peer_connection::peer_connection(int _family, std::string _addr, short _port, int _type, int _protocol) : 
+peer_connection::peer_connection(int _family, std::string _addr, uint16_t _port, int _type, int _protocol) : 
     family {_family}, local_addr{_addr}, type{_type}, protocol{_protocol} {
     timeval tv = { .tv_sec = 30 };
     int enable = 1;
@@ -48,18 +48,41 @@ peer_connection::peer_connection(int _family, std::string _addr, short _port, in
     }
 };
 
-peer_connection::peer_connection(short _port) : peer_connection(AF_INET, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
+peer_connection::peer_connection(uint16_t _port) : peer_connection(AF_INET, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
 {
 };
 
-peer_connection::peer_connection(int _family, short _port) : peer_connection(_family, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
+peer_connection::peer_connection(int _family, uint16_t _port) : peer_connection(_family, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
 {
 };
 
-peer_connection::peer_connection(int _family, std::string _addr, short _port) : peer_connection(_family, _addr, _port, SOCK_DGRAM, IPPROTO_UDP)
+peer_connection::peer_connection(int _family, std::string _addr, uint16_t _port) : peer_connection(_family, _addr, _port, SOCK_DGRAM, IPPROTO_UDP)
 {
 };
 
 peer_connection::~peer_connection() {
     close(sock_fd);
+};
+
+
+ssize_t peer_connection::send(std::vector<uint8_t> &buf) {
+    
+    switch (connection_type)
+    {
+    case PEER_DIRECT_CONNECTION:
+        return network::send_to(sock_fd, buf.data(), buf.size(), &remote);
+    
+    case PEER_RELAYED_CONNECTION:
+        if (!relay || !session)
+            return -1;
+
+        return relay->send_request_data(session, &remote, buf);
+    }
+
+    return -EINVAL;
+}
+
+ssize_t peer_connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r) {
+
+    return network::recv_from(sock_fd, buf.data(), buf.size(), r);
 };

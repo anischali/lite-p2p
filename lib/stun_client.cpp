@@ -109,12 +109,10 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
 
 int stun_client::bind_request(struct stun_session_t *session)
 {
-    struct stun_packet_t packet(STUN_REQUEST);
-    struct stun_attr_t attr;
-    struct sockaddr_t a_tmp;
+    uint16_t msg_type = stun_type(STUN_REQUEST, STUN_TYPE_REQUEST);
+    struct stun_packet_t packet(msg_type);
     std::vector<uint8_t> s_nonce;
-    uint8_t *attrs = &packet.attributes[0];
-    int ret, len, offset = 0;
+    int ret, offset = 0;
     bool retry_attrs = false;
     std::vector<uint16_t> p_attrs = {
         STUN_ATTR_USERNAME, STUN_ATTR_REALM, STUN_ATTR_NONCE, STUN_ATTR_SOFTWARE,
@@ -124,7 +122,7 @@ int stun_client::bind_request(struct stun_session_t *session)
 retry:
     if (retry_attrs)
     {
-        packet.msg_type = htons(STUN_REQUEST);
+        packet.msg_type = msg_type;
         offset = packet.msg_len = 0;
         offset += stun_add_attrs(session, &packet, p_attrs, offset);
         packet.msg_len = htons(offset);
@@ -134,29 +132,16 @@ retry:
     if (ret < 0)
         return ret;
 
-    attrs = packet.attributes;
-    len = std::min(packet.msg_len, (uint16_t)sizeof(packet.attributes));
-
-    for (int i = 0; i < len; i += (4 + attr.length))
-    {
-        attr = STUN_ATTR(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
-        if (attr.type == STUN_ATTR_XOR_MAPPED_ADDR)
-        {
-            ret = stun_attr_get_value(&attrs[i], STUN_ATTR_XOR_MAPPED_ADDR, &a_tmp);
-            if (ret > 0)
-                stun_xor_addr(&packet, &session->mapped_addr, &a_tmp);
+    ret = stun_process_attrs(session, &packet, p_attrs);
+    if (ret < 0) {
+        if (ret == -STUN_ERR_UNAUTH) {
+            retry_attrs = true;
+            goto retry;
         }
 
-        if (attr.type == STUN_ATTR_NONCE)
-        {
-            stun_attr_get_value(&attrs[i], STUN_ATTR_NONCE, (void *)&s_nonce);
-            if (!retry_attrs && session->nonce != s_nonce)
-            {
-                session->nonce = s_nonce;
-                goto retry;
-            }
-        }
+        return ret;
     }
+
 
     return 0;
 }

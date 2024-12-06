@@ -10,32 +10,33 @@
 
 
 
+
 void visichat_listener(void *args) {
     int ret;
-    static char buf[512];
+    static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     struct sockaddr_t s_addr;
 
     printf("receiver thread start [OK]\n");
 
     while(true) {
-        ret = lite_p2p::network::recv_from(conn->sock_fd, buf, 512, &s_addr);
+        ret = conn->recv(buf, &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
         buf[ret] = 0;
 
-        if (!strncmp("exit", &buf[0], 4))
+        if (!strncmp("exit", (char *)&buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), buf);
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf.data());
     }
 }
 
 void visichat_sender(void *args) {
     int cnt = 0;
-    char c = 0;
-    static char buf[512];
+    uint8_t c = 0;
+    static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
     printf("sender thread start [OK]\n");
@@ -50,10 +51,11 @@ void visichat_sender(void *args) {
         if (cnt <= 0)
             continue;
 
-        lite_p2p::network::send_to(conn->sock_fd, buf, cnt, &conn->remote);
+        buf.resize(cnt);
+        conn->send(buf);
         cnt = 0;
 
-        if (!strncmp("exit", &buf[0], 4)) {
+        if (!strncmp("exit", (char *)&buf[0], 4)) {
             sleep(1);
             exit(0);
             printf("sender thread stop [OK]\n");
@@ -78,7 +80,7 @@ void visichat_sender(void *args) {
 //2001:4860:4864:5:8000::1 19302
 int main(int argc, char *argv[]) {
 
-    if (argc < 5) {
+    if (argc < 6) {
         printf("wrong arguments number !\n");
         exit(0);
     }
@@ -86,10 +88,13 @@ int main(int argc, char *argv[]) {
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
-    lite_p2p::peer_connection conn(family, atoi(argv[4]));
+    lite_p2p::peer_connection conn(family, argv[4], atoi(argv[5]));
     lite_p2p::stun_client stun(conn.sock_fd);
-    struct stun_session_t s_stun;
-    struct sockaddr_t *ext_ip;
+    struct stun_session_t s_stun = {
+        .protocol = IPPROTO_UDP,
+        .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
+    };
+    session_config c;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
         lite_p2p::peer_connection *c = (lite_p2p::peer_connection *)ctx;
@@ -105,21 +110,28 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_stun.server, family, argv[2], atoi(argv[3]));
     
+    c.stun_generate_key(&s_stun, "free");
+
+    print_hexbuf("key", s_stun.key);
+
+    c.stun_register_session(&s_stun);
+
     int ret = stun.bind_request(&s_stun);
     if (ret < 0) {
         printf("request failed with: %d\n", ret);
         return ret;
     }
     
-    ext_ip = stun.stun_get_mapped_addr(&s_stun.server);
-    printf("external ip: %s\n", lite_p2p::network::addr_to_string(ext_ip).c_str());
+    printf("external ip: %s\n", lite_p2p::network::addr_to_string(&s_stun.mapped_addr).c_str());
     if (ret < 0)
         exit(ret);
 
     lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(argv[5]));
+    lite_p2p::network::set_port(&conn.remote, atoi(argv[7]));
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
+
+    conn.connection_type = PEER_DIRECT_CONNECTION;
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);

@@ -113,7 +113,7 @@ retry:
     if (ret == -STUN_ERR_UNAUTH || ret == -STUN_ERR_UNKNOWN_ATTR)
         goto retry;
 
-    return ret;
+    return buf.size();
 }
 
 
