@@ -45,7 +45,7 @@ void visichat_sender(void *args) {
         printf("\r> ");
         while((c = getc(stdin)) != '\n') {
             buf[cnt] = c;
-            cnt = ((cnt + 1) % sizeof(buf));
+            cnt = ((cnt + 1) % 512);
         }
 
         if (cnt <= 0)
