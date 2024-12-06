@@ -11,11 +11,6 @@ file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/lite-p2p/*.hpp)
 
 include(FetchContent)
 
-FetchContent_Declare(nlohmann_json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.2
-)
-FetchContent_MakeAvailable(nlohmann_json)
 if (ANDROID)
     FetchContent_Declare(
         android_openssl
@@ -38,8 +33,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(OpenSSL REQUIRED openssl)
 endif()
 
-target_link_libraries(lite-p2p PUBLIC 
-    nlohmann_json 
+target_link_libraries(lite-p2p PUBLIC  
     ${OpenSSL_LIBRARIES}
 )
 
@@ -62,7 +56,6 @@ target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/crypto.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/stun_session.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/lite_json.cpp
 )
 
 
