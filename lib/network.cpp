@@ -370,6 +370,50 @@ ssize_t network::recv_from(int fd, void *buf, size_t len) {
     return recv_from(fd, buf, len, 0, NULL);
 }
 
+int network::bind_socket(int fd, struct sockaddr_t *addr) {
+    
+    switch (addr->sa_family)
+    {
+    case AF_INET6:
+        return bind(fd, (struct sockaddr *)network::inet6_address(addr), sizeof(sockaddr_in6));
+
+    case AF_INET:
+        return bind(fd, (struct sockaddr *)network::inet_address(addr), sizeof(sockaddr_in));
+        break;
+    }
+
+    return -1;
+}
+
+
+int network::connect_socket(int fd, struct sockaddr_t *addr) {
+    
+    switch (addr->sa_family)
+    {
+    case AF_INET6:
+        return connect(fd, (struct sockaddr *)network::inet6_address(addr), sizeof(sockaddr_in6));
+
+    case AF_INET:
+        return connect(fd, (struct sockaddr *)network::inet_address(addr), sizeof(sockaddr_in));
+        break;
+    }
+
+    return -1;
+}
+
+
+int network::listen_socket(int fd, int n) {
+    return listen(fd, n);
+}
+
+
+int network::accept_socket(int fd, struct sockaddr_t *addr) {
+    socklen_t len = sizeof(struct sockaddr);
+    return accept(fd,((addr->sa_family == AF_INET6) ? 
+        (struct sockaddr *)inet_address(addr) : 
+        (struct sockaddr *)inet6_address(addr)), &len);
+}
+
 int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname)
 {
     struct addrinfo hints, *servinfo, *p;
@@ -423,4 +467,9 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
     lite_p2p::network::set_port(hostaddr, port);
 
     return 0;
+}
+
+void network::print_addr(struct sockaddr_t *a) {
+
+    printf("ip: %s\n", lite_p2p::network::addr_to_string(a).c_str());
 }

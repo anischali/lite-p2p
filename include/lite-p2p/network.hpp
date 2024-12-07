@@ -69,6 +69,14 @@ namespace lite_p2p
         static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname);
         static int resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, uint16_t port);
 
+        static int bind_socket(int fd, struct sockaddr_t *addr);
+        static int connect_socket(int fd, struct sockaddr_t *addr);
+        static int accept_socket(int fd, struct sockaddr_t *addr);
+        static int listen_socket(int fd, int n);
+
+        static void print_addr(struct sockaddr_t *a);
+
+
         network(const std::string __iface);
         std::string to_string(void);
         ~network() {}
