@@ -102,7 +102,7 @@ retry:
     stun_remove_unsupported_attrs(session, attrs);
     offset += stun_attr_add_value(&packet.attributes[offset], STUN_ATTR_XOR_PEER_ADDR, &a_tmp);
     offset += stun_attr_add_value(&packet.attributes[offset], STUN_ATTR_DATA, &buf);
-    offset += stun_add_attrs(session, &packet, attrs, offset);
+    //offset += stun_add_attrs(session, &packet, attrs, offset);
     
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet);

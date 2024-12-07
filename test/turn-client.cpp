@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <thread>
 #include <cstdlib>
 #include <time.h>
@@ -46,12 +47,13 @@ void visichat_sender(void *args) {
         printf("\r> ");
         while((c = getc(stdin)) != '\n') {
             buf[cnt] = c;
-            cnt = ((cnt + 1) % sizeof(buf));
+            cnt = ((cnt + 1) % 512);
         }
 
         if (cnt <= 0)
             continue;
 
+        buf.resize(cnt);
         conn->send(buf);
         cnt = 0;
 
@@ -149,11 +151,6 @@ int main(int argc, char *argv[]) {
         printf("request failed with: %d\n", ret);
         exit(-1);
     }
-    
-    ret = turn.create_permission_request(&s_turn, &conn.remote);
-    //ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));
-    //ret = turn.refresh_request(&s_turn, s_turn.lifetime);
-    //ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
 
     printf("mapped addr: %s:%d relayed addr: %s:%d\n", 
         lite_p2p::network::addr_to_string(&s_turn.mapped_addr).c_str(), 
@@ -161,6 +158,24 @@ int main(int argc, char *argv[]) {
         lite_p2p::network::addr_to_string(&s_turn.relayed_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.relayed_addr));
     
+    printf("port: ");
+
+    char buf[512];
+    int cx = 0, cnt = 0;
+    while((cx = getc(stdin)) != '\n') {
+        buf[cnt] = cx;
+        cnt = ((cnt + 1) % 512);
+    }
+    buf[cnt] = 0;
+
+    printf("\n");
+
+    lite_p2p::network::set_port(&conn.remote, atoi(buf));
+
+    ret = turn.create_permission_request(&s_turn, &conn.remote);
+    //ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));
+    //ret = turn.refresh_request(&s_turn, s_turn.lifetime);
+    //ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
     printf("peer: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.remote).c_str(), lite_p2p::network::get_port(&conn.remote));

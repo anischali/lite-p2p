@@ -16,8 +16,8 @@ namespace lite_p2p
 
     class peer_connection
     {
-
     public:
+        int fd;
         struct sockaddr_t local;
         struct sockaddr_t remote;
 
@@ -25,19 +25,23 @@ namespace lite_p2p
         struct turn_client *relay;
 
         int sock_fd; 
-        int family;
+        sa_family_t family;
         std::string local_addr;
         int type;
         int protocol;
         int connection_type;
 
-        peer_connection(int _family, std::string _addr, uint16_t _port, int _type, int _protocol);
-        peer_connection(int _family, std::string _addr, uint16_t _port);
-        peer_connection(int family, uint16_t port);
+        peer_connection(sa_family_t _family, std::string _addr, uint16_t _port, int _type, int _protocol);
+        peer_connection(sa_family_t _family, std::string _addr, uint16_t _port);
+        peer_connection(sa_family_t family, uint16_t port);
         peer_connection(uint16_t port);
 
         ssize_t send(std::vector<uint8_t> &buf);
+        ssize_t send(int new_fd, std::vector<uint8_t> &buf);
+
         ssize_t recv(std::vector<uint8_t> &buf, struct sockaddr_t *r);
+        ssize_t recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r);
+        
         
         ~peer_connection();
     };

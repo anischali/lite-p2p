@@ -3,10 +3,10 @@
 
 using namespace lite_p2p;
 
-peer_connection::peer_connection(int _family, std::string _addr, uint16_t _port, int _type, int _protocol) : 
+peer_connection::peer_connection(sa_family_t _family, std::string _addr, uint16_t _port, int _type, int _protocol) : 
     family {_family}, local_addr{_addr}, type{_type}, protocol{_protocol} {
-    timeval tv = { .tv_sec = 30 };
-    int enable = 1;
+    timeval tv = { .tv_sec = 5 };
+    const int enable = 1;
         
     sock_fd = socket(family, type, protocol);
     if (sock_fd <= 0) {
@@ -18,45 +18,21 @@ peer_connection::peer_connection(int _family, std::string _addr, uint16_t _port,
     setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
     setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     
-    
-    if (family == AF_INET) {
-        struct sockaddr_in *saddr = network::inet_address(&local);
-        if (_addr.length() == 0)
-        {
-            saddr->sin_addr.s_addr = INADDR_ANY;
-        }
-        else {
-            inet_pton(AF_INET, _addr.c_str(), &saddr->sin_addr.s_addr);
-        }
+    network::string_to_addr(family, _addr, &local);
+    network::set_port(&local, _port);
 
-        local.sa_family = saddr->sin_family = AF_INET;
-        saddr->sin_port = htons(_port);
-        bind(sock_fd, (struct sockaddr *)saddr, sizeof(struct sockaddr_in));
-    }
-    else if (family == AF_INET6) {
-        struct sockaddr_in6 *saddr6 = network::inet6_address(&local);
-        if (_addr.length() == 0) {
-            memcpy(&saddr6->sin6_addr, &in6addr_any, sizeof(struct in6_addr));
-        }
-        else {
-            inet_pton(AF_INET6, _addr.c_str(), &saddr6->sin6_addr);
-        }
-        local.sa_family = saddr6->sin6_family = AF_INET6;
-        saddr6->sin6_port = htons(_port);
-
-        bind(sock_fd, (struct sockaddr *)saddr6, sizeof(struct sockaddr_in6));
-    }
+    network::bind_socket(sock_fd, &local);
 };
 
 peer_connection::peer_connection(uint16_t _port) : peer_connection(AF_INET, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
 {
 };
 
-peer_connection::peer_connection(int _family, uint16_t _port) : peer_connection(_family, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
+peer_connection::peer_connection(sa_family_t _family, uint16_t _port) : peer_connection(_family, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
 {
 };
 
-peer_connection::peer_connection(int _family, std::string _addr, uint16_t _port) : peer_connection(_family, _addr, _port, SOCK_DGRAM, IPPROTO_UDP)
+peer_connection::peer_connection(sa_family_t _family, std::string _addr, uint16_t _port) : peer_connection(_family, _addr, _port, SOCK_DGRAM, IPPROTO_UDP)
 {
 };
 
@@ -66,10 +42,14 @@ peer_connection::~peer_connection() {
 
 
 ssize_t peer_connection::send(std::vector<uint8_t> &buf) {
-    
+
     switch (connection_type)
     {
     case PEER_DIRECT_CONNECTION:
+        if (protocol == IPPROTO_TCP) {
+            return write(sock_fd, buf.data(), buf.size());
+        }
+        
         return network::send_to(sock_fd, buf.data(), buf.size(), &remote);
     
     case PEER_RELAYED_CONNECTION:
@@ -83,6 +63,38 @@ ssize_t peer_connection::send(std::vector<uint8_t> &buf) {
 }
 
 ssize_t peer_connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r) {
+    
+    if (protocol == IPPROTO_TCP)
+        return read(sock_fd, buf.data(), buf.size());
 
     return network::recv_from(sock_fd, buf.data(), buf.size(), r);
 };
+
+
+
+ssize_t peer_connection::send(int new_fd, std::vector<uint8_t> &buf) {
+
+    switch (connection_type)
+    {
+    case PEER_DIRECT_CONNECTION:
+        if (protocol == IPPROTO_TCP)
+            return write(new_fd, buf.data(), buf.size());
+        
+        return network::send_to(new_fd, buf.data(), buf.size(), &remote);
+    
+    case PEER_RELAYED_CONNECTION:
+        if (!relay || !session)
+            return -1;
+
+        return relay->send_request_data(session, &remote, buf);
+    }
+
+    return -EINVAL;
+}
+
+ssize_t peer_connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
+    if (protocol == IPPROTO_TCP)
+        return read(new_fd, buf.data(), buf.size());    
+    
+    return network::recv_from(new_fd, buf.data(), buf.size(), NULL);
+}

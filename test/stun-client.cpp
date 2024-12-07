@@ -15,12 +15,22 @@ void visichat_listener(void *args) {
     int ret;
     static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
-    struct sockaddr_t s_addr;
-
+    struct sockaddr_t s_addr = {
+        .sa_family = conn->family,
+    };
+    
     printf("receiver thread start [OK]\n");
 
+    if (conn->protocol == IPPROTO_TCP) {
+        conn->fd = -1;
+        while (conn->fd < 0) {
+            lite_p2p::network::listen_socket(conn->sock_fd, 1);
+            conn->fd = lite_p2p::network::accept_socket(conn->sock_fd, &s_addr);
+        }
+    }
+
     while(true) {
-        ret = conn->recv(buf, &s_addr);
+        ret = conn->recv(conn->fd, buf, &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
@@ -39,6 +49,14 @@ void visichat_sender(void *args) {
     static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
+    if (conn->protocol == IPPROTO_TCP) {
+        int ret = lite_p2p::network::connect_socket(conn->sock_fd, &conn->remote);
+        if (ret < 0) {
+            ret = errno;
+            printf("%d - %s\n", ret, strerror(ret));
+        }
+    }
+
     printf("sender thread start [OK]\n");
 
     while(true) {
@@ -52,7 +70,7 @@ void visichat_sender(void *args) {
             continue;
 
         buf.resize(cnt);
-        cnt = conn->send(buf);
+        cnt = conn->send(conn->sock_fd, buf);
         if (cnt < 0)
             printf("error sending data\n");
 
@@ -87,11 +105,12 @@ int main(int argc, char *argv[]) {
         printf("wrong arguments number !\n");
         exit(0);
     }
-
+    int ret;
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, argv[4], atoi(argv[5]));
+
     lite_p2p::stun_client stun(conn.sock_fd);
     struct stun_session_t s_stun = {
         .protocol = IPPROTO_UDP,
@@ -119,7 +138,7 @@ int main(int argc, char *argv[]) {
 
     c.stun_register_session(&s_stun);
 
-    int ret = stun.bind_request(&s_stun);
+    ret = stun.bind_request(&s_stun);
     if (ret < 0) {
         printf("request failed with: %d\n", ret);
         return ret;
@@ -148,8 +167,8 @@ int main(int argc, char *argv[]) {
 #endif
     };
 
-    __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
     __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
+    __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
 
     recver.join();
     sender.join();
