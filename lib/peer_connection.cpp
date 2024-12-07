@@ -96,5 +96,5 @@ ssize_t peer_connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sock
     if (protocol == IPPROTO_TCP)
         return read(new_fd, buf.data(), buf.size());    
     
-    return network::recv_from(new_fd, buf.data(), buf.size(), NULL);
+    return network::recv_from(new_fd, buf.data(), buf.size(), r);
 }
