@@ -15,6 +15,7 @@ void visichat_listener(void *args) {
     int ret;
     static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
+    conn->fd = conn->sock_fd;
     struct sockaddr_t s_addr = {
         .sa_family = conn->family,
     };

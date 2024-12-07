@@ -11,18 +11,27 @@
 #include "lite-p2p/ice_agent.hpp"
 #include "lite-p2p/stun_session.hpp"
 
-
-
 void visichat_listener(void *args) {
     int ret;
     static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
-    struct sockaddr_t s_addr;
-
+    conn->fd = conn->sock_fd;
+    struct sockaddr_t s_addr = {
+        .sa_family = conn->family,
+    };
+    
     printf("receiver thread start [OK]\n");
 
+    if (conn->protocol == IPPROTO_TCP) {
+        conn->fd = -1;
+        while (conn->fd < 0) {
+            lite_p2p::network::listen_socket(conn->sock_fd, 1);
+            conn->fd = lite_p2p::network::accept_socket(conn->sock_fd, &s_addr);
+        }
+    }
+
     while(true) {
-        ret = conn->recv(buf, &s_addr);
+        ret = conn->recv(conn->fd, buf, &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
@@ -41,6 +50,14 @@ void visichat_sender(void *args) {
     static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
+    if (conn->protocol == IPPROTO_TCP) {
+        int ret = lite_p2p::network::connect_socket(conn->sock_fd, &conn->remote);
+        if (ret < 0) {
+            ret = errno;
+            printf("%d - %s\n", ret, strerror(ret));
+        }
+    }
+
     printf("sender thread start [OK]\n");
 
     while(true) {
@@ -54,7 +71,10 @@ void visichat_sender(void *args) {
             continue;
 
         buf.resize(cnt);
-        conn->send(buf);
+        cnt = conn->send(conn->sock_fd, buf);
+        if (cnt < 0)
+            printf("error sending data\n");
+
         cnt = 0;
 
         if (!strncmp("exit", (char *)&buf[0], 4)) {
