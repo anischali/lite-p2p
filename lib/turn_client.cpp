@@ -110,7 +110,6 @@ int turn_client::send_request_data(struct stun_session_t *session, struct sockad
     stun_remove_unsupported_attrs(session, attrs);
     offset += stun_attr_add_value(&packet.attributes[offset], STUN_ATTR_XOR_PEER_ADDR, &a_tmp);
     offset += stun_attr_add_value(&packet.attributes[offset], STUN_ATTR_DATA, &buf);
-    //offset += stun_add_attrs(session, &packet, attrs, offset);
     
     packet.msg_len = htons(offset);
     ret = request(&session->server, &packet, false);
@@ -120,6 +119,20 @@ int turn_client::send_request_data(struct stun_session_t *session, struct sockad
     return buf.size();
 }
 
+int turn_client::send_channel(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf) {
+    int ret = 0;
+    uint8_t packet[512];
+
+    *(uint16_t *)&packet[0] = (uint16_t)channel_id;
+    *(uint16_t *)&packet[2] = (uint16_t)htons(buf.size());
+
+    memcpy(&packet[4], buf.data(), buf.size());
+    ret = send_raw(&session->server, packet, buf.size() + 4);
+    if (ret < 0)
+        return 0;
+    
+    return buf.size();
+}
 
 int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
     uint16_t msg_type = stun_type(STUN_CREATE_PERM, STUN_TYPE_REQUEST);
@@ -150,7 +163,7 @@ retry:
 }
 
 
-int turn_client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, int chanel_id) {
+int turn_client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t chanel_id) {
     uint16_t msg_type = stun_type(STUN_CHANNEL_BIND, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);

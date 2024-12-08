@@ -73,6 +73,7 @@ struct stun_session_t {
     sha_algo_type_t password_algo;
     sha_algo_type_t hmac_algo;
     uint32_t lifetime;
+    uint32_t channel;
     int protocol;
     int family;
     bool can_frag;

@@ -216,6 +216,9 @@ namespace lite_p2p
     protected:
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait);
+        int send_raw(struct sockaddr_t *stun_server, uint8_t *buf, size_t len) { 
+            return network::send_to(_socket, buf, len, stun_server);
+        }
     public:
         session_config sessions;
 
