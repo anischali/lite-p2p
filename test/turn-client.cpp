@@ -13,18 +13,6 @@
 
 std::map<std::string, struct stun_server_t> servers = {
     {
-        "viagenie", 
-        {
-            .type = STUN_SERV_TYPE_TURNS,
-            .port = 80,
-            .url = "turn:numb.viagenie.ca",
-            .username = "webrtc@live.com",
-            .credential = "muazkh",
-            .realm = "",
-            .support_ipv6 = false,
-        }
-    },
-    {
         "localhost", 
         {
             .type = STUN_SERV_TYPE_STUN_TURN,
@@ -153,7 +141,7 @@ void visichat_sender(void *args) {
 //2001:4860:4864:5:8000::1 19302
 int main(int argc, char *argv[]) {
 
-    if (argc < 9) {
+    if (argc < 8) {
         printf("wrong arguments number !\n");
         exit(0);
     }
