@@ -539,6 +539,43 @@ int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet,
     return idx;
 }
 
+int stun_attr_find_offset(struct stun_packet_t *packet,  uint16_t attr_tag) {
+    uint8_t *attrs;
+    struct stun_attr_t attr;
+    int len, offset = 0, padding, i;
+
+    attrs = &packet->attributes[0];
+    len = std::min((uint16_t)ntohs(packet->msg_len), (uint16_t)sizeof(packet->attributes));
+
+
+    for (i = 0, offset = 0; i < len; i += offset, offset = 0)
+    {
+        if (i >= len)
+            break;
+
+        attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
+        
+        if (attr.type == attr_tag)
+            return offset;
+
+        offset += attr.length + 4;
+        padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
+        offset += padding;
+    }
+
+    return -1;
+}
+
+int stun_attr_get_value(struct stun_packet_t *packet, uint16_t attr_type, void *value) {
+
+    int offset = stun_attr_find_offset(packet, attr_type);
+    if (offset < 0)
+        return offset;
+
+    return stun_attr_get_value(&packet->attributes[offset], attr_type, value);
+}
+
+
 int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet, std::vector<uint16_t> &s_attrs)
 {
     std::vector<uint8_t> v_tmp;
@@ -547,14 +584,16 @@ int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *pac
     uint32_t err_code = 0;
     uint8_t *attrs;
     struct stun_attr_t attr;
-    int len, offset, padding, ret;
+    int len, offset, padding, ret, i;
 
     attrs = &packet->attributes[0];
     len = std::min((uint16_t)ntohs(packet->msg_len), (uint16_t)sizeof(packet->attributes));
 
-    for (int i = 0; i < len; i += offset)
+    for (i = 0, offset = 0; i < len; i += offset, offset = 0)
     {
-        offset = 4;
+        if (i >= len)
+            break;
+
         attr = STUN_ATTR_H(&attrs[i], &attrs[i + 2], &attrs[i + 4]);
 
         switch (attr.type)
@@ -605,15 +644,12 @@ int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *pac
             break;
         }
 
-        offset += attr.length;
+        offset += attr.length + 4;
         padding = offset % 4 != 0 ? (4 - (offset % 4)) : 0;
         offset += padding;
     }
-
-    if (err_code == STUN_ERR_ALLOC_MISMATCH)
-        return 0;
     
-    else if ((err_code == STUN_ERR_STALE_NONCE ||
+    if ((err_code == STUN_ERR_STALE_NONCE ||
         err_code == STUN_ERR_UNAUTH) &&
             session->nonce != v_tmp && v_tmp.size() > 0)
     {
@@ -621,9 +657,8 @@ int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *pac
         return -STUN_ERR_UNAUTH;
     }
 
-    if (err_code == STUN_ERR_UNKNOWN_ATTR)
-        return -STUN_ERR_UNKNOWN_ATTR;
-
+    if (err_code != 0)
+        return -err_code;
 
     return 0;
 }

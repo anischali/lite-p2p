@@ -26,6 +26,13 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
     STUN_ATTR_DONT_FRAGMENT, \
 }
 
+#define STUN_ATTRS_ALLOCATE_REUSE \
+{ \
+    STUN_ATTR_LIFETIME, \
+    STUN_ATTR_RESERV_TOKEN, \
+    STUN_ATTR_DONT_FRAGMENT, \
+}
+
 #define STUN_ATTRS_SEND_REQUEST \
 { \
     STUN_ATTR_REALM, \
@@ -39,6 +46,7 @@ int turn_client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
     uint16_t msg_type = stun_type(STUN_ALLOCATE, STUN_TYPE_REQUEST);
     std::vector<uint16_t> attrs(STUN_ATTRS_ALLOCATE);
+    std::vector<uint8_t> v_tmp;
     session->family == INET_BOTH ? 
         attrs.insert(attrs.begin(), STUN_ATTR_ADDITIONAL_ADDR_FAMILY) : 
         attrs.insert(attrs.begin(), STUN_ATTR_REQUESTED_ADDR_FAMILY);
@@ -55,13 +63,14 @@ retry:
         return ret;
 
     ret = stun_process_attrs(session, &packet, attrs);
-    if (ret == -STUN_ERR_UNAUTH) {
+    if (ret == -STUN_ERR_UNAUTH || ret == -STUN_ERR_STALE_NONCE) {
         attrs.insert(attrs.end(), STUN_ATTRS_LONG_TERM);
         goto retry;
     }
+
     if (ret == -STUN_ERR_UNKNOWN_ATTR)
         goto retry_id;
-
+    
     return ret;
 }
 

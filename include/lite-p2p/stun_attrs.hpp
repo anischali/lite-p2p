@@ -24,6 +24,8 @@ void stun_remove_unsupported_attrs(struct stun_session_t *session, std::vector<u
 void stun_xor_addr(struct stun_packet_t *packet, struct sockaddr_t *d_addr, struct sockaddr_t *s_addr);
 int stun_attr_add_value(uint8_t *attrs, uint16_t attr_type, void *value);
 int stun_attr_get_value(uint8_t *attrs, uint16_t attr_type, void *value);
+int stun_attr_get_value(struct stun_packet_t *packet, uint16_t attr_type, void *value);
+int stun_attr_find_offset(struct stun_packet_t *packet,  uint16_t attr_tag);
 int stun_add_attrs(struct stun_session_t *session, struct stun_packet_t *packet, 
                     std::vector<uint16_t> &s_attrs, int offset);
 int stun_process_attrs(struct stun_session_t *session, struct stun_packet_t *packet, 
