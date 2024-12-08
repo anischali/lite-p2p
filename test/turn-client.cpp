@@ -178,19 +178,8 @@ int main(int argc, char *argv[]) {
         lite_p2p::network::addr_to_string(&s_turn.relayed_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.relayed_addr));
     
-    printf("port: ");
-
-    char buf[512];
-    int cx = 0, cnt = 0;
-    while((cx = getc(stdin)) != '\n') {
-        buf[cnt] = cx;
-        cnt = ((cnt + 1) % 512);
-    }
-    buf[cnt] = 0;
-
-    printf("\n");
-
-    lite_p2p::network::set_port(&conn.remote, atoi(buf));
+    lite_p2p::network::set_port(&conn.remote, atoi(parse("port").c_str()));
+    
 
     ret = turn.create_permission_request(&s_turn, &conn.remote);
     //ret = turn.bind_channel_request(&s_turn, &conn.remote, htons(rand_int(0x4000,0x4FFF)));

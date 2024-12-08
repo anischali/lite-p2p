@@ -12,7 +12,7 @@ namespace lite_p2p
     class at_exit_cleanup
     {
     private:
-        struct list_head list;
+        struct list_head list = {0};
         struct at_exit_context_t
         {
             void (*cleanup)(void *context);
@@ -22,8 +22,11 @@ namespace lite_p2p
 
         static void on_exit_engine_cleanup(int status, void *context)
         {
-            struct at_exit_context_t *ctx, *save;
-            struct list_head *array = (struct list_head *)context;
+            struct at_exit_context_t *ctx = NULL, *save = NULL;
+            struct list_head *array = reinterpret_cast<struct list_head *>(context);
+
+            if (!array || list_empty(array))
+                return;
 
             list_for_each_entry_safe(ctx, save, array, list)
             {

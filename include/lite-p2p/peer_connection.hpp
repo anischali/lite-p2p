@@ -36,11 +36,15 @@ namespace lite_p2p
         peer_connection(sa_family_t family, uint16_t port);
         peer_connection(uint16_t port);
 
+        ssize_t send(int fd, uint8_t *buf, size_t len, struct sockaddr_t *r);
+        ssize_t send(int fd, uint8_t *buf, size_t len);
+        ssize_t send(uint8_t *buf, size_t len);
+        ssize_t send(int fd, std::vector<uint8_t> &buf);
         ssize_t send(std::vector<uint8_t> &buf);
-        ssize_t send(int new_fd, std::vector<uint8_t> &buf);
 
         ssize_t recv(std::vector<uint8_t> &buf, struct sockaddr_t *r);
         ssize_t recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r);
+        ssize_t recv(int new_fd, uint8_t *buf, size_t len, struct sockaddr_t *r);
         
         
         ~peer_connection();

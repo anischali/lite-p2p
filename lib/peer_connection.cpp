@@ -40,61 +40,62 @@ peer_connection::~peer_connection() {
     close(sock_fd);
 };
 
-
-ssize_t peer_connection::send(std::vector<uint8_t> &buf) {
-
-    switch (connection_type)
-    {
-    case PEER_DIRECT_CONNECTION:
-        if (protocol == IPPROTO_TCP) {
-            return write(sock_fd, buf.data(), buf.size());
-        }
-        
-        return network::send_to(sock_fd, buf.data(), buf.size(), &remote);
-    
-    case PEER_RELAYED_CONNECTION:
-        if (!relay || !session)
-            return -1;
-
-        return relay->send_request_data(session, &remote, buf);
-    }
-
-    return -EINVAL;
-}
-
-ssize_t peer_connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r) {
-    
-    if (protocol == IPPROTO_TCP)
-        return read(sock_fd, buf.data(), buf.size());
-
-    return network::recv_from(sock_fd, buf.data(), buf.size(), r);
-};
-
-
-
-ssize_t peer_connection::send(int new_fd, std::vector<uint8_t> &buf) {
+ssize_t peer_connection::send(int fd, uint8_t *buf, size_t len, struct sockaddr_t *r) {
 
     switch (connection_type)
     {
     case PEER_DIRECT_CONNECTION:
         if (protocol == IPPROTO_TCP)
-            return write(new_fd, buf.data(), buf.size());
+            return write(fd, buf, len);
         
-        return network::send_to(new_fd, buf.data(), buf.size(), &remote);
+        return network::send_to(fd, buf, len, r);
     
     case PEER_RELAYED_CONNECTION:
         if (!relay || !session)
             return -1;
 
-        return relay->send_request_data(session, &remote, buf);
+        std::vector<uint8_t> s_buf(&buf[0], &buf[len - 1]);
+        return relay->send_request_data(session, r, s_buf);
     }
 
     return -EINVAL;
 }
 
-ssize_t peer_connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
-    if (protocol == IPPROTO_TCP)
-        return read(new_fd, buf.data(), buf.size());    
-    
-    return network::recv_from(new_fd, buf.data(), buf.size(), r);
+
+ssize_t peer_connection::send(uint8_t *buf, size_t len) {
+
+    return send(sock_fd, buf, len, &remote);
 }
+
+ssize_t peer_connection::send(int fd, uint8_t *buf, size_t len) {
+
+    return send(fd, buf, len, &remote);
+}
+
+
+ssize_t peer_connection::send(int new_fd, std::vector<uint8_t> &buf) {
+    return send(new_fd, buf.data(), buf.size(), &remote);
+}
+
+
+
+ssize_t peer_connection::send(std::vector<uint8_t> &buf) {
+
+    return send(sock_fd, buf.data(), buf.size(), &remote);
+}
+
+ssize_t peer_connection::recv(int new_fd, uint8_t *buf, size_t len, struct sockaddr_t *r) {
+    if (protocol == IPPROTO_TCP)
+        return read(new_fd, buf, len);    
+    
+    return network::recv_from(new_fd, buf, len, r);   
+}
+
+ssize_t peer_connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
+    return recv(new_fd, buf.data(), buf.size(), r);
+}
+
+ssize_t peer_connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r) {
+
+    return recv(sock_fd, buf.data(), buf.size(), r);
+};
