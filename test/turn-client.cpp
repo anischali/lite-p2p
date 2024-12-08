@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, argv[4], atoi(argv[5]));
     lite_p2p::turn_client turn(conn.sock_fd);
+    /*
     struct stun_session_t s_turn = {
         .user = "free",
         .software = "lite-p2p v 1.0",
@@ -124,7 +125,7 @@ int main(int argc, char *argv[]) {
         .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,
     };
-    /*
+    */
     struct stun_session_t s_turn = {
         .user = "visi",
         .software = "lite-p2p v 1.0",
@@ -136,7 +137,7 @@ int main(int argc, char *argv[]) {
         .protocol = IPPROTO_UDP,
         .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,
-    };*/
+    };
     session_config c;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
 
-    c.stun_generate_key(&s_turn, "free");
+    c.stun_generate_key(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==");
 
     print_hexbuf("key", s_turn.key);
 

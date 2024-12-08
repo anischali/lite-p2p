@@ -8,26 +8,9 @@
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/ice_agent.hpp"
 
-
-struct keepalive_ctx_t {
-    struct stun_session_t *s;
-    lite_p2p::stun_client *c;
-    lite_p2p::peer_connection *conn;
-};
-
-void visichat_keep_alive(void *args) {
-    struct keepalive_ctx_t *ctx = (struct keepalive_ctx_t *)args;
-
-    while (true) {
-        ctx->c->bind_request(ctx->s);
-        sleep(30);
-    }
-}
-
-
 void visichat_listener(void *args) {
     int ret;
-    static uint8_t buf[512];
+    static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     conn->fd = conn->sock_fd;
     struct sockaddr_t s_addr = {
@@ -45,24 +28,23 @@ void visichat_listener(void *args) {
     }
 
     while(true) {
-        ret = conn->recv(conn->fd, buf, sizeof(buf), &s_addr);
+        ret = conn->recv(conn->fd, buf, &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
-        if (ret < (int)sizeof(buf))
-            buf[ret] = 0;
+        buf[ret] = 0;
 
         if (!strncmp("exit", (char *)&buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf);
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf.data());
     }
 }
 
 void visichat_sender(void *args) {
     int cnt = 0;
     uint8_t c = 0;
-    static uint8_t buf[512];
+    static std::vector<uint8_t> buf(512);
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
     if (conn->protocol == IPPROTO_TCP) {
@@ -85,8 +67,8 @@ void visichat_sender(void *args) {
         if (cnt <= 0)
             continue;
 
-        buf[cnt] = 0;
-        cnt = conn->send(buf, cnt);
+        buf.resize(cnt);
+        cnt = conn->send(conn->sock_fd, buf);
         if (cnt < 0)
             printf("error sending data\n");
 
@@ -170,8 +152,6 @@ int main(int argc, char *argv[]) {
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
-   
-    //std::thread keep_alive(visichat_keep_alive, &ctx);
 
     auto thread_cleanup = [](void *ctx) {
         std::thread *t = (std::thread *)ctx;
@@ -184,8 +164,6 @@ int main(int argc, char *argv[]) {
 
     __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
     __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
-    //__at_exit.at_exit_cleanup_add(&keep_alive, thread_cleanup);
-
 
     recver.join();
     sender.join();
