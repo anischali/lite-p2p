@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
     }
     
     printf("external ip: %s [%d]\n", lite_p2p::network::addr_to_string(&s_stun.mapped_addr).c_str(), lite_p2p::network::get_port(&s_stun.mapped_addr));
-    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
+    lite_p2p::network::string_to_addr(AF_INET, argv[6], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[7]));
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));

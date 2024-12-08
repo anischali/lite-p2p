@@ -36,6 +36,26 @@ struct algo_type_t
     size_t length;
 };
 
+
+enum stun_server_type {
+    STUN_SERV_TYPE_UNKNOWN = 0,
+    STUN_SERV_TYPE_STUN_ONLY = 1,
+    STUN_SERV_TYPE_TURN_ONLY,
+    STUN_SERV_TYPE_STUN_TURN,
+    STUN_SERV_TYPE_TURNS,
+};
+typedef uint8_t stun_server_type_t;
+
+struct stun_server_t {
+    stun_server_type_t type;
+    uint16_t port;
+    std::string url;
+    std::string username;
+    std::string credential;
+    std::string realm;
+    bool support_ipv6;
+};
+
 struct stun_session_t {
     std::string user;
     std::string software;
@@ -46,7 +66,6 @@ struct stun_session_t {
     std::vector<uint8_t> reservation_token;
     std::vector<uint8_t> mobility_token;
     std::vector<uint16_t> unkown_attrs;
-    std::vector<uint8_t> transaction_id;
     struct sockaddr_t server;
     struct sockaddr_t mapped_addr;
     struct sockaddr_t relayed_addr;

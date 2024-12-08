@@ -54,7 +54,7 @@ ssize_t peer_connection::send(int fd, uint8_t *buf, size_t len, struct sockaddr_
         if (!relay || !session)
             return -1;
 
-        std::vector<uint8_t> s_buf(&buf[0], &buf[len - 1]);
+        std::vector<uint8_t> s_buf(buf, buf + len);
         return relay->send_request_data(session, r, s_buf);
     }
 

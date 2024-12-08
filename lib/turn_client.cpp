@@ -96,7 +96,6 @@ int turn_client::send_request_data(struct stun_session_t *session, struct sockad
     int ret = 0, offset;
 
     stun_xor_addr(&packet, &a_tmp, peer);
-retry:
     packet.msg_type = msg_type;
     packet.msg_len = offset = 0;
     stun_remove_unsupported_attrs(session, attrs);
@@ -105,14 +104,10 @@ retry:
     //offset += stun_add_attrs(session, &packet, attrs, offset);
     
     packet.msg_len = htons(offset);
-    ret = request(&session->server, &packet);
+    ret = request(&session->server, &packet, false);
     if (ret < 0)
-        return ret;
-
-    ret = stun_process_attrs(session, &packet, attrs);
-    if (ret == -STUN_ERR_UNAUTH || ret == -STUN_ERR_UNKNOWN_ATTR)
-        goto retry;
-
+        return 0;
+    
     return buf.size();
 }
 

@@ -11,6 +11,57 @@
 #include "lite-p2p/ice_agent.hpp"
 #include "lite-p2p/stun_session.hpp"
 
+std::map<std::string, struct stun_server_t> servers = {
+    {
+        "viagenie", 
+        {
+            .type = STUN_SERV_TYPE_TURNS,
+            .port = 80,
+            .url = "turn:numb.viagenie.ca",
+            .username = "webrtc@live.com",
+            .credential = "muazkh",
+            .realm = "",
+            .support_ipv6 = false,
+        }
+    },
+    {
+        "localhost", 
+        {
+            .type = STUN_SERV_TYPE_STUN_TURN,
+            .port = 3478,
+            .url = "127.0.0.1",
+            .username = "visi",
+            .credential = "/0X8VMBsdnlL5jWq5xu7ZA==",
+            .realm = "visibog.org",
+            .support_ipv6 = true,
+        }
+    },
+    {
+        "freestun", 
+        {
+            .type = STUN_SERV_TYPE_STUN_TURN,
+            .port = 3478,
+            .url = "stun:freestun.net",
+            .username = "free",
+            .credential = "free",
+            .realm = "freestun.net",
+            .support_ipv6 = false,
+        }
+    },
+    {
+        "google", 
+            {
+            .type = STUN_SERV_TYPE_STUN_ONLY,
+            .port = 19302,
+            .url = "stun:stun2.1.google.com",
+            .support_ipv6 = true,
+        }
+    }
+};
+
+
+
+
 void visichat_listener(void *args) {
     int ret;
     static std::vector<uint8_t> buf(512);
@@ -112,32 +163,21 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, argv[4], atoi(argv[5]));
     lite_p2p::turn_client turn(conn.sock_fd);
-    /*
+
+    struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_turn = {
-        .user = "free",
+        .user = srv.username,
         .software = "lite-p2p v 1.0",
-        .realm = "freestun.net",
+        .realm = srv.realm,
         .key_algo = SHA_ALGO_MD5,
         .password_algo = SHA_ALGO_CLEAR,
         .hmac_algo = SHA_ALGO_SHA1,
-        .lifetime = (uint32_t)atoi(argv[8]),
+        .lifetime = (uint32_t)atoi(argv[7]),
         .protocol = IPPROTO_UDP,
         .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,
     };
-    */
-    struct stun_session_t s_turn = {
-        .user = "visi",
-        .software = "lite-p2p v 1.0",
-        .realm = "visibog.org",
-        .key_algo = SHA_ALGO_MD5,
-        .password_algo = SHA_ALGO_CLEAR,
-        .hmac_algo = SHA_ALGO_SHA1,
-        .lifetime = 60,
-        .protocol = IPPROTO_UDP,
-        .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
-        .lt_cred_mech = true,
-    };
+
     session_config c;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -152,9 +192,9 @@ int main(int argc, char *argv[]) {
         c->~turn_client();
     });
 
-    lite_p2p::network::resolve(&s_turn.server, family, argv[2], atoi(argv[3]));
+    lite_p2p::network::resolve(&s_turn.server, family, srv.url, srv.port);
 
-    c.stun_generate_key(&s_turn, "/0X8VMBsdnlL5jWq5xu7ZA==");
+    c.stun_generate_key(&s_turn, srv.credential);
 
     print_hexbuf("key", s_turn.key);
 
@@ -164,8 +204,8 @@ int main(int argc, char *argv[]) {
     conn.session = &s_turn;
     conn.relay = &turn;
 
-    lite_p2p::network::string_to_addr(family, argv[6], &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(argv[7]));
+    lite_p2p::network::string_to_addr(family, argv[5], &conn.remote);
+    lite_p2p::network::set_port(&conn.remote, atoi(argv[6]));
 
     int ret = turn.allocate_request(&s_turn);
     if (ret < 0) {
