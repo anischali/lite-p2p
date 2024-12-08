@@ -45,8 +45,8 @@ namespace lite_p2p
         ssize_t recv(std::vector<uint8_t> &buf, struct sockaddr_t *r);
         ssize_t recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r);
         ssize_t recv(int new_fd, uint8_t *buf, size_t len, struct sockaddr_t *r);
-        
-        
+        ssize_t recv(uint8_t *buf, size_t len, struct sockaddr_t *r);
+              
         ~peer_connection();
     };
 };

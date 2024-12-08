@@ -17,7 +17,7 @@ std::map<std::string, struct stun_server_t> servers = {
         {
             .type = STUN_SERV_TYPE_STUN_TURN,
             .port = 3478,
-            .url = "127.0.0.1",
+            .url = "192.168.0.10",
             .username = "visi",
             .credential = "/0X8VMBsdnlL5jWq5xu7ZA==",
             .realm = "visibog.org",
@@ -49,10 +49,9 @@ std::map<std::string, struct stun_server_t> servers = {
 
 
 
-
 void visichat_listener(void *args) {
     int ret;
-    static std::vector<uint8_t> buf(512);
+    static uint8_t buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     conn->fd = conn->sock_fd;
     struct sockaddr_t s_addr = {
@@ -70,7 +69,7 @@ void visichat_listener(void *args) {
     }
 
     while(true) {
-        ret = conn->recv(conn->fd, buf, &s_addr);
+        ret = conn->recv(buf, sizeof(buf), &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
@@ -79,14 +78,14 @@ void visichat_listener(void *args) {
         if (!strncmp("exit", (char *)&buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf.data());
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf);
     }
 }
 
 void visichat_sender(void *args) {
     int cnt = 0;
     uint8_t c = 0;
-    static std::vector<uint8_t> buf(512);
+    static uint8_t buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
     if (conn->protocol == IPPROTO_TCP) {
@@ -103,14 +102,14 @@ void visichat_sender(void *args) {
         printf("\r> ");
         while((c = getc(stdin)) != '\n') {
             buf[cnt] = c;
-            cnt = ((cnt + 1) % 512);
+            cnt = ((cnt + 1) % sizeof(buf));
         }
 
         if (cnt <= 0)
             continue;
 
-        buf.resize(cnt);
-        cnt = conn->send(conn->sock_fd, buf);
+        buf[cnt] = 0;
+        cnt = conn->send(buf, cnt);
         if (cnt < 0)
             printf("error sending data\n");
 
@@ -124,6 +123,7 @@ void visichat_sender(void *args) {
         }
     }
 }
+
 
 
 
@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
-    lite_p2p::peer_connection conn(family, argv[4], atoi(argv[5]));
+    lite_p2p::peer_connection conn(family, argv[3], atoi(argv[4]));
     lite_p2p::turn_client turn(conn.sock_fd);
 
     struct stun_server_t srv = servers[argv[2]];

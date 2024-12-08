@@ -91,6 +91,13 @@ ssize_t peer_connection::recv(int new_fd, uint8_t *buf, size_t len, struct socka
     return network::recv_from(new_fd, buf, len, r);   
 }
 
+ssize_t peer_connection::recv(uint8_t *buf, size_t len, struct sockaddr_t *r) {
+    if (protocol == IPPROTO_TCP)
+        return read(sock_fd, buf, len);    
+    
+    return network::recv_from(sock_fd, buf, len, r);   
+}
+
 ssize_t peer_connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
     return recv(new_fd, buf.data(), buf.size(), r);
 }

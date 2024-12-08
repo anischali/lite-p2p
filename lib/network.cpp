@@ -426,7 +426,6 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = family;
-    hints.ai_socktype = SOCK_STREAM;
 
     memset(hst, 0, sizeof(hst));
     memcpy(hst, hostname.c_str(), std::min(512, (int)hostname.length()));
@@ -438,6 +437,7 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
     ret = getaddrinfo(host, service, &hints, &servinfo);
     if (ret != 0)
     {
+        printf("%s\n", gai_strerror(ret));
         return ret;
     }
 
