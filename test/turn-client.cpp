@@ -29,7 +29,7 @@ std::map<std::string, struct stun_server_t> servers = {
         {
             .type = STUN_SERV_TYPE_STUN_TURN,
             .port = 3478,
-            .url = "stun:freestun.net",
+            .url = "turn:freestun.net",
             .username = "free",
             .credential = "free",
             .realm = "freestun.net",

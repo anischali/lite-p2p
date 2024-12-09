@@ -127,6 +127,7 @@ int turn_client::send_channel(struct stun_session_t *session, struct sockaddr_t 
     *(uint16_t *)&packet[2] = (uint16_t)htons(buf.size());
 
     memcpy(&packet[4], buf.data(), buf.size());
+
     ret = send_raw(&session->server, packet, buf.size() + 4);
     if (ret < 0)
         return 0;

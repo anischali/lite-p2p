@@ -130,8 +130,6 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::network::resolve(&s_stun.server, family, argv[2], atoi(argv[3]));
     
-    c.stun_generate_key(&s_stun, "free");
-
     print_hexbuf("key", s_stun.key);
 
     c.stun_register_session(&s_stun);
