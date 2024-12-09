@@ -1,5 +1,6 @@
 #include <vector>
 #include "lite-p2p/peer_connection.hpp"
+#include "lite-p2p/stun_attrs.hpp"
 
 using namespace lite_p2p;
 
@@ -95,10 +96,45 @@ ssize_t peer_connection::recv(int new_fd, uint8_t *buf, size_t len, struct socka
 }
 
 ssize_t peer_connection::recv(uint8_t *buf, size_t len, struct sockaddr_t *r) {
+    int ret = 0, offset;
+    struct stun_packet_t *p;
+    struct stun_attr_t attr;
+    size_t length;
+
     if (protocol == IPPROTO_TCP)
         return read(sock_fd, buf, len);    
     
-    return network::recv_from(sock_fd, buf, len, r);   
+    ret = network::recv_from(sock_fd, buf, len, r);   
+    if (ret <= 0)
+        return -errno;
+    
+    switch (connection_type)
+    {
+    case PEER_DIRECT_CONNECTION:
+        return ret;
+    
+    case PEER_RELAYED_CONNECTION:
+        if (session->channel != 0) {
+            length = std::min(len, (size_t)htons(*(uint16_t *)&buf[2]));
+            if (length > 0)
+                memmove(&buf[0], &buf[4], length);
+            return length;
+        }
+        
+        p = (struct stun_packet_t *)&buf[0];
+        offset = stun_attr_find_offset(p, STUN_ATTR_DATA);
+        attr = STUN_ATTR_H(&p->attributes[offset], &p->attributes[offset + 2], &p->attributes[offset + 4]);
+        if (attr.type != STUN_ATTR_DATA)
+            return -EINVAL;
+
+        length = std::min(len, (size_t)attr.length);
+        if (length > 0)
+            memmove(&buf[0], &attr.value[0], attr.length);
+        
+        return length;
+    }
+
+    return -EINVAL;
 }
 
 ssize_t peer_connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
