@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
         lite_p2p::network::addr_to_string(&s_turn.relayed_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.relayed_addr));
     
-    //lite_p2p::network::set_port(&conn.remote, atoi(parse("port").c_str()));
+    lite_p2p::network::set_port(&conn.remote, atoi(parse("port").c_str()));
     
 
     s_turn.channel = htons(rand_int(0x4000,0x4FFF));
