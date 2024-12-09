@@ -3,14 +3,16 @@
 #include <cstdlib>
 #include <time.h>
 #include "lite-p2p/cleanup.hpp"
+#include "lite-p2p/lib_common.hpp"
 #include "lite-p2p/stun_client.hpp"
 #include "lite-p2p/peer_connection.hpp"
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/ice_agent.hpp"
 
+
 void visichat_listener(void *args) {
     int ret;
-    static std::vector<uint8_t> buf(512);
+    static uint8_t buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args; 
     conn->fd = conn->sock_fd;
     struct sockaddr_t s_addr = {
@@ -28,7 +30,7 @@ void visichat_listener(void *args) {
     }
 
     while(true) {
-        ret = conn->recv(conn->fd, buf, &s_addr);
+        ret = conn->recv(buf, sizeof(buf), &s_addr);
         if (ret < 0 || buf[0] == 0)
             continue;
 
@@ -37,14 +39,14 @@ void visichat_listener(void *args) {
         if (!strncmp("exit", (char *)&buf[0], 4))
             continue;
 
-        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf.data());
+        fprintf(stdout, "[%s:%d]: %s\n\r> ", lite_p2p::network::addr_to_string(&s_addr).c_str(), lite_p2p::network::get_port(&s_addr), (const char *)buf);
     }
 }
 
 void visichat_sender(void *args) {
     int cnt = 0;
     uint8_t c = 0;
-    static std::vector<uint8_t> buf(512);
+    static uint8_t buf[512];
     lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
 
     if (conn->protocol == IPPROTO_TCP) {
@@ -61,14 +63,14 @@ void visichat_sender(void *args) {
         printf("\r> ");
         while((c = getc(stdin)) != '\n') {
             buf[cnt] = c;
-            cnt = ((cnt + 1) % 512);
+            cnt = ((cnt + 1) % sizeof(buf));
         }
 
         if (cnt <= 0)
             continue;
 
-        buf.resize(cnt);
-        cnt = conn->send(conn->sock_fd, buf);
+        buf[cnt] = 0;
+        cnt = conn->send(buf, cnt);
         if (cnt < 0)
             printf("error sending data\n");
 
@@ -82,8 +84,6 @@ void visichat_sender(void *args) {
         }
     }
 }
-
-
 
 //stun:stun.l.google.com 19302
 //34.203.251.243 3478
@@ -144,7 +144,8 @@ int main(int argc, char *argv[]) {
     
     printf("external ip: %s [%d]\n", lite_p2p::network::addr_to_string(&s_stun.mapped_addr).c_str(), lite_p2p::network::get_port(&s_stun.mapped_addr));
     lite_p2p::network::string_to_addr(AF_INET, argv[6], &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(argv[7]));
+    //lite_p2p::network::set_port(&conn.remote, atoi(argv[7]));
+    lite_p2p::network::set_port(&conn.remote, atoi(parse("port").c_str()));
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
     printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.remote).c_str(), lite_p2p::network::get_port(&conn.remote));
