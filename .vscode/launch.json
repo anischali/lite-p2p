@@ -2,21 +2,46 @@
   "version": "0.2.0",
   "configurations": [
     {
+        "name": "(gdb) Pipe Attach",
+        "type": "cppdbg",
+        "request": "attach",
+        "program": "${workspaceFolder}/build/test/stun-client",
+        //"program": "${workspaceFolder}/build/test/turn-client",
+        //"program": "${workspaceFolder}/build/test/lite-crypto",
+        "processId": "${command:pickRemoteProcess}",
+        "useExtendedRemote": true,
+        "miDebuggerPath": "/usr/bin/gdb",
+        "miDebuggerServerAddress": "localhost:3334",
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            },
+            {
+                "description": "Set Disassembly Flavor to Intel",
+                "text": "-gdb-set disassembly-flavor intel",
+                "ignoreFailures": true
+            }
+        ]
+      },
+    {
       "name": "C/C++ Runner: Debug Session",
       "type": "cppdbg",
       "request": "launch",
-      //"args": ["4", "stun:stun.sipnet.net", "3478", "36896", "41173"],
-      //"args": ["6", "stun:stun.sipnet.net", "3478", "36896", "41173"],
-      //"args": ["4", "34.203.251.243", "3478", "36896", "41173", "127.0.0.1"],
-      "args": ["4", "172.18.0.6", "3478", "36896", "41173", "127.0.0.1"],
-      //"args": ["6", "2001:4860:4864:5:8000::1", "19302", "5001", "5002", "<remote>"],
-      //"args": ["test"],
+      //stun 
+      //"args": ["<ip-family[4|6]>", "<stun-turn-server[url|ip]>", "<stun-port>", "<lan-ip>", "<lport>", "<remote-mapped-ip>", "<remote-port>", "<turn-lifetime>"],
+      //turn
+      //"args": ["<ip-family[4|6]>", "<server-name[see the code]>", "<lan-ip>", "<lport>", "<remote-mapped-ip>", "<remote-port>", "<turn-lifetime>"],
+      //crypto
+      //"args": ["string to hash"]
       "stopAtEntry": false,
       "externalConsole": false,
       "cwd": "${workspaceFolder}/build/",
-      "program": "${workspaceFolder}/build/turn-client",
-      //"program": "${workspaceFolder}/build/stun-client",
+      //"program": "${workspaceFolder}/build/turn-client",
       //"program": "${workspaceFolder}/build/lite-crypto",
+      "program": "${workspaceFolder}/build/test/stun-client",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

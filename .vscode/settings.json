@@ -117,6 +117,7 @@
     "typeinfo": "cpp",
     "variant": "cpp",
     "cinttypes": "cpp",
-    "ranges": "cpp"
+    "ranges": "cpp",
+    "chrono": "cpp"
   }
 }
