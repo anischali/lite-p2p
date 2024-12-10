@@ -10,20 +10,10 @@
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/ice_agent.hpp"
 #include "lite-p2p/stun_session.hpp"
-
+#if __has_include("./servers.hpp")
+#include "./servers.hpp"
+#else
 std::map<std::string, struct stun_server_t> servers = {
-    {
-        "localhost", 
-        {
-            .type = STUN_SERV_TYPE_STUN_TURN,
-            .port = 3478,
-            .url = "192.168.0.10",
-            .username = "visi",
-            .credential = "/0X8VMBsdnlL5jWq5xu7ZA==",
-            .realm = "visibog.org",
-            .support_ipv6 = true,
-        }
-    },
     {
         "freestun", 
         {
@@ -35,19 +25,9 @@ std::map<std::string, struct stun_server_t> servers = {
             .realm = "freestun.net",
             .support_ipv6 = false,
         }
-    },
-    {
-        "google", 
-            {
-            .type = STUN_SERV_TYPE_STUN_ONLY,
-            .port = 19302,
-            .url = "stun:stun2.1.google.com",
-            .support_ipv6 = true,
-        }
     }
 };
-
-
+#endif
 
 void visichat_listener(void *args) {
     int ret;
@@ -141,7 +121,7 @@ void visichat_sender(void *args) {
 //2001:4860:4864:5:8000::1 19302
 int main(int argc, char *argv[]) {
 
-    if (argc < 8) {
+    if (argc < 6) {
         printf("wrong arguments number !\n");
         exit(0);
     }
@@ -160,7 +140,7 @@ int main(int argc, char *argv[]) {
         .key_algo = SHA_ALGO_MD5,
         .password_algo = SHA_ALGO_CLEAR,
         .hmac_algo = SHA_ALGO_SHA1,
-        .lifetime = (uint32_t)atoi(argv[7]),
+        .lifetime = (uint32_t)atoi(argv[5]),
         .protocol = IPPROTO_UDP,
         .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,
@@ -192,9 +172,6 @@ int main(int argc, char *argv[]) {
     conn.session = &s_turn;
     conn.relay = &turn;
 
-    lite_p2p::network::string_to_addr(family, argv[5], &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(argv[6]));
-
     int ret = turn.allocate_request(&s_turn);
     if (ret < 0) {
         printf("request failed with: %d\n", ret);
@@ -207,6 +184,7 @@ int main(int argc, char *argv[]) {
         lite_p2p::network::addr_to_string(&s_turn.relayed_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.relayed_addr));
     
+    lite_p2p::network::string_to_addr(family, parse("remote ip"), &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(parse("port").c_str()));
     
 
