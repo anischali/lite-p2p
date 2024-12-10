@@ -50,7 +50,7 @@ void visichat_listener(void *args) {
 
     while(true) {
         ret = conn->recv(buf, sizeof(buf), &s_addr);
-        if (ret < 0 || buf[0] == 0)
+        if (ret <= 0 || buf[0] == 0)
             continue;
 
         buf[ret] = 0;
@@ -101,6 +101,17 @@ void visichat_sender(void *args) {
             printf("sender thread stop [OK]\n");
             return;
         }
+    }
+}
+
+
+void visichat_keepalive(void *args) {
+    lite_p2p::peer_connection *conn = (lite_p2p::peer_connection *)args;
+
+    while(true) {
+        conn->send(NULL, 0);
+        
+        sleep(30);
     }
 }
 
@@ -201,6 +212,8 @@ int main(int argc, char *argv[]) {
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
+    std::thread keepalive(visichat_keepalive, &conn);
+
 
     auto thread_cleanup = [](void *ctx) {
         std::thread *t = (std::thread *)ctx;
@@ -213,6 +226,8 @@ int main(int argc, char *argv[]) {
 
     __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
     __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
+    __at_exit.at_exit_cleanup_add(&keepalive, thread_cleanup);
+
 
     recver.join();
     sender.join();
