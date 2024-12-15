@@ -43,7 +43,10 @@ namespace lite_p2p {
     class crypto {
     public:
         static std::string crypto_base64_encode(std::vector<uint8_t> buf);
+        static std::string crypto_base64_encode(uint8_t *buf, size_t len);
+
         static std::vector<uint8_t> crypto_base64_decode(std::string &str);
+        static std::vector<uint8_t> crypto_base64_decode(const char *str, size_t len);
 
         static std::vector<uint8_t> checksum(const EVP_MD *algorithm, std::vector<uint8_t> &buf);
         static std::vector<uint8_t> checksum(const EVP_MD *algorithm, std::string &s);

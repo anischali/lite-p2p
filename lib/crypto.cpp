@@ -62,6 +62,11 @@ std::vector<uint8_t> crypto::crypto_random_password(int bits) {
 
 
 std::string crypto::crypto_base64_encode(std::vector<uint8_t> buf) {
+
+    return crypto::crypto_base64_encode(buf.data(), buf.size());
+}
+
+std::string crypto::crypto_base64_encode(uint8_t *buf, size_t s_len) {
     EVP_ENCODE_CTX *ctx;
     auto b64_size = [](int len) {
         int d_len = 4 * (len / 3 + 2) + 1;
@@ -71,7 +76,7 @@ std::string crypto::crypto_base64_encode(std::vector<uint8_t> buf) {
 
         return d_len;
     };
-    int ret, len = b64_size(buf.size());
+    int ret, len = b64_size(s_len);
     std::vector<uint8_t> out(len);    
 
     ctx = EVP_ENCODE_CTX_new();
@@ -80,7 +85,7 @@ std::string crypto::crypto_base64_encode(std::vector<uint8_t> buf) {
 
     EVP_EncodeInit(ctx);
     
-    ret = EVP_EncodeUpdate(ctx, out.data(), &len, buf.data(), buf.size());
+    ret = EVP_EncodeUpdate(ctx, out.data(), &len, buf, s_len);
     if (ret < 0)
         goto clean_ctx;
 
@@ -97,8 +102,13 @@ clean_ctx:
 
 
 std::vector<uint8_t> crypto::crypto_base64_decode(std::string &str) {
+
+    return crypto::crypto_base64_decode(str.c_str(), str.length());
+}
+
+std::vector<uint8_t> crypto::crypto_base64_decode(const char *str, size_t s_len) {
     EVP_ENCODE_CTX *ctx;
-    std::vector<uint8_t> out((int)(str.length() * 3 / 4));    
+    std::vector<uint8_t> out((int)(s_len * 3 / 4));    
     int ret, len;
     
     ctx = EVP_ENCODE_CTX_new();
@@ -107,7 +117,7 @@ std::vector<uint8_t> crypto::crypto_base64_decode(std::string &str) {
 
     EVP_DecodeInit(ctx);
     
-    ret = EVP_DecodeUpdate(ctx, out.data(), &len, (uint8_t *)str.data(), str.length());
+    ret = EVP_DecodeUpdate(ctx, out.data(), &len, (uint8_t *)str, s_len);
     if (ret < 0)
         goto clean_ctx;
 
