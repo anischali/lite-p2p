@@ -22,7 +22,7 @@ namespace lite_p2p
         struct sockaddr_t remote;
 
         struct stun_session_t *session;
-        struct turn_client *relay;
+        turn_client *relay;
 
         int sock_fd; 
         sa_family_t family;
