@@ -3,6 +3,8 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <unistd.h>
+#include <fcntl.h>
 #include "lite-p2p/crypto.hpp"
 #include "lite-p2p/lib_common.hpp"
 
@@ -30,7 +32,7 @@ int main(int argc, char *argv[]) {
     print_hexbuf("hmacsha256", sign);
     
     std::string b64 = lite_p2p::crypto::crypto_base64_encode(sign); // echo -n b33283b4055e919f700f08f65328c75ec87938d5d22b17520df5ad7532908ed9 | xxd -r -p | base64
-    printf("%s\n", b64.c_str());
+    printf("base64: %s\n", b64.c_str());
     std::vector<uint8_t> rb64 = lite_p2p::crypto::crypto_base64_decode(b64);
     print_hexbuf("hmacsha1 - b64", rb64);
     
@@ -50,6 +52,27 @@ int main(int argc, char *argv[]) {
     printf("%s\n", b64_pass.c_str());
     std::vector<uint8_t> rpass = lite_p2p::crypto::crypto_base64_decode(b64_pass);
     print_hexbuf("pass-decode", rpass);
+
+    int fd = open(argv[2], O_RDONLY);
+    size_t size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    std::vector<uint8_t> file_buf(size);
+
+    read(fd, file_buf.data(), size);
+    printf("size: %d\n", size);
+
+    std::string b64_file = lite_p2p::crypto::crypto_base64_encode(file_buf);
+    printf("file-b64: %s\n", b64_file.c_str());
+    close(fd);
+
+    auto before_b64 = lite_p2p::crypto::crypto_base64_decode(b64_file);
+    int fd2 = open(argv[3], O_WRONLY | O_CREAT, 0666);
+    write(fd2, before_b64.data(), before_b64.size());
+    printf("size: %d\n", before_b64.size());
+
+    sync();
+
+    close(fd2);
 
 
     return 0;

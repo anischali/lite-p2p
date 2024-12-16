@@ -2,7 +2,7 @@
 #include <openssl/rand.h>
 #include <cerrno>
 #include <cstdlib>
-
+#include <iostream>
 
 using namespace lite_p2p;
 
@@ -68,16 +68,9 @@ std::string crypto::crypto_base64_encode(std::vector<uint8_t> buf) {
 
 std::string crypto::crypto_base64_encode(uint8_t *buf, size_t s_len) {
     EVP_ENCODE_CTX *ctx;
-    auto b64_size = [](int len) {
-        int d_len = 4 * (len / 3 + 2) + 1;
-        if (len % 3) {
-            d_len += 4 - (len % 4);
-        }
-
-        return d_len;
-    };
-    int ret, len = b64_size(s_len);
-    std::vector<uint8_t> out(len);    
+    int ret, len = EVP_ENCODE_LENGTH(s_len), o_len = 0, remaining;
+    std::vector<uint8_t> out(len);
+    uint8_t *o_ptr = out.data(), *i_ptr = buf;
 
     ctx = EVP_ENCODE_CTX_new();
     if (!ctx)
@@ -85,13 +78,24 @@ std::string crypto::crypto_base64_encode(uint8_t *buf, size_t s_len) {
 
     EVP_EncodeInit(ctx);
     
-    ret = EVP_EncodeUpdate(ctx, out.data(), &len, buf, s_len);
-    if (ret < 0)
-        goto clean_ctx;
+    do {
+        remaining = std::min(48, (int)s_len);
+        ret = EVP_EncodeUpdate(ctx, o_ptr, &len, i_ptr, remaining);
+        if (ret < 0)
+            goto clean_ctx;
 
-    EVP_EncodeFinal(ctx, out.data(), &len);
+        o_ptr += len;
+        i_ptr += remaining;
+        s_len -= remaining;
+        o_len += len;
+
+    } while(s_len > 0);
+
+    
+    EVP_EncodeFinal(ctx, o_ptr, &len);
+    o_len += len;
     EVP_ENCODE_CTX_free(ctx);
-    out.resize(len);
+    out.resize(o_len);
 
     return std::string(out.begin(), out.end());
 
@@ -108,21 +112,32 @@ std::vector<uint8_t> crypto::crypto_base64_decode(std::string &str) {
 
 std::vector<uint8_t> crypto::crypto_base64_decode(const char *str, size_t s_len) {
     EVP_ENCODE_CTX *ctx;
-    std::vector<uint8_t> out((int)(s_len * 3 / 4));    
-    int ret, len;
-    
+    std::vector<uint8_t> out(EVP_DECODE_LENGTH(s_len));    
+    int ret, len = 0, remaining = 0, o_len = 0;
+    uint8_t *i_ptr = (uint8_t *)str, *o_ptr = out.data();
+
     ctx = EVP_ENCODE_CTX_new();
     if (!ctx)
         return {};
 
     EVP_DecodeInit(ctx);
     
-    ret = EVP_DecodeUpdate(ctx, out.data(), &len, (uint8_t *)str, s_len);
-    if (ret < 0)
-        goto clean_ctx;
+    do {
+        remaining = std::min(65, (int)s_len);
+        ret = EVP_DecodeUpdate(ctx, o_ptr, &len, i_ptr, remaining);
+        if (ret < 0)
+            goto clean_ctx;
 
-    out.resize(len);
-    EVP_DecodeFinal(ctx, out.data() + len, &len);
+        o_ptr += len;
+        i_ptr += remaining;
+        s_len -= remaining;
+        o_len += len;
+
+    } while(s_len > 0);
+
+    EVP_DecodeFinal(ctx, o_ptr, &len);
+    o_len += len;
+    out.resize(o_len);
     EVP_ENCODE_CTX_free(ctx);
 
     return out;
