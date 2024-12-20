@@ -65,6 +65,16 @@ namespace lite_p2p
             return result;
         };
 
+        const uint8_t &operator[](size_t idx) const
+        {
+            return bytes[idx];
+        };
+
+        uint8_t &operator[](size_t idx)
+        {
+            return bytes[idx];
+        };
+
         lite_number operator|(const lite_number &other) const
         {
             size_t size = std::min(sizeof(bytes), sizeof(other.bytes));
@@ -97,6 +107,14 @@ namespace lite_p2p
         int at(int pos)
         {
             return !!(bytes[(int)(pos / 8)] & (1 << (pos % 8)));
+        };
+
+        void set_bit(int pos, int val)
+        {
+            if (!!val)
+                bytes[(int)(pos / 8)] |= (1 << (pos % 8));
+            else
+                bytes[(int)(pos / 8)] &= ~(1 << (pos % 8));
         };
 
         std::string to_string()
