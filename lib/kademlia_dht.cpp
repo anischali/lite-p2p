@@ -26,5 +26,7 @@ kademlia_dht<T>::~kademlia_dht() {
 template <typename T>
 btree_node_t * kademlia_dht<T>::find_closest_node(T key) {
 
-    return nullptr;
+    T s_key = key ^ self_key;
+    
+    return kad_tree.btree_find_node(s_key);
 }
