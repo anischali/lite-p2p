@@ -96,7 +96,27 @@ int main(int argc, char *argv[]) {
     ds = curr.key ^ curr.key;
     bt.btree_insert_key(&curr.node, ds);
     ds = curr.key ^ rem.key;
-    bt.btree_insert_key(&curr.node, ds);
+    bt.btree_insert_key(&rem.node, ds);
+
+    auto node = bt.btree_find_node(ds);
+    if (node) {
+        auto nval = container_of(node, struct dht_peer_t, node);
+        if (nval) {
+            printf("key found (%s|%s)\n", rem.key.to_string().c_str(), nval->key.to_string().c_str());
+        }
+    }
+
+
+    lite_p2p::lpint256_t vs;
+    for (size_t i = 0; i < ds.bits(); ++i) {
+        int j = (255 - i);
+        int vbit = ds.at(j);
+        printf("bit at: %d [%d:%d]\n", (int)i, vbit, (int)((ds[j / 8] >> (j % 8)) & 1) != 0);
+
+        vs.set_bit(j, vbit);
+    }
+
+    printf("key found (%s|%s)\n", ds.to_string().c_str(), vs.to_string().c_str());
 
     bt.print();
 
