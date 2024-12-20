@@ -24,7 +24,8 @@ namespace lite_p2p
     public:
         btree();
         ~btree();
-
+        
+        struct btree_node_t *get_root() {return root;};
         int btree_insert_key(struct btree_node_t *node, T v);
         void print();
     };
