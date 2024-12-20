@@ -139,7 +139,11 @@ namespace lite_p2p
     typedef lite_number<32> lpint32_t;
     typedef lite_number<64> lpint64_t;
     typedef lite_number<128> lpint128_t;
+    typedef lite_number<160> lpint160_t;
+    typedef lite_number<192> lpint192_t;
+    typedef lite_number<224> lpint224_t;
     typedef lite_number<256> lpint256_t;
+    typedef lite_number<384> lpint384_t;
     typedef lite_number<512> lpint512_t;
     typedef lite_number<1024> lpint1024_t;
     typedef lite_number<2048> lpint2048_t;
