@@ -7,6 +7,11 @@
 #include <fcntl.h>
 #include "lite-p2p/crypto.hpp"
 #include "lite-p2p/lib_common.hpp"
+#include "lite-p2p/network.hpp"
+#include "lite-p2p/litetypes.hpp"
+#include "lite-p2p/btree.hpp"
+
+
 
 int main(int argc, char *argv[]) {
     std::vector<uint8_t> hash, sign;
@@ -59,7 +64,7 @@ int main(int argc, char *argv[]) {
     std::vector<uint8_t> file_buf(size);
 
     read(fd, file_buf.data(), size);
-    printf("size: %d\n", size);
+    printf("size: %ld\n", size);
 
     std::string b64_file = lite_p2p::crypto::crypto_base64_encode(file_buf);
     printf("file-b64: %s\n", b64_file.c_str());
@@ -68,12 +73,28 @@ int main(int argc, char *argv[]) {
     auto before_b64 = lite_p2p::crypto::crypto_base64_decode(b64_file);
     int fd2 = open(argv[3], O_WRONLY | O_CREAT, 0666);
     write(fd2, before_b64.data(), before_b64.size());
-    printf("size: %d\n", before_b64.size());
+    printf("size: %ld\n", before_b64.size());
 
     sync();
 
     close(fd2);
 
+    struct btree_t bt;
+    
+    struct dht_peer_t {
+        uint256_t key = uint256_t(lite_p2p::crypto::crypto_random_bytes(256));
+        struct sockaddr_t addr;
+        struct btree_node_t node = { .leaf = true };
+    };
+
+    struct dht_peer_t curr;
+
+    btree_insert_value_u256(&bt, &curr.node, curr.key);
+
+
+    btree_print(bt.root);
+
+    btree_free(bt.root);
 
     return 0;
 }

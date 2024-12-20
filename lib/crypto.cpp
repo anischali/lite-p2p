@@ -48,7 +48,7 @@ std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::string &s) {
 }
 
 
-std::vector<uint8_t> crypto::crypto_random_password(int bits) {
+std::vector<uint8_t> crypto::crypto_random_bytes(int bits) {
     int ret;
     size_t byte_len = (bits / 8);
     std::vector<uint8_t> pass(byte_len);
@@ -60,6 +60,10 @@ std::vector<uint8_t> crypto::crypto_random_password(int bits) {
     return pass;
 }
 
+
+std::vector<uint8_t> crypto::crypto_random_password(int bits) {
+    return crypto_random_bytes(bits);
+}
 
 std::string crypto::crypto_base64_encode(std::vector<uint8_t> buf) {
 
