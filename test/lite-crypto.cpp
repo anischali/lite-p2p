@@ -111,14 +111,12 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < ds.bits(); ++i) {
         int j = (255 - i);
         int vbit = ds.at(j);
-        printf("bit at: %d [%d:%d]\n", (int)i, vbit, (int)((ds[j / 8] >> (j % 8)) & 1) != 0);
-
         vs.set_bit(j, vbit);
     }
 
-    auto shb = lite_p2p::crypto::checksum(EVP_sha256(), before_b64);
+    auto shb = lite_p2p::crypto::checksum(EVP_sha512(), before_b64);
 
-    lite_p2p::lpint256_t p = shb;
+    lite_p2p::lpint512_t p = shb;
 
     printf("key (%s)\n", p.to_string().c_str());
 
