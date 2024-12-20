@@ -29,18 +29,6 @@ namespace lite_p2p
         int status;
     };
 
-    template class lite_peer<lite_p2p::lpint8_t>;
-    template class lite_peer<lite_p2p::lpint16_t>;
-    template class lite_peer<lite_p2p::lpint24_t>;
-    template class lite_peer<lite_p2p::lpint32_t>;
-    template class lite_peer<lite_p2p::lpint64_t>;
-    template class lite_peer<lite_p2p::lpint128_t>;
-    template class lite_peer<lite_p2p::lpint256_t>;
-    template class lite_peer<lite_p2p::lpint512_t>;
-    template class lite_peer<lite_p2p::lpint1024_t>;
-    template class lite_peer<lite_p2p::lpint2048_t>;
-    template class lite_peer<lite_p2p::lpint4096_t>;
-
     class peer_connection
     {
     public:

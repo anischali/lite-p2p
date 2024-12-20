@@ -24,14 +24,19 @@ namespace lite_p2p
         struct btree<T> kad_tree;
 
     public:
-        kademlia_dht(T skey);
-        ~kademlia_dht();
+        kademlia_dht(T skey) : self_key{skey} {}
+        ~kademlia_dht() { kad_tree.~btree(); }
+
+        btree_node_t * find_closest_node(T key) {
+            T s_key = key ^ self_key;
+    
+            return kad_tree.btree_find_node(s_key);
+        }
 
         void start();
         void stop();
 
         struct sockaddr_t get_peer_address(T key);
-        btree_node_t *find_closest_node(T key);
     };
 }
 
