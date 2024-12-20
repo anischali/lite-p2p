@@ -54,6 +54,7 @@ target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/turn_client.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/ice_agent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/btree.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/crypto.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/stun_session.cpp
 )

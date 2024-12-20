@@ -79,22 +79,27 @@ int main(int argc, char *argv[]) {
 
     close(fd2);
 
-    struct btree_t bt;
-    
+    lite_p2p::btree<lite_p2p::lpint256_t> bt;
+
     struct dht_peer_t {
-        uint256_t key = uint256_t(lite_p2p::crypto::crypto_random_bytes(256));
+        lite_p2p::lpint256_t key = lite_p2p::lpint256_t(lite_p2p::crypto::crypto_random_bytes(256));
         struct sockaddr_t addr;
-        struct btree_node_t node = { .leaf = true };
+        lite_p2p::btree_node_t node = { .leaf = true };
     };
 
     struct dht_peer_t curr;
+    struct dht_peer_t rem;
 
-    btree_insert_value_u256(&bt, &curr.node, curr.key);
 
+    lite_p2p::lpint256_t ds = curr.key ^ curr.key;
+    ds = curr.key ^ curr.key;
+    bt.btree_insert_key(&curr.node, ds);
+    ds = curr.key ^ rem.key;
+    bt.btree_insert_key(&curr.node, ds);
 
-    btree_print(bt.root);
+    bt.print();
 
-    btree_free(bt.root);
+    bt.~btree();
 
     return 0;
 }
