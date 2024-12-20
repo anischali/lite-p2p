@@ -75,7 +75,7 @@ template <typename T> btree<T>::~btree()
 }
 
 template <typename T>
-int btree<T>::btree_insert_key(struct btree_node_t *node, T v)
+int btree<T>::btree_insert_key(struct btree_node_t *node, T key)
 {
     struct btree_node_t *bt;
     size_t vsize = (sizeof(T) * 8);
@@ -89,7 +89,7 @@ int btree<T>::btree_insert_key(struct btree_node_t *node, T v)
     bt = root;
     for (size_t i = 0; i < vsize - 1 && bt; ++i)
     {
-        int vbit = v.at(i);
+        int vbit = key.at(i);
         if (!bt->children[vbit])
         {
             if ((allocate_node(&bt->children[vbit])) != 0)
@@ -99,9 +99,30 @@ int btree<T>::btree_insert_key(struct btree_node_t *node, T v)
         bt = bt->children[vbit];
     }
 
-    bt->children[v.at(vsize - 1)] = node;
+    bt->children[key.at(vsize - 1)] = node;
 
     return 0;
+}
+
+template <typename T>
+struct btree_node_t *btree<T>::btree_find_node(T key)
+{
+    struct btree_node_t *bt;
+    size_t vsize = (sizeof(T) * 8);
+
+    bt = root;
+    for (size_t i = 0; i < vsize - 1 && bt; ++i)
+    {
+        int vbit = key.at(i);
+        if (!bt->children[vbit])
+        {
+            return nullptr;
+        }
+
+        bt = bt->children[vbit];
+    }
+
+    return bt->children[key.at(vsize - 1)];
 }
 
 
