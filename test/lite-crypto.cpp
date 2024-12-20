@@ -116,7 +116,13 @@ int main(int argc, char *argv[]) {
         vs.set_bit(j, vbit);
     }
 
-    printf("key found (%s|%s)\n", ds.to_string().c_str(), vs.to_string().c_str());
+    auto shb = lite_p2p::crypto::checksum(EVP_sha256(), before_b64);
+
+    lite_p2p::lpint256_t p = shb;
+
+    printf("key (%s)\n", p.to_string().c_str());
+
+    print_hexbuf("key sha", shb);
 
     bt.print();
 
