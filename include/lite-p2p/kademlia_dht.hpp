@@ -6,29 +6,14 @@
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/crypto.hpp"
 #include "lite-p2p/list_head.hpp"
+#include "lite-p2p/peer_connection.hpp"
 
 namespace lite_p2p
 {
-    template <typename T> class kademlia_peer {
-        public:
-            kademlia_peer(T s_key) {
-                key = s_key;
-            };
-
-            kademlia_peer() {
-                key = lite_p2p::crypto::crypto_random_bytes(sizeof(T) * 8);
-            };
-
-        T key;
-        struct sockaddr_t addr;
-        struct timeval last_seen;
-        int status;
-    };
-
     template <typename T> class kademlia_bucket {
         public:
             constexpr static size_t bucket_size = sizeof(T) * 8;
-            std::array<kademlia_peer<T>, bucket_size> peers;
+            std::array<lite_peer<T>, bucket_size> peers;
             struct btree_node_t node = { .leaf = true };
     };
 

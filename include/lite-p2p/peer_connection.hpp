@@ -4,7 +4,7 @@
 #include "lite-p2p/stun_client.hpp"
 #include "lite-p2p/turn_client.hpp"
 #include "lite-p2p/network.hpp"
-
+#include "lite-p2p/litetypes.hpp"
 
 enum _peer_connection_type {
     PEER_DIRECT_CONNECTION = 1,
@@ -13,6 +13,33 @@ enum _peer_connection_type {
 
 namespace lite_p2p
 {
+    template <typename T> class lite_peer {
+        public:
+            lite_peer(T s_key) {
+                key = s_key;
+            };
+
+            lite_peer() {
+                key = lite_p2p::crypto::crypto_random_bytes(sizeof(T) * 8);
+            };
+
+        T key;
+        struct sockaddr_t addr;
+        struct timeval last_seen;
+        int status;
+    };
+
+    template class lite_peer<lite_p2p::lpint8_t>;
+    template class lite_peer<lite_p2p::lpint16_t>;
+    template class lite_peer<lite_p2p::lpint24_t>;
+    template class lite_peer<lite_p2p::lpint32_t>;
+    template class lite_peer<lite_p2p::lpint64_t>;
+    template class lite_peer<lite_p2p::lpint128_t>;
+    template class lite_peer<lite_p2p::lpint256_t>;
+    template class lite_peer<lite_p2p::lpint512_t>;
+    template class lite_peer<lite_p2p::lpint1024_t>;
+    template class lite_peer<lite_p2p::lpint2048_t>;
+    template class lite_peer<lite_p2p::lpint4096_t>;
 
     class peer_connection
     {
