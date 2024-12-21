@@ -1,14 +1,60 @@
-#ifndef __CLEANUP_HPP__
-#define __CLEANUP_HPP__
-#include "lite-p2p/list_head.hpp"
-#include "cstdlib"
-#include "cstring"
+#ifndef __COMMON_HPP__
+#define __COMMON_HPP__
+#include "lite-p2p/types/list_head.hpp"
+#include <cstring>
 #include <csignal>
 #include <cstdarg>
 #include <vector>
+#include <ctime>
+#include <cstdlib>
+#include <cstdint>
+#include <string>
 
-namespace lite_p2p
+namespace lite_p2p::common
 {
+
+    static inline int rand_int(int min, int max)
+    {
+        return (int)(rand() % (max - min + 1) + min);
+    }
+
+    static inline bool c_array_cmp(uint8_t a1[], uint8_t a2[], int len)
+    {
+
+        while (len-- > 0 && *(a1++) != *(a2++))
+            ;
+        return len == 0;
+    }
+
+    static inline void print_hexbuf(const char *label, std::vector<uint8_t> &buf)
+    {
+
+        printf("%s (%d): ", label, (int)buf.size());
+        for (size_t i = 0; i < buf.size(); ++i)
+        {
+            printf("%02x", buf[i]);
+        }
+
+        printf("\n");
+    }
+
+    static inline std::string parse(std::string label)
+    {
+        char buf[512];
+        int cx = 0, cnt = 0;
+
+        printf("%s: ", label.c_str());
+        while ((cx = getc(stdin)) != '\n')
+        {
+            buf[cnt] = cx;
+            cnt = ((cnt + 1) % 512);
+        }
+        buf[cnt] = 0;
+
+        printf("\n");
+        return std::string(buf);
+    }
+
     class at_exit_cleanup
     {
     private:
@@ -50,7 +96,7 @@ namespace lite_p2p
         {
             INIT_LIST_HEAD(&list);
 #if defined(__ANDROID__)
-    // not suppot cleanup for now
+            // not suppot cleanup for now
 #else
             on_exit(at_exit_cleanup::on_exit_engine_cleanup, &list);
 #endif
@@ -79,8 +125,8 @@ namespace lite_p2p
             list_add_tail(&ctx->list, &list);
         }
 
-        void at_exit() {
-
+        void at_exit()
+        {
         }
     };
 };

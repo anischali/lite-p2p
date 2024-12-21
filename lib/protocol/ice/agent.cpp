@@ -1,18 +1,18 @@
 #include <set>
-#include "lite-p2p/ice_agent.hpp"
+#include "lite-p2p/protocol/ice/agent.hpp"
 
-using namespace lite_p2p;
+using namespace lite_p2p::protocol::ice;
 
-ice_agent::ice_agent()
+agent::agent()
 {
 }
 
-ice_agent::~ice_agent()
+agent::~agent()
 {
 }
 
 
-void ice_agent::gather_addrs(void) {
+void agent::gather_addrs(void) {
     std::vector<std::string> ifaces = network::network_interfaces();
 
     for (auto &&ifc : ifaces) {

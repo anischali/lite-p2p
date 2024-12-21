@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 #include <lite-p2p/crypto/crypto.hpp>
-#include <lite-p2p/network.hpp>
+#include <lite-p2p/network/network.hpp>
 
 enum sha_algo_type {
     SHA_ALGO_CLEAR = -1,

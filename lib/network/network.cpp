@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "lite-p2p/network.hpp"
+#include "lite-p2p/network/network.hpp"
 
 using namespace lite_p2p;
 

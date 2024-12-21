@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <memory>
 
-namespace lite_p2p
+namespace lite_p2p::types
 {
     template <int _bits>
     class lite_number

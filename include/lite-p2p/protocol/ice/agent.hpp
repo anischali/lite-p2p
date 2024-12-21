@@ -1,12 +1,12 @@
 #ifndef __ICE_AGENT_HPP__
 #define __ICE_AGENT_HPP__
 #include <vector>
-#include <lite-p2p/network.hpp>
+#include <lite-p2p/network/network.hpp>
 
-namespace lite_p2p
+namespace lite_p2p::protocol::ice
 {
 
-    class ice_agent
+    class agent
     {
     private:
         std::vector<struct sockaddr_t> addrs;
@@ -14,8 +14,8 @@ namespace lite_p2p
 
         /* data */
     public:
-        ice_agent();
-        ~ice_agent();
+        agent();
+        ~agent();
 
         void gather_addrs(void);
         std::vector<struct sockaddr_t> get_addrs(void) {return addrs;};

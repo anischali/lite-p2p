@@ -19,7 +19,9 @@
 #include <netinet/ip.h>
 #include "lite-p2p/protocol/stun/client.hpp"
 #include "lite-p2p/protocol/stun/attrs.hpp"
-#include "lite-p2p/network.hpp"
+#include "lite-p2p/network/network.hpp"
+#include "lite-p2p/common/common.hpp"
+
 
 #define err_ret(msg, err)         \
     printf("%d: %s\n", err, msg); \
@@ -93,7 +95,7 @@ int client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet
     if (packet->magic_cookie != htonl(MAGIC_COOKIE))
         return -EINVAL;
 
-    if (c_array_cmp(packet->transaction_id, transaction_id, sizeof(transaction_id)))
+    if (common::c_array_cmp(packet->transaction_id, transaction_id, sizeof(transaction_id)))
         return -EINVAL;
 
     if (IS_ERR_RESP(packet->msg_type))

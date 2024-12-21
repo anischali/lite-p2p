@@ -3,9 +3,9 @@
 #include "list_head.hpp"
 #include <stdint.h>
 #include <errno.h>
-#include "litetypes.hpp"
+#include "lite-p2p/types/types.hpp"
 
-namespace lite_p2p
+namespace lite_p2p::types
 {
     struct btree_node_t
     {

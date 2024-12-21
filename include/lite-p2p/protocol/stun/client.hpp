@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/socket.h>
-#include "lite-p2p/lib_common.hpp"
-#include <lite-p2p/network.hpp>
+#include "lite-p2p/common/common.hpp"
+#include <lite-p2p/network/network.hpp>
 #include <lite-p2p/crypto/crypto.hpp>
 #include <lite-p2p/protocol/stun/session.hpp>
 

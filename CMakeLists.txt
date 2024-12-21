@@ -48,14 +48,14 @@ target_include_directories(lite-p2p PUBLIC
 )
 
 target_sources(lite-p2p PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/lib/peer_connection.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/peer/connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/attrs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/client.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/session.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/turn/client.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/ice/agent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/crypto/crypto.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/ice_agent.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/network/network.cpp
 )
 
 
