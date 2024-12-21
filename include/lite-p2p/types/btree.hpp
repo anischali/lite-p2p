@@ -18,8 +18,8 @@ namespace lite_p2p::types
     {
 
     private:
-        size_t depth = sizeof(T) * 8;
         struct btree_node_t *root = nullptr;
+        size_t depth = sizeof(T) * 8;
 
         static inline int allocate_node(struct btree_node_t **node)
         {
@@ -36,34 +36,40 @@ namespace lite_p2p::types
             return 0;
         }
 
-        static inline void btree_free(struct btree_node_t *bt)
+        static inline void btree_free(struct btree_node_t *bt, int depth)
         {
-            struct btree_node_t *c1, *c2;
-            if (!bt || bt->leaf)
+            struct btree_node_t *c1 = nullptr, *c2 = nullptr;
+            
+            if (!bt || depth == 0)
                 return;
 
             c1 = bt->children[0];
             c2 = bt->children[1];
-
+            --depth;
+          
             if (c1)
-                btree_free(c1);
+                btree_free(c1, depth);
 
             if (c2)
-                btree_free(c2);
+                btree_free(c2, depth);
 
-            free(bt);
-            bt = nullptr;
+            
+            if (bt) {
+                free(bt);
+                bt = nullptr;
+            }
+            
         }
 
         static inline void btree_print(struct btree_node_t *bt)
         {
 
-            if (bt->leaf)
-                printf("leaf\n");
-
             if (!bt)
                 return;
 
+            if (bt->leaf)
+                printf("leaf\n");
+            
             if (bt->children[0])
                 btree_print(bt->children[0]);
 
@@ -71,12 +77,43 @@ namespace lite_p2p::types
                 btree_print(bt->children[1]);
         }
 
+        static inline void btree_callback_on_leaf(btree_node_t *bt, void (*exec_callback)(btree_node_t **node)) {
+            
+            if (!bt)
+                return;
+        
+            if (bt->leaf && exec_callback) {
+                exec_callback(&bt);
+                return;
+            }
+
+            if (bt->children[0])
+                btree_callback_on_leaf(bt->children[0], exec_callback);
+
+            if (bt->children[1])
+                btree_callback_on_leaf(bt->children[1], exec_callback);
+        }
+
+        
+        static inline void btree_node_callback(btree_node_t *bt, void (*exec_callback)(lite_p2p::types::btree_node_t **node)) {
+            
+            if (!bt)
+                return;
+        
+            if (bt->children[0])
+                btree_node_callback(bt->children[0], exec_callback);
+
+            if (bt->children[1])
+                btree_node_callback(bt->children[1], exec_callback);
+            
+            exec_callback(&bt);
+        }
+
     public:
         btree() {}
-
         ~btree()
         {
-            btree_free(root);
+            btree_free(root, depth);
             root = nullptr;
         }
 
@@ -115,6 +152,9 @@ namespace lite_p2p::types
             size_t vsize = (sizeof(T) * 8);
 
             bt = root;
+            if (!bt)
+                return nullptr;
+
             for (size_t i = 0; i < vsize - 1 && bt; ++i)
             {
                 int vbit = key.at(i);
@@ -132,6 +172,16 @@ namespace lite_p2p::types
         void print()
         {
             btree_print(root);
+        }
+
+        void btree_callback_on_leaf(void (*exec_callback)(btree_node_t **node)) {
+            
+            btree_callback_on_leaf(root, exec_callback);
+        }
+
+        void btree_node_callback(void (*exec_callback)(lite_p2p::types::btree_node_t **node)) {
+            
+            btree_node_callback(root, exec_callback);
         }
 
         struct btree_node_t *get_root() { return root; };
