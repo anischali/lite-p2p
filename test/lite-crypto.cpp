@@ -103,6 +103,5 @@ int main(int argc, char *argv[]) {
 
     printf("%s = %s ^ %s\n", v3.to_string().c_str(), v1.to_string().c_str(), v2.to_string().c_str());
 
-
     return 0;
 }

@@ -1,5 +1,6 @@
 #include "lite-p2p/crypto/crypto.hpp"
 #include <openssl/rand.h>
+#include <openssl/kdf.h>
 #include <cerrno>
 #include <cstdlib>
 #include <iostream>
@@ -188,7 +189,7 @@ std::vector<uint8_t> crypto::crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::
         goto clean_mac;
 
 
-    ret = EVP_MAC_init(evp_ctx, ctx->key.data(), ctx->key.size(), ctx->params);
+    ret = EVP_MAC_init(evp_ctx, ctx->key.data(), ctx->key.size(), ctx->params.data());
     if (!ret)
         goto clean_ctx;
     
@@ -225,4 +226,33 @@ bool crypto::crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t
     tmp = crypto_mac_sign(ctx, buf);
 
     return ((digest.size() == tmp.size()) && !CRYPTO_memcmp(digest.data(), tmp.data(), digest.size()));
+}
+
+std::vector<uint8_t> crypto::crypto_generate_keypair(int alg_id, std::string &password) {
+    //EVP_PKEY_CTX *ctx = nullptr;
+    //EVP_PKEY *pkey = nullptr;
+
+    //ctx = EVP_PKEY_CTX_new_id(alg_id, nullptr);
+    //if (!ctx)
+    //    return {};
+
+
+    //EVP_PKEY_keygen_init(ctx);
+
+
+    return {};
+}
+
+
+
+std::vector<uint8_t> crypto::crypto_pbkdf_derive(std::string &password, std::vector<uint8_t> &salt, std::vector<uint8_t> &digest) {
+   // EVP_KDF_CTX *ctx = nullptr;
+    //EVP_KDF *kdf = nullptr;
+
+//    EVP_KDF_fetch()
+
+//    EVP_KDF_CTX_new()
+
+
+    return {};
 }
