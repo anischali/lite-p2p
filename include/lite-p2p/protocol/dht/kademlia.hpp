@@ -4,7 +4,7 @@
 #include "lite-p2p/btree.hpp"
 #include "lite-p2p/litetypes.hpp"
 #include "lite-p2p/network.hpp"
-#include "lite-p2p/crypto.hpp"
+#include "lite-p2p/crypto/crypto.hpp"
 #include "lite-p2p/list_head.hpp"
 #include "lite-p2p/peer_connection.hpp"
 

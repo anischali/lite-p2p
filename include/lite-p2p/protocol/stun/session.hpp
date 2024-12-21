@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <lite-p2p/crypto.hpp>
+#include <lite-p2p/crypto/crypto.hpp>
 #include <lite-p2p/network.hpp>
 
 enum sha_algo_type {

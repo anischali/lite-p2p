@@ -1,7 +1,7 @@
 #ifndef __STUN_ATTRS_HPP__
 #define __STUN_ATTRS_HPP__
 #include "lite-p2p/protocol/stun/client.hpp"
-#include "lite-p2p/crypto.hpp"
+#include "lite-p2p/crypto/crypto.hpp"
 
 using namespace lite_p2p;
 

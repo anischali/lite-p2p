@@ -1,4 +1,4 @@
-#include "lite-p2p/crypto.hpp"
+#include "lite-p2p/crypto/crypto.hpp"
 #include <openssl/rand.h>
 #include <cerrno>
 #include <cstdlib>

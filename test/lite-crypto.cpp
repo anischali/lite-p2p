@@ -5,7 +5,7 @@
 #include <vector>
 #include <unistd.h>
 #include <fcntl.h>
-#include "lite-p2p/crypto.hpp"
+#include "lite-p2p/crypto/crypto.hpp"
 #include "lite-p2p/lib_common.hpp"
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/litetypes.hpp"
