@@ -80,53 +80,17 @@ int main(int argc, char *argv[]) {
 
     close(fd2);
 
-    lite_p2p::types::btree<lite_p2p::types::lpint256_t> bt;
-
-    struct dht_peer_t {
-        lite_p2p::types::lpint256_t key = lite_p2p::types::lpint256_t(lite_p2p::crypto::crypto_random_bytes(256));
-        struct sockaddr_t addr;
-        lite_p2p::types::btree_node_t node = { .leaf = true };
-    };
-
-    struct dht_peer_t curr;
-    struct dht_peer_t rem;
-
-
-    lite_p2p::types::lpint256_t ds = curr.key ^ curr.key;
-    ds = curr.key ^ curr.key;
-    bt.btree_insert_key(&curr.node, ds);
-    ds = curr.key ^ rem.key;
-    bt.btree_insert_key(&rem.node, ds);
-
-    auto node = bt.btree_find_node(ds);
-    if (node) {
-        auto nval = container_of(node, struct dht_peer_t, node);
-        if (nval) {
-            printf("key found (%s|%s)\n", rem.key.to_string().c_str(), nval->key.to_string().c_str());
-        }
-    }
-
-
-    lite_p2p::types::lpint256_t vs;
-    for (size_t i = 0; i < ds.bits(); ++i) {
-        int j = (255 - i);
-        int vbit = ds.at(j);
-        vs.set_bit(j, vbit);
-    }
-
-    auto shb = lite_p2p::crypto::checksum(EVP_sha512(), before_b64);
-
-    lite_p2p::types::lpint512_t p = shb;
-
-    printf("key (%s)\n", p.to_string().c_str());
-
-    lite_p2p::common::print_hexbuf("key sha", shb);
-
-    bt.print();
-
-    bt.~btree();
+    lite_p2p::peer::peer_info<lite_p2p::types::lpint256_t> curr;
+    lite_p2p::peer::peer_info<lite_p2p::types::lpint256_t> rem;
 
     lite_p2p::protocol::dht::kademlia<lite_p2p::types::lpint256_t> dht(curr.key);
+
+    dht.add_peer(curr);
+    dht.add_peer(rem);
+
+    auto pi = dht.get_peer_info(rem.key);
+
+    printf("key: %s|%s\n", rem.key.to_string().c_str(), pi->key.to_string().c_str());
 
     dht.~kademlia();
 
