@@ -1,8 +1,12 @@
 #include <vector>
 #include "lite-p2p/peer_connection.hpp"
-#include "lite-p2p/stun_attrs.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
+#include "lite-p2p/protocol/stun/attrs.hpp"
 
 using namespace lite_p2p;
+using namespace lite_p2p::protocol::stun;
+using namespace lite_p2p::protocol::turn;
+
 
 peer_connection::peer_connection(sa_family_t _family, std::string _addr, uint16_t _port, int _type, int _protocol) : 
     family {_family}, local_addr{_addr}, type{_type}, protocol{_protocol} {

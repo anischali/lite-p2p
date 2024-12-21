@@ -1,12 +1,12 @@
 #include <map>
-#include "lite-p2p/stun_client.hpp"
-#include "lite-p2p/turn_client.hpp"
-#include "lite-p2p/stun_attrs.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
+#include "lite-p2p/protocol/turn/client.hpp"
+#include "lite-p2p/protocol/stun/attrs.hpp"
 #include "lite-p2p/crypto.hpp"
 
-using namespace lite_p2p;
+using namespace lite_p2p::protocol::turn;
 
-turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
+client::client(int sock_fd) : lite_p2p::protocol::stun::client(sock_fd) {}
 
 #define STUN_ATTRS_LONG_TERM \
 { \
@@ -42,7 +42,7 @@ turn_client::turn_client(int sock_fd) : stun_client(sock_fd) {}
     STUN_ATTR_DONT_FRAGMENT, \
 }
 
-int turn_client::allocate_request(struct stun_session_t *session) {
+int client::allocate_request(struct stun_session_t *session) {
     int ret = 0;
     uint16_t msg_type = stun_type(STUN_ALLOCATE, STUN_TYPE_REQUEST);
     std::vector<uint16_t> attrs(STUN_ATTRS_ALLOCATE);
@@ -74,7 +74,7 @@ retry:
     return ret;
 }
 
-int turn_client::refresh_request(struct stun_session_t *session, uint32_t lifetime) {
+int client::refresh_request(struct stun_session_t *session, uint32_t lifetime) {
     uint16_t msg_type = stun_type(STUN_REFRESH, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -97,7 +97,7 @@ retry:
     return ret;
 }
 
-int turn_client::send_request_data(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
+int client::send_request_data(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
     uint16_t msg_type = stun_type(STUN_SEND_REQUEST, STUN_TYPE_INDICATION);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -119,7 +119,7 @@ int turn_client::send_request_data(struct stun_session_t *session, struct sockad
     return buf.size();
 }
 
-int turn_client::send_channel(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf) {
+int client::send_channel(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf) {
     int ret = 0;
     uint8_t packet[512];
 
@@ -135,7 +135,7 @@ int turn_client::send_channel(struct stun_session_t *session, struct sockaddr_t 
     return buf.size();
 }
 
-int turn_client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
+int client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
     uint16_t msg_type = stun_type(STUN_CREATE_PERM, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -164,7 +164,7 @@ retry:
 }
 
 
-int turn_client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t chanel_id) {
+int client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t chanel_id) {
     uint16_t msg_type = stun_type(STUN_CHANNEL_BIND, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -192,7 +192,7 @@ retry:
     return ret;
 }
 
-struct sockaddr_t * turn_client::stun_get_relayed_addr(struct sockaddr_t *stun_server) {
+struct sockaddr_t * client::stun_get_relayed_addr(struct sockaddr_t *stun_server) {
     struct stun_session_t *session = sessions.stun_session_get(stun_server);
     if (session)
         return &session->relayed_addr;

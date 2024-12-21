@@ -7,7 +7,7 @@ enable_language(C CXX ASM)
 add_compile_options(-Wall)
 add_library(lite-p2p)
 
-file(GLOB lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/lite-p2p/*.hpp)
+file(GLOB_RECURSE lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/ *.hpp)
 
 include(FetchContent)
 
@@ -44,18 +44,18 @@ SOVERSION 1
 )
 
 target_include_directories(lite-p2p PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/include/
 )
 
 target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/peer_connection.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/stun_attrs.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/stun_client.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/turn_client.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/attrs.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/client.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/session.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/turn/client.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/ice_agent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/network.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/crypto.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/lib/stun_session.cpp
 )
 
 

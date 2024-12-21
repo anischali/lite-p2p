@@ -1,17 +1,17 @@
 #ifndef __TURN_CLIENT_HPP__
 #define __TURN_CLIENT_HPP__
-#include "stun_client.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
 
-namespace lite_p2p
+namespace lite_p2p::protocol::turn
 {
 
-    class turn_client : public stun_client
+    class client : public lite_p2p::protocol::stun::client
     {
     private:
 
     public:
-        turn_client(int sock_fd);
-        ~turn_client() {};
+        client(int sock_fd);
+        ~client() {};
 
         int allocate_request(struct stun_session_t *session);
         int create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer);

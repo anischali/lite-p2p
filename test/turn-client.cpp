@@ -4,12 +4,12 @@
 #include <cstdlib>
 #include <time.h>
 #include "lite-p2p/cleanup.hpp"
-#include "lite-p2p/stun_client.hpp"
-#include "lite-p2p/turn_client.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
+#include "lite-p2p/protocol/turn/client.hpp"
 #include "lite-p2p/peer_connection.hpp"
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/ice_agent.hpp"
-#include "lite-p2p/stun_session.hpp"
+#include "lite-p2p/protocol/stun/session.hpp"
 #if __has_include("./servers.hpp")
 #include "./servers.hpp"
 #else
@@ -130,18 +130,23 @@ void visichat_keepalive(void *args) {
 //stun1.l.google.com:3478
 //stun1.l.google.com:5349
 //2001:4860:4864:5:8000::1 19302
+
+void usage(const char *prog) {
+    printf("%s: <protocol> <server_name> <lan-ip> <lport> <remote-mapped-ip> <remote-port> <lifetime>\n", prog);
+    exit(0);
+}
+
 int main(int argc, char *argv[]) {
 
     if (argc < 6) {
-        printf("wrong arguments number !\n");
-        exit(0);
+        usage(argv[0]);
     }
 
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, argv[3], atoi(argv[4]));
-    lite_p2p::turn_client turn(conn.sock_fd);
+    lite_p2p::protocol::turn::client turn(conn.sock_fd);
 
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_turn = {
@@ -166,9 +171,9 @@ int main(int argc, char *argv[]) {
     });
 
     __at_exit.at_exit_cleanup_add(&turn, [](void *ctx){
-        lite_p2p::turn_client *c = (lite_p2p::turn_client *)ctx;
+        lite_p2p::protocol::turn::client *c = (lite_p2p::protocol::turn::client *)ctx;
 
-        c->~turn_client();
+        c->~client();
     });
 
     lite_p2p::network::resolve(&s_turn.server, family, srv.url, srv.port);

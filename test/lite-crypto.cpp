@@ -10,7 +10,7 @@
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/litetypes.hpp"
 #include "lite-p2p/btree.hpp"
-#include "lite-p2p/kademlia_dht.hpp"
+#include "lite-p2p/protocol/dht/kademlia.hpp"
 
 
 
@@ -126,9 +126,9 @@ int main(int argc, char *argv[]) {
 
     bt.~btree();
 
-    lite_p2p::kademlia_dht<lite_p2p::lpint256_t> dht(curr.key);
+    lite_p2p::protocol::dht::kademlia<lite_p2p::lpint256_t> dht(curr.key);
 
-    dht.~kademlia_dht();
+    dht.~kademlia();
 
     return 0;
 }

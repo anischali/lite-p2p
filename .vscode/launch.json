@@ -5,8 +5,8 @@
         "name": "(gdb) Pipe Attach",
         "type": "cppdbg",
         "request": "attach",
-        "program": "${workspaceFolder}/build/test/stun-client",
-        //"program": "${workspaceFolder}/build/test/turn-client",
+        //"program": "${workspaceFolder}/build/test/stun-client",
+        "program": "${workspaceFolder}/build/test/turn-client",
         //"program": "${workspaceFolder}/build/test/lite-crypto",
         "processId": "${command:pickRemoteProcess}",
         "useExtendedRemote": true,
@@ -35,13 +35,13 @@
       //turn
       //"args": ["<ip-family[4|6]>", "<server-name[see the code]>", "<lan-ip>", "<lport>", "<remote-mapped-ip>", "<remote-port>", "<turn-lifetime>"],
       //crypto
-      //"args": ["string to hash"]
+      "args": ["test", "~/Documents/qr-code.png", "~/Documents/qr_code3.png"],
       "stopAtEntry": false,
       "externalConsole": false,
       "cwd": "${workspaceFolder}/build/",
       //"program": "${workspaceFolder}/build/turn-client",
-      //"program": "${workspaceFolder}/build/lite-crypto",
-      "program": "${workspaceFolder}/build/test/stun-client",
+      "program": "${workspaceFolder}/build/test/lite-crypto",
+      //"program": "${workspaceFolder}/build/test/stun-client",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

@@ -17,25 +17,25 @@
 #include <resolv.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include "lite-p2p/stun_client.hpp"
-#include "lite-p2p/stun_attrs.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
+#include "lite-p2p/protocol/stun/attrs.hpp"
 #include "lite-p2p/network.hpp"
 
 #define err_ret(msg, err)         \
     printf("%d: %s\n", err, msg); \
     return err
 
-using namespace lite_p2p;
+using namespace lite_p2p::protocol::stun;
 
-stun_client::stun_client(int socket_fd) : _socket{socket_fd}
+client::client(int socket_fd) : _socket{socket_fd}
 {
 }
 
-stun_client::~stun_client()
+client::~client()
 {
 }
 
-uint32_t stun_client::crc32(uint32_t crc, uint8_t *buf, size_t len)
+uint32_t client::crc32(uint32_t crc, uint8_t *buf, size_t len)
 {
     static const std::vector<uint32_t> crc_table = []()
     {
@@ -59,7 +59,7 @@ uint32_t stun_client::crc32(uint32_t crc, uint8_t *buf, size_t len)
     return ~crc;
 }
 
-struct sockaddr_t *stun_client::stun_get_mapped_addr(struct sockaddr_t *stun_server)
+struct sockaddr_t *client::stun_get_mapped_addr(struct sockaddr_t *stun_server)
 {
     struct stun_session_t *session = sessions.stun_session_get(stun_server);
     if (session)
@@ -69,7 +69,7 @@ struct sockaddr_t *stun_client::stun_get_mapped_addr(struct sockaddr_t *stun_ser
 }
 
 
-int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait)
+int client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait)
 {
     uint8_t transaction_id[12];
     int ret;
@@ -103,11 +103,11 @@ int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *p
 }
 
 
-int stun_client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet) {
+int client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet) {
     return request(stun_server, packet, true);
 }
 
-int stun_client::bind_request(struct stun_session_t *session)
+int client::bind_request(struct stun_session_t *session)
 {
     uint16_t msg_type = stun_type(STUN_REQUEST, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);

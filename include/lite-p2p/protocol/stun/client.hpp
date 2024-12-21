@@ -9,10 +9,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/socket.h>
-#include "lib_common.hpp"
+#include "lite-p2p/lib_common.hpp"
 #include <lite-p2p/network.hpp>
 #include <lite-p2p/crypto.hpp>
-#include <lite-p2p/stun_session.hpp>
+#include <lite-p2p/protocol/stun/session.hpp>
 
 enum STUN_PACKET_TYPE {
     STUN_TYPE_REQUEST,
@@ -187,10 +187,8 @@ enum stun_attrs
     STUN_ATTR_ICMP = 0x8004,
 };
 
-namespace lite_p2p
-{
 
-    struct __attribute__((packed)) stun_packet_t
+struct __attribute__((packed)) stun_packet_t
     {
         stun_packet_t(int _msg_type)
         {
@@ -209,7 +207,10 @@ namespace lite_p2p
         uint8_t attributes[512];
     };
 
-    class stun_client
+
+namespace lite_p2p::protocol::stun
+{
+    class client
     {
     private:
         int _socket;
@@ -222,8 +223,8 @@ namespace lite_p2p
     public:
         session_config sessions;
 
-        stun_client(int socket_fd);
-        ~stun_client();
+        client(int socket_fd);
+        ~client();
 
         int bind_request(struct stun_session_t *session);
         struct sockaddr_t *stun_get_mapped_addr(struct sockaddr_t *stun_server);

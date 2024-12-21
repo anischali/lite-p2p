@@ -1,7 +1,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
-#include "lite-p2p/stun_attrs.hpp"
+#include "lite-p2p/protocol/stun/attrs.hpp"
 
 int stun_add_attr(uint8_t *attrs, struct stun_attr_t *attr)
 {
@@ -214,7 +214,7 @@ int stun_attr_fingerprint(uint8_t *attrs, uint16_t attr_type, void *args)
     };
 
     packet->msg_len = htons((int)(attrs - msg - 20 + 8));
-    crc = stun_client::crc32(0, msg, (size_t)(attrs - msg));
+    crc = lite_p2p::protocol::stun::client::crc32(0, msg, (size_t)(attrs - msg));
     crc ^= FINGERPRINT_XOR;
     crc = htonl(crc);
     attr.value = (uint8_t *)&crc;
@@ -230,7 +230,7 @@ bool stun_attr_check_fingerprint(struct stun_packet_t *packet, uint8_t *attrs)
 
     packet->msg_len = htons((int)(attrs - msg - 20 + 8));
     s_crc = *(uint32_t *)s_attr.value;
-    crc = stun_client::crc32(0, msg, (size_t)(attrs - msg));
+    crc = lite_p2p::protocol::stun::client::crc32(0, msg, (size_t)(attrs - msg));
     crc ^= FINGERPRINT_XOR;
     crc = htonl(crc);
 

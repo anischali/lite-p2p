@@ -1,8 +1,8 @@
 #ifndef __PEER_CONNECTION_HPP__
 #define __PEER_CONNECTION_HPP__
 #include <string>
-#include "lite-p2p/stun_client.hpp"
-#include "lite-p2p/turn_client.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
+#include "lite-p2p/protocol/turn/client.hpp"
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/litetypes.hpp"
 
@@ -37,7 +37,7 @@ namespace lite_p2p
         struct sockaddr_t remote;
 
         struct stun_session_t *session;
-        turn_client *relay;
+        lite_p2p::protocol::turn::client *relay;
 
         int sock_fd; 
         sa_family_t family;

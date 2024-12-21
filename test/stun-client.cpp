@@ -4,7 +4,7 @@
 #include <time.h>
 #include "lite-p2p/cleanup.hpp"
 #include "lite-p2p/lib_common.hpp"
-#include "lite-p2p/stun_client.hpp"
+#include "lite-p2p/protocol/stun/client.hpp"
 #include "lite-p2p/peer_connection.hpp"
 #include "lite-p2p/network.hpp"
 #include "lite-p2p/ice_agent.hpp"
@@ -126,11 +126,15 @@ void visichat_keepalive(void *args) {
 //stun1.l.google.com:3478
 //stun1.l.google.com:5349
 //2001:4860:4864:5:8000::1 19302
+void usage(const char *prog) {
+    printf("%s: <protocol> <server_name> <lan-ip> <lport> <remote-mapped-ip> <remote-port> \n", prog);
+    exit(0);
+}
+
 int main(int argc, char *argv[]) {
 
     if (argc < 5) {
-        printf("wrong arguments number !\n");
-        exit(0);
+        usage(argv[0]);
     }
     int ret;
     lite_p2p::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
@@ -138,7 +142,7 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer_connection conn(family, argv[3], atoi(argv[4]));
 
-    lite_p2p::stun_client stun(conn.sock_fd);
+    lite_p2p::protocol::stun::client stun(conn.sock_fd);
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_stun = {
         .user = srv.username,
@@ -162,9 +166,9 @@ int main(int argc, char *argv[]) {
     });
 
     __at_exit.at_exit_cleanup_add(&stun, [](void *ctx){
-        lite_p2p::stun_client *c = (lite_p2p::stun_client *)ctx;
+        lite_p2p::protocol::stun::client *c = (lite_p2p::protocol::stun::client *)ctx;
 
-        c->~stun_client();
+        c->~client();
     });
 
     lite_p2p::network::resolve(&s_stun.server, family, srv.url, srv.port);
