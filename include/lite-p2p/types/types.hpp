@@ -99,6 +99,60 @@ namespace lite_p2p::types
             return result;
         };
 
+        bool operator<(const lite_number &other) const {
+
+            if (sizeof(bytes) != sizeof(other.bytes)) {
+
+                return sizeof(bytes) < sizeof(other.bytes) ? true : false;
+            }
+
+            ssize_t i = sizeof(bytes);
+            while (--i >= 0) {
+                if (bytes[i] < other.bytes[i])
+                    return true;
+                
+                else if (bytes[i] > other.bytes[i])
+                    break;
+            }
+
+            return false;
+        }
+
+        bool operator>(const lite_number &other) const {
+
+            if (sizeof(bytes) != sizeof(other.bytes)) {
+
+                return sizeof(bytes) > sizeof(other.bytes) ? true : false;
+            }
+
+            ssize_t i = sizeof(bytes);
+            while (--i >= 0) {
+                if (bytes[i] > other.bytes[i])
+                    return true;
+
+                else if (bytes[i] < other.bytes[i])
+                    break;
+            }
+
+            return false;
+        }
+
+        bool operator<=(const lite_number &other) const {
+
+            if (*this == other || *this < other)
+                return true;
+
+            return false;
+        }
+
+        bool operator>=(const lite_number &other) const {
+
+            if (*this == other || *this > other)
+                return true;
+
+            return false;
+        }
+
         const size_t bits()
         {
             return _bits;

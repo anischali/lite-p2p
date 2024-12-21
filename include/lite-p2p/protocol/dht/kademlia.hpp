@@ -53,9 +53,14 @@ namespace lite_p2p::protocol::dht
 
         lite_p2p::types::btree_node_t *find_closest_node(T key)
         {
+            lite_p2p::types::btree_node_t *node = nullptr;
             T s_key = key ^ self_key;
 
-            return kad_tree.btree_find_node(s_key);
+            node = kad_tree.btree_find_node(s_key);
+            if (node)
+                return node;
+
+            return node;
         }
 
         void add_peer(lite_p2p::peer::peer_info<T> &info)

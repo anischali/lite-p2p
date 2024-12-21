@@ -94,5 +94,15 @@ int main(int argc, char *argv[]) {
 
     dht.~kademlia();
 
+
+    lite_p2p::types::lpint8_t v1, v2, v3;
+
+    v1 = lite_p2p::crypto::crypto_random_bytes(8);
+    v2 = lite_p2p::crypto::crypto_random_bytes(8);
+    v3 = v1 ^ v2;
+
+    printf("%s = %s ^ %s\n", v3.to_string().c_str(), v1.to_string().c_str(), v2.to_string().c_str());
+
+
     return 0;
 }
