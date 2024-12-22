@@ -189,7 +189,7 @@ std::vector<uint8_t> crypto::crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::
         goto clean_mac;
 
 
-    ret = EVP_MAC_init(evp_ctx, ctx->key.data(), ctx->key.size(), ctx->params.data());
+    ret = EVP_MAC_init(evp_ctx, ctx->key.data(), ctx->key.size(), ossl_build_params(ctx->params).data());
     if (!ret)
         goto clean_ctx;
     
@@ -243,16 +243,46 @@ std::vector<uint8_t> crypto::crypto_generate_keypair(int alg_id, std::string &pa
     return {};
 }
 
+std::vector<uint8_t> crypto::crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, std::vector<uint8_t> salt, int nbits) {
+    std::vector<uint8_t> digest(nbits / 8);
+    EVP_KDF_CTX *evp_ctx = NULL;
+    EVP_KDF *kdf = NULL;
+    struct ossl_param_t param;
+    int ret;
 
+    param = {.ossl_type = ossl_octet_string, .size = password.size(), .str_val = (char *)password.data()};
+    ctx->params[OSSL_KDF_PARAM_PASSWORD] = param;
+    if (salt.size() > 0) {
+        param = {.ossl_type = ossl_octet_string, .size = salt.size(), .str_val = (char *)salt.data()};
+        ctx->params[OSSL_KDF_PARAM_SALT] = param;
+    }
 
-std::vector<uint8_t> crypto::crypto_pbkdf_derive(std::string &password, std::vector<uint8_t> &salt, std::vector<uint8_t> &digest) {
-   // EVP_KDF_CTX *ctx = nullptr;
-    //EVP_KDF *kdf = nullptr;
+    kdf = EVP_KDF_fetch(NULL, ctx->algorithm.c_str(), NULL);
+    if (!kdf)
+        return {};
 
-//    EVP_KDF_fetch()
+    evp_ctx = EVP_KDF_CTX_new(kdf);
+    if (!evp_ctx)
+        goto clean_kdf;
+    
+    ret = EVP_KDF_derive(evp_ctx, digest.data(), digest.size(), ossl_build_params(ctx->params).data());
+    if (ret <= 0)
+        goto clean_ctx;
 
-//    EVP_KDF_CTX_new()
+    EVP_KDF_CTX_free(evp_ctx);
+    EVP_KDF_free(kdf);
 
+    return digest;
+
+clean_ctx:
+    EVP_KDF_CTX_free(evp_ctx);
+clean_kdf:
+    EVP_KDF_free(kdf);
 
     return {};
+}
+
+
+std::vector<uint8_t> crypto::crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, int nbits) {
+    return crypto_kdf_derive(ctx, password, {}, nbits);
 }
