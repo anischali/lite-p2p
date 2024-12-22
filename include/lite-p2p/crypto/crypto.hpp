@@ -19,6 +19,7 @@ enum ossl_params_type
     ossl_utf8_string = 0,
     ossl_octet_string,
     ossl_octet_ptr,
+    ossl_numeric_int,
     ossl_numeric_int32,
     ossl_numeric_uint32,
     ossl_numeric_int64,
@@ -49,6 +50,7 @@ static inline std::vector<OSSL_PARAM> ossl_build_params(std::map<std::string, st
         case ossl_octet_string:
             params.push_back(OSSL_PARAM_construct_octet_string(p.first.c_str(), (char *)p.second.str_val, p.second.size));
             break;
+        case ossl_numeric_int:
         case ossl_numeric_int32:
         case ossl_numeric_uint32:
         case ossl_numeric_int64:
@@ -118,7 +120,6 @@ struct crypto_kdf_ctx_t
         {
             if (k->second.int_val > 1)
             {
-                k->second.int_val = k->second.int_val > 2 ? 2 : k->second.int_val;
                 OSSL_set_max_threads(NULL, k->second.int_val);
             }
         }
