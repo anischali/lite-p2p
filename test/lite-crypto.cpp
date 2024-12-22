@@ -103,11 +103,16 @@ int main(int argc, char *argv[]) {
 
     printf("%s = %s ^ %s\n", v3.to_string().c_str(), v1.to_string().c_str(), v2.to_string().c_str());
 
-    struct crypto_kdf_ctx_t ctx;
-    vpass = {1,2,3,5,6,7,3,2,1};
+    struct crypto_kdf_ctx_t ctx("ARGON2D", {
+        {OSSL_KDF_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = SN_sha256}}
+    });
+    
+    auto pss = std::string("test/pass");
+    auto vpss = lite_p2p::crypto::checksum(EVP_sha256(), pss);
     std::vector<uint8_t> salt = {0x3e, 0xa1, 0x2f, 0xb2, 0x1d, 0xca, 0xc9, 0xd7, 0x77, 0xb9, 0x9b, 0x52, 0x05, 0x51, 0xa0, 0x78, 0x80, 0x3f, 0x8b, 0x46, 0x3b, 0x2e, 0x4a, 0xdf, 0xdc, 0x18, 0xfc, 0x7c, 0x65, 0xb5, 0xda, 0x8f};
     lite_p2p::common::print_hexbuf("salt", salt);
-    auto der = lite_p2p::crypto::crypto_kdf_derive(&ctx, vpass, salt, 2048);
+    lite_p2p::common::print_hexbuf("vpss", vpss);
+    auto der = lite_p2p::crypto::crypto_kdf_derive(&ctx, vpss, salt, 2048);
     printf("b64 hmac pswd: %s\n", lite_p2p::crypto::crypto_base64_encode(der).c_str());
     lite_p2p::common::print_hexbuf("kdf", vpass);
     lite_p2p::common::print_hexbuf("kdf", der);
