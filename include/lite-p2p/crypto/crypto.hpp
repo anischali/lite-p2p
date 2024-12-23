@@ -10,9 +10,11 @@
 #include <openssl/hmac.h>
 #include <openssl/params.h>
 #include <openssl/core_names.h>
-#include <openssl/thread.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
+#ifndef ANDROID
+#include <openssl/thread.h>
+#endif
 
 #define SHA_ALGO(alg) EVP_##alg()
 
@@ -84,7 +86,7 @@ struct crypto_mac_ctx_t
     crypto_mac_ctx_t(std::vector<uint8_t> _key) : crypto_mac_ctx_t("hmac", _key,
     {
         {OSSL_MAC_PARAM_CIPHER, {.ossl_type = ossl_utf8_string, .size = 0, .str_val = nullptr}},
-        {OSSL_MAC_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = SN_sha256}}
+        {OSSL_MAC_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = (char *)std::string(SN_sha256).c_str()}}
     }) {};
 
     crypto_mac_ctx_t(std::string _algorithm,
@@ -108,7 +110,7 @@ struct crypto_kdf_ctx_t
 {
     crypto_kdf_ctx_t() : crypto_kdf_ctx_t("PKCS12KDF",
     {
-        { OSSL_KDF_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = SN_sha256}},
+        { OSSL_KDF_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = (char *)std::string(SN_sha256).c_str()}},
         { OSSL_KDF_PARAM_ITER, {.ossl_type = ossl_numeric_uint64, .int_val = 65000}},
     }) {};
 
@@ -118,6 +120,7 @@ struct crypto_kdf_ctx_t
         algorithm = _algorithm;
         params = mparams;
 
+#ifndef ANDROID
         if (auto k = mparams.find(OSSL_KDF_PARAM_THREADS); k != mparams.end())
         {
             if (k->second.int_val > 1)
@@ -125,6 +128,7 @@ struct crypto_kdf_ctx_t
                 OSSL_set_max_threads(NULL, k->second.int_val);
             }
         }
+#endif
     };
 
     std::string algorithm;
@@ -143,12 +147,12 @@ struct crypto_pkey_ctx_t
         },
         { 
             EVP_PKEY_ED25519, {
-                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = SN_sha512_256}}
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = (char *)std::string(SN_sha512_256).c_str()}}
             }
         },
         {
             EVP_PKEY_ED448, {
-                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = SN_shake256}}
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = (char *)std::string(SN_shake256).c_str()}}
             }
         }
     };
