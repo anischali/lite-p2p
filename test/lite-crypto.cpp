@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
         {OSSL_KDF_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = SN_sha256}},
         {OSSL_KDF_PARAM_THREADS, {.ossl_type = ossl_numeric_int, .int_val = 2}},
         {OSSL_KDF_PARAM_ARGON2_LANES, {.ossl_type = ossl_numeric_int, .int_val = 2}},
-        {OSSL_KDF_PARAM_ARGON2_MEMCOST, {.ossl_type = ossl_numeric_int, .int_val = 32768}},
+        {OSSL_KDF_PARAM_ARGON2_MEMCOST, {.ossl_type = ossl_numeric_int, .int_val = 4096}},
         {OSSL_KDF_PARAM_ARGON2_VERSION, {.ossl_type = ossl_numeric_int, .int_val = 19}},
     });
     
@@ -116,10 +116,15 @@ int main(int argc, char *argv[]) {
     std::vector<uint8_t> salt = {0x3e, 0xa1, 0x2f, 0xb2, 0x1d, 0xca, 0xc9, 0xd7, 0x77, 0xb9, 0x9b, 0x52, 0x05, 0x51, 0xa0, 0x78, 0x80, 0x3f, 0x8b, 0x46, 0x3b, 0x2e, 0x4a, 0xdf, 0xdc, 0x18, 0xfc, 0x7c, 0x65, 0xb5, 0xda, 0x8f};
     lite_p2p::common::print_hexbuf("salt", salt);
     lite_p2p::common::print_hexbuf("vpss", vpss);
-    auto der = lite_p2p::crypto::crypto_kdf_derive(&ctx, vpss, salt, 128);
+    auto der = lite_p2p::crypto::crypto_kdf_derive(&ctx, vpss, salt, 1024);
     printf("b64 hmac pswd: %s\n", lite_p2p::crypto::crypto_base64_encode(der).c_str());
     lite_p2p::common::print_hexbuf("kdf", vpass);
     lite_p2p::common::print_hexbuf("kdf", der);
+
+    struct crypto_pkey_ctx_t p_ctx(EVP_PKEY_ED448);
+    EVP_PKEY *pkey = lite_p2p::crypto::crypto_generate_keypair(&p_ctx, "");
+
+    lite_p2p::crypto::crypto_free_keypair(pkey);
 
     return 0;
 }

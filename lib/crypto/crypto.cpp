@@ -228,32 +228,73 @@ bool crypto::crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t
     return ((digest.size() == tmp.size()) && !CRYPTO_memcmp(digest.data(), tmp.data(), digest.size()));
 }
 
-std::vector<uint8_t> crypto::crypto_generate_keypair(int alg_id, std::string &password) {
-    //EVP_PKEY_CTX *ctx = nullptr;
-    //EVP_PKEY *pkey = nullptr;
+EVP_PKEY * crypto::crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::string password) {
+    EVP_PKEY *pkey = nullptr;
+    EVP_PKEY_CTX *evp_ctx = nullptr;
+    int ret;
 
-    //ctx = EVP_PKEY_CTX_new_id(alg_id, nullptr);
-    //if (!ctx)
-    //    return {};
+    evp_ctx = EVP_PKEY_CTX_new_id(ctx->id, nullptr);
+    if (!evp_ctx)
+        return nullptr;
 
+    ret = EVP_PKEY_keygen_init(evp_ctx);
+    if (ret <= 0)
+        goto clean_ctx;
+    
+    ret = EVP_PKEY_CTX_set_params(evp_ctx, ossl_build_params(ctx->params).data());
+    if (ret <= 0)
+        goto clean_ctx;
 
-    //EVP_PKEY_keygen_init(ctx);
+    ret = EVP_PKEY_keygen(evp_ctx, &pkey);
+    if (ret <= 0)
+        goto clean_ctx;
+    
+    EVP_PKEY_CTX_free(evp_ctx);
 
+printf("Print parameters:\n");
+EVP_PKEY_print_params_fp(stdout, pkey, 2, NULL);
+printf("Print the private key:\n");
+PEM_write_PrivateKey(stdout, pkey, NULL, NULL, 0, NULL, NULL);
+printf("Print the public key:\n");
+PEM_write_PUBKEY(stdout, pkey);
+    
+    return pkey;
 
-    return {};
+clean_ctx:
+    EVP_PKEY_CTX_free(evp_ctx);
+
+    return nullptr;
 }
 
-std::vector<uint8_t> crypto::crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, std::vector<uint8_t> salt, int nbits) {
+
+void crypto::crypto_free_keypair(EVP_PKEY *pkey) {
+    
+    if (pkey)
+        EVP_PKEY_free(pkey);
+};
+
+std::vector<uint8_t> crypto::crypto_kdf_derive(
+    struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, 
+    std::vector<uint8_t> salt, int nbits) {
     std::vector<uint8_t> digest(nbits / 8);
     EVP_KDF_CTX *evp_ctx = NULL;
     EVP_KDF *kdf = NULL;
     struct ossl_param_t param;
     int ret;
 
-    param = {.ossl_type = ossl_octet_string, .size = password.size(), .str_val = (char *)password.data()};
+    param = {
+        .ossl_type = ossl_octet_string, 
+        .size = password.size(), 
+        .str_val = (char *)password.data()
+    };
     ctx->params[OSSL_KDF_PARAM_PASSWORD] = param;
+    
     if (salt.size() > 0) {
-        param = {.ossl_type = ossl_octet_string, .size = salt.size(), .str_val = (char *)salt.data()};
+        param = {
+            .ossl_type = ossl_octet_string, 
+            .size = salt.size(), 
+            .str_val = (char *)salt.data()
+        };
         ctx->params[OSSL_KDF_PARAM_SALT] = param;
     }
 
@@ -265,7 +306,8 @@ std::vector<uint8_t> crypto::crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std
     if (!evp_ctx)
         goto clean_kdf;
     
-    ret = EVP_KDF_derive(evp_ctx, digest.data(), digest.size(), ossl_build_params(ctx->params).data());
+    ret = EVP_KDF_derive(evp_ctx, digest.data(), digest.size(), 
+                        ossl_build_params(ctx->params).data());
     if (ret <= 0)
         goto clean_ctx;
 
@@ -283,6 +325,9 @@ clean_kdf:
 }
 
 
-std::vector<uint8_t> crypto::crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, int nbits) {
+std::vector<uint8_t> crypto::crypto_kdf_derive(
+    struct crypto_kdf_ctx_t *ctx, 
+    std::vector<uint8_t> password, 
+    int nbits) {
     return crypto_kdf_derive(ctx, password, {}, nbits);
 }

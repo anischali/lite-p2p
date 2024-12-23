@@ -11,6 +11,8 @@
 #include <openssl/params.h>
 #include <openssl/core_names.h>
 #include <openssl/thread.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
 
 #define SHA_ALGO(alg) EVP_##alg()
 
@@ -129,13 +131,59 @@ struct crypto_kdf_ctx_t
     std::map<std::string, struct ossl_param_t> params;
 };
 
+struct crypto_pkey_ctx_t
+{
+    const std::map<int, std::map<std::string, struct ossl_param_t>> default_params = {
+        { 
+            EVP_PKEY_RSA,  
+            {
+                { OSSL_PKEY_PARAM_RSA_BITS, {.ossl_type = ossl_numeric_int, .int_val = 1024}},
+                { OSSL_PKEY_PARAM_RSA_PRIMES, {.ossl_type = ossl_numeric_int, .int_val = 3}},
+            }
+        },
+        { 
+            EVP_PKEY_ED25519, {
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = SN_sha512_256}}
+            }
+        },
+        {
+            EVP_PKEY_ED448, {
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = SN_shake256}}
+            }
+        }
+    };
+
+    crypto_pkey_ctx_t() : crypto_pkey_ctx_t(EVP_PKEY_ED25519,
+    {
+        { OSSL_PKEY_PARAM_RSA_BITS, {.ossl_type = ossl_numeric_int, .int_val = 1024}},
+        { OSSL_PKEY_PARAM_RSA_PRIMES, {.ossl_type = ossl_numeric_int, .int_val = 3}},
+    }) {};
+
+    crypto_pkey_ctx_t(int _id, std::map<std::string, struct ossl_param_t> mparams)
+    {
+        id = _id;
+        params = mparams;
+    };
+
+    crypto_pkey_ctx_t(int _id) {
+        id = _id;
+
+        if (auto p = default_params.find(_id); p != default_params.end()) 
+            params = p->second;
+    };
+
+    int id;
+    std::map<std::string, struct ossl_param_t> params;
+};
+
 namespace lite_p2p
 {
 
     class crypto
     {
     public:
-        static std::vector<uint8_t> crypto_generate_keypair(int alg_id, std::string &password);
+        static EVP_PKEY * crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::string password);
+        static void crypto_free_keypair(EVP_PKEY *pkey);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, int nbits);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, std::vector<uint8_t> salt, int nbits);
 
