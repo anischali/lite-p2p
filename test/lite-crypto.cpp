@@ -126,5 +126,14 @@ int main(int argc, char *argv[]) {
 
     lite_p2p::crypto::crypto_free_keypair(pkey);
 
+    auto shake_128 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 128);
+    lite_p2p::common::print_hexbuf("shake-256", shake_128);
+    auto shake_256 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 256);
+    lite_p2p::common::print_hexbuf("shake-256", shake_256);
+    auto shake_512 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 512);
+    lite_p2p::common::print_hexbuf("shake-512", shake_512);
+    auto shake_448 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 448);
+    lite_p2p::common::print_hexbuf("shake-448", shake_448);
+
     return 0;
 }

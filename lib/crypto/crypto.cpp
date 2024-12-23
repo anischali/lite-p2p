@@ -7,6 +7,59 @@
 
 using namespace lite_p2p;
 
+std::vector<uint8_t> crypto::xof_checksum(const EVP_MD *algorithm, std::vector<uint8_t> &buf, int bits) {
+    EVP_MD_CTX *ctx;
+    uint32_t o_len = (uint32_t)(bits / 8);
+    std::vector<uint8_t> digest(o_len);
+    OSSL_PARAM params[3];
+    int ret, xof = 1;
+
+    ctx = EVP_MD_CTX_new();
+    if (!ctx)
+        return {};
+    
+    ret = EVP_DigestInit(ctx, algorithm);
+    if (!ret)
+        goto out_err;
+
+    params[0] = OSSL_PARAM_construct_uint32(OSSL_DIGEST_PARAM_XOFLEN, &o_len);
+    params[1] = OSSL_PARAM_construct_int(OSSL_DIGEST_PARAM_XOF, &xof);
+    params[2] = OSSL_PARAM_construct_end();
+
+    ret = EVP_MD_CTX_set_params(ctx, params);
+    if (ret <= 0)
+        goto out_err;
+    
+
+    ret = EVP_DigestUpdate(ctx, buf.data(), buf.size());
+    if (!ret)
+        goto out_err;
+
+    
+    ret = EVP_DigestFinalXOF(ctx, digest.data(), bits / 8);
+    if (!ret)
+        goto out_err;
+
+    EVP_MD_CTX_free(ctx);
+
+    digest.resize(o_len);
+
+    return digest;
+
+out_err:
+    EVP_MD_CTX_free(ctx);
+
+    return {};
+}
+
+
+std::vector<uint8_t> crypto::xof_checksum(const EVP_MD *algorithm, std::string &s, int bits) {
+    std::vector<uint8_t> buf(s.begin(), s.end());
+
+    return xof_checksum(algorithm, buf, bits);
+}
+
+
 std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::vector<uint8_t> &buf) {
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     uint32_t out_len = EVP_MAX_MD_SIZE;
@@ -40,11 +93,8 @@ out_err:
     return {};
 }
 
-
 std::vector<uint8_t> crypto::checksum(const EVP_MD *algorithm, std::string &s) {
-
     std::vector<uint8_t> buf(s.begin(), s.end());
-
     return checksum(algorithm, buf);
 }
 
