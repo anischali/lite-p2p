@@ -147,12 +147,22 @@ struct crypto_pkey_ctx_t
         },
         { 
             EVP_PKEY_ED25519, {
-                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = (char *)std::string(SN_sha512_256).c_str()}}
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha512_256), .str_val = (char *)std::string(SN_sha512_256).c_str()}}
+            }
+        },
+        { 
+            EVP_PKEY_X25519, {
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha512_256), .str_val = (char *)std::string(SN_sha512_256).c_str()}}
             }
         },
         {
             EVP_PKEY_ED448, {
-                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .str_val = (char *)std::string(SN_shake256).c_str()}}
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha512_256), .str_val = (char *)std::string(SN_shake256).c_str()}}
+            }
+        },
+        {
+            EVP_PKEY_X448, {
+                {OSSL_PKEY_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha512_256), .str_val = (char *)std::string(SN_shake256).c_str()}}
             }
         }
     };
@@ -190,6 +200,10 @@ namespace lite_p2p
         static void crypto_free_keypair(EVP_PKEY *pkey);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, int nbits);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, std::vector<uint8_t> salt, int nbits);
+
+        static std::vector<uint8_t> crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint8_t> &buf);
+        static std::vector<uint8_t> crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint8_t> &enc_buf);
+
 
         static std::string crypto_base64_encode(std::vector<uint8_t> buf);
         static std::string crypto_base64_encode(uint8_t *buf, size_t len);

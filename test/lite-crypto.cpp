@@ -121,9 +121,13 @@ int main(int argc, char *argv[]) {
     lite_p2p::common::print_hexbuf("kdf", vpass);
     lite_p2p::common::print_hexbuf("kdf", der);
 
-    struct crypto_pkey_ctx_t p_ctx(EVP_PKEY_ED448);
+    struct crypto_pkey_ctx_t p_ctx(EVP_PKEY_RSA);
     EVP_PKEY *pkey = lite_p2p::crypto::crypto_generate_keypair(&p_ctx, "");
-
+    std::vector<uint8_t> msg = {'H', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', 'n','o','w'};
+    auto enc_msg = lite_p2p::crypto::crypto_asm_encrypt(pkey, msg);
+    lite_p2p::common::print_hexbuf("enc-msg", enc_msg);
+    auto dec_msg = lite_p2p::crypto::crypto_asm_decrypt(pkey, enc_msg);
+    lite_p2p::common::print_hexbuf("dec-msg", dec_msg);
     lite_p2p::crypto::crypto_free_keypair(pkey);
 
     auto shake_128 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 128);

@@ -281,7 +281,7 @@ bool crypto::crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t
 EVP_PKEY * crypto::crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::string password) {
     EVP_PKEY *pkey = nullptr;
     EVP_PKEY_CTX *evp_ctx = nullptr;
-    int ret;
+    int ret = -1;
 
     evp_ctx = EVP_PKEY_CTX_new_id(ctx->id, nullptr);
     if (!evp_ctx)
@@ -301,13 +301,16 @@ EVP_PKEY * crypto::crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::s
     
     EVP_PKEY_CTX_free(evp_ctx);
 
-printf("Print parameters:\n");
-EVP_PKEY_print_params_fp(stdout, pkey, 2, NULL);
-printf("Print the private key:\n");
-PEM_write_PrivateKey(stdout, pkey, NULL, NULL, 0, NULL, NULL);
-printf("Print the public key:\n");
-PEM_write_PUBKEY(stdout, pkey);
-    
+
+#if defined(DEBUG)
+    printf("Print parameters:\n");
+    EVP_PKEY_print_params_fp(stdout, pkey, 2, NULL);
+    printf("Print the private key:\n");
+    PEM_write_PrivateKey(stdout, pkey, NULL, NULL, 0, NULL, NULL);
+    printf("Print the public key:\n");
+    PEM_write_PUBKEY(stdout, pkey);
+#endif    
+
     return pkey;
 
 clean_ctx:
@@ -380,4 +383,72 @@ std::vector<uint8_t> crypto::crypto_kdf_derive(
     std::vector<uint8_t> password, 
     int nbits) {
     return crypto_kdf_derive(ctx, password, {}, nbits);
+}
+
+
+std::vector<uint8_t> crypto::crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint8_t> &buf) {
+    EVP_PKEY_CTX *evp_ctx = nullptr;
+    std::vector<uint8_t> enc_msg;
+    size_t o_len = 0;
+    int ret;
+
+    evp_ctx = EVP_PKEY_CTX_new(pkey, nullptr);
+    if (!evp_ctx)
+        return {};
+    
+    ret = EVP_PKEY_encrypt_init(evp_ctx);
+    if (ret <= 0)
+        goto clean_ctx;
+
+    ret = EVP_PKEY_encrypt(evp_ctx, nullptr, &o_len, buf.data(), buf.size());
+    if (ret <= 0)
+        goto clean_ctx;
+    
+    enc_msg.resize(o_len);
+    ret = EVP_PKEY_encrypt(evp_ctx, enc_msg.data(), &o_len, buf.data(), buf.size());
+    if (ret <= 0)
+        goto clean_ctx;
+
+    EVP_PKEY_CTX_free(evp_ctx);
+
+    return enc_msg;
+
+clean_ctx:
+    EVP_PKEY_CTX_free(evp_ctx);
+
+    return {};
+}
+
+std::vector<uint8_t> crypto::crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint8_t> &enc_buf) {
+    EVP_PKEY_CTX *evp_ctx = nullptr;
+    std::vector<uint8_t> msg(enc_buf.size());
+    size_t o_len = 0;
+    int ret;
+
+    evp_ctx = EVP_PKEY_CTX_new(pkey, nullptr);
+    if (!evp_ctx)
+        return {};
+    
+    ret = EVP_PKEY_decrypt_init(evp_ctx);
+    if (ret <= 0)
+        goto clean_ctx;
+
+    ret = EVP_PKEY_decrypt(evp_ctx, nullptr, &o_len, enc_buf.data(), enc_buf.size());
+    if (ret <= 0)
+        goto clean_ctx;
+    
+    ret = EVP_PKEY_decrypt(evp_ctx, msg.data(), &o_len, enc_buf.data(), enc_buf.size());
+    if (ret <= 0)
+        goto clean_ctx;
+
+    msg.resize(o_len);
+
+    EVP_PKEY_CTX_free(evp_ctx);
+
+    return msg;
+
+clean_ctx:
+    EVP_PKEY_CTX_free(evp_ctx);
+
+    return {};
 }

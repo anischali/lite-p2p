@@ -7,6 +7,13 @@ enable_language(C CXX ASM)
 add_compile_options(-Wall)
 add_library(lite-p2p)
 
+if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
+message("build type: ${CMAKE_BUILD_TYPE}")
+add_compile_definitions(
+    -DDEBUG=1
+)
+endif()
+
 file(GLOB_RECURSE lite_p2p_HEADERS ${CMAKE_CURRENT_LIST_DIR}/include/ *.hpp)
 
 include(FetchContent)
