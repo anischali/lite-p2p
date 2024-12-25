@@ -128,7 +128,19 @@ int main(int argc, char *argv[]) {
     lite_p2p::common::print_hexbuf("enc-msg", enc_msg);
     auto dec_msg = lite_p2p::crypto::crypto_asm_decrypt(pkey, enc_msg);
     lite_p2p::common::print_hexbuf("dec-msg", dec_msg);
-    lite_p2p::crypto::crypto_free_keypair(pkey);
+
+    struct crypto_pkey_ctx_t p_ctx2(EVP_PKEY_ED25519);
+
+    EVP_PKEY *pkey2 = lite_p2p::crypto::crypto_generate_keypair(&p_ctx2, "");
+    auto pkey_sign = lite_p2p::crypto::crypto_asm_sign(nullptr, pkey2, msg);
+    lite_p2p::common::print_hexbuf("sign", pkey_sign);
+    bool valid_sign = lite_p2p::crypto::crypto_asm_verify_sign(nullptr, pkey2, msg, pkey_sign);
+    if (valid_sign) {
+        printf("Signature is valid !!!\n");
+    }
+    lite_p2p::crypto::crypto_free_keypair(&pkey);
+    lite_p2p::crypto::crypto_free_keypair(&pkey2);
+    
 
     auto shake_128 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 128);
     lite_p2p::common::print_hexbuf("shake-256", shake_128);

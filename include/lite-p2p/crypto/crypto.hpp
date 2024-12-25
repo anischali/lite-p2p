@@ -197,13 +197,15 @@ namespace lite_p2p
     {
     public:
         static EVP_PKEY * crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::string password);
-        static void crypto_free_keypair(EVP_PKEY *pkey);
+        static void crypto_free_keypair(EVP_PKEY **pkey);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, int nbits);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, std::vector<uint8_t> salt, int nbits);
 
         static std::vector<uint8_t> crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint8_t> &buf);
         static std::vector<uint8_t> crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint8_t> &enc_buf);
 
+        static std::vector<uint8_t> crypto_asm_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf);
+        static bool crypto_asm_verify_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf, std::vector<uint8_t> &sign);
 
         static std::string crypto_base64_encode(std::vector<uint8_t> buf);
         static std::string crypto_base64_encode(uint8_t *buf, size_t len);

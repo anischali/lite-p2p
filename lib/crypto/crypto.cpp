@@ -1,6 +1,8 @@
 #include "lite-p2p/crypto/crypto.hpp"
 #include <openssl/rand.h>
 #include <openssl/kdf.h>
+#include <openssl/rsa.h>
+#include <openssl/evp.h>
 #include <cerrno>
 #include <cstdlib>
 #include <iostream>
@@ -320,10 +322,12 @@ clean_ctx:
 }
 
 
-void crypto::crypto_free_keypair(EVP_PKEY *pkey) {
+void crypto::crypto_free_keypair(EVP_PKEY **pkey) {
     
-    if (pkey)
-        EVP_PKEY_free(pkey);
+    if (*pkey) {
+        EVP_PKEY_free(*pkey);
+        *pkey = nullptr;
+    }
 };
 
 std::vector<uint8_t> crypto::crypto_kdf_derive(
@@ -385,7 +389,6 @@ std::vector<uint8_t> crypto::crypto_kdf_derive(
     return crypto_kdf_derive(ctx, password, {}, nbits);
 }
 
-
 std::vector<uint8_t> crypto::crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint8_t> &buf) {
     EVP_PKEY_CTX *evp_ctx = nullptr;
     std::vector<uint8_t> enc_msg;
@@ -425,6 +428,9 @@ std::vector<uint8_t> crypto::crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint
     size_t o_len = 0;
     int ret;
 
+    if (!enc_buf.size() || !pkey)
+        return {};
+
     evp_ctx = EVP_PKEY_CTX_new(pkey, nullptr);
     if (!evp_ctx)
         return {};
@@ -451,4 +457,74 @@ clean_ctx:
     EVP_PKEY_CTX_free(evp_ctx);
 
     return {};
+}
+
+
+
+std::vector<uint8_t> crypto::crypto_asm_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf) {
+    EVP_MD_CTX *md_ctx = nullptr;
+    std::vector<uint8_t> sign_msg;
+    size_t o_len = 0;
+    int ret;
+
+    if (!pkey || !buf.size())
+        return {};
+
+    md_ctx = EVP_MD_CTX_new();
+    if (!md_ctx)
+        goto clean_algo;
+
+    ret = EVP_DigestSignInit(md_ctx, nullptr, algo, nullptr, pkey);
+    if (ret <= 0)
+        goto clean_algo;
+
+
+    ret = EVP_DigestSign(md_ctx, nullptr, &o_len, buf.data(), buf.size());
+    if (ret <= 0)
+        goto clean_algo;
+    
+    sign_msg.resize(o_len);
+    ret = EVP_DigestSign(md_ctx, sign_msg.data(), &o_len, buf.data(), buf.size());
+    if (ret <= 0)
+        goto clean_algo;
+
+    EVP_MD_CTX_free(md_ctx);
+
+    return sign_msg;
+
+clean_algo:
+    EVP_MD_CTX_free(md_ctx);
+
+    return {};
+}
+
+bool crypto::crypto_asm_verify_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf, std::vector<uint8_t> &sign) {
+    EVP_MD_CTX *md_ctx = nullptr;
+    int ret;
+
+    if (!sign.size() || !buf.size() || !pkey)
+        return false;
+
+    md_ctx = EVP_MD_CTX_new();
+    if (!md_ctx)
+        return {};
+    
+    ret = EVP_DigestVerifyInit(md_ctx, nullptr, algo, nullptr, pkey);
+    if (ret <= 0)
+        goto clean_ctx;
+
+    ret = EVP_DigestVerify(md_ctx, sign.data(), sign.size(), buf.data(), buf.size());
+    if (ret <= 0)
+        goto clean_ctx;
+
+    
+
+    EVP_MD_CTX_free(md_ctx);
+
+    return true;
+
+clean_ctx:
+    EVP_MD_CTX_free(md_ctx);
+
+    return false;
 }
