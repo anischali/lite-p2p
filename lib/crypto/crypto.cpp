@@ -460,6 +460,115 @@ clean_ctx:
 }
 
 
+std::vector<uint8_t> crypto::crypto_sym_encrypt(struct crypto_cipher_ctx_t *ctx, std::vector<uint8_t> &buf) {
+    EVP_CIPHER_CTX *cp_ctx = nullptr;
+    std::vector<uint8_t> enc_msg(256);
+    int o_len = 0, remaining, s_len = buf.size();
+    uint8_t *o_ptr = enc_msg.data(), *i_ptr = buf.data();
+    int ret;
+
+    if (!ctx || !buf.size() || !ctx->key.size())
+        return {};
+
+    cp_ctx = EVP_CIPHER_CTX_new();
+    if (!cp_ctx)
+        return {};
+
+    if (ctx->params.size() > 1) {
+        ret = EVP_EncryptInit_ex2(cp_ctx, ctx->cipher_type, ctx->key.data(), 
+                ctx->iv.data(), ossl_build_params(ctx->params).data());
+        if (ret <= 0)
+            goto clean_ctx;
+    }
+    else {
+        ret = EVP_EncryptInit(cp_ctx, ctx->cipher_type, ctx->key.data(), ctx->iv.data());
+        if (ret <= 0)
+            goto clean_ctx;
+    }
+
+     do {
+        remaining = std::min(256, (int)s_len);
+        ret = EVP_EncryptUpdate(cp_ctx, o_ptr, &o_len, i_ptr, remaining);
+        if (ret < 0)
+            goto clean_ctx;
+
+        o_ptr += o_len;
+        i_ptr += remaining;
+        s_len -= remaining;
+        o_len += o_len;
+
+        if (o_len >= (int)enc_msg.size())
+            enc_msg.resize(o_len * 2);
+
+    } while(s_len > 0);
+
+    EVP_EncryptFinal(cp_ctx, o_ptr + o_len, &s_len);
+    o_len += s_len;
+    enc_msg.resize(o_len);
+    EVP_CIPHER_CTX_free(cp_ctx);
+
+    return enc_msg;
+
+clean_ctx:
+    EVP_CIPHER_CTX_free(cp_ctx);
+
+    return {};
+}
+
+std::vector<uint8_t> crypto::crypto_sym_decrypt(struct crypto_cipher_ctx_t *ctx, std::vector<uint8_t> &enc_buf) {
+    EVP_CIPHER_CTX *cp_ctx = nullptr;
+    std::vector<uint8_t> msg(256);
+    int o_len = 0, remaining, s_len = enc_buf.size();
+    uint8_t *o_ptr = msg.data(), *i_ptr = enc_buf.data();
+    int ret;
+
+    if (!ctx || !enc_buf.size() || !ctx->key.size())
+        return {};
+
+    cp_ctx = EVP_CIPHER_CTX_new();
+    if (!cp_ctx)
+        return {};
+
+    if (ctx->params.size() > 1) {
+        ret = EVP_DecryptInit_ex2(cp_ctx, ctx->cipher_type, ctx->key.data(), 
+                ctx->iv.data(), ossl_build_params(ctx->params).data());
+        if (ret <= 0)
+            goto clean_ctx;
+    }
+    else {
+        ret = EVP_DecryptInit(cp_ctx, ctx->cipher_type, ctx->key.data(), ctx->iv.data());
+        if (ret <= 0)
+            goto clean_ctx;
+    }
+
+     do {
+        remaining = std::min(256, (int)s_len);
+        ret = EVP_DecryptUpdate(cp_ctx, o_ptr, &o_len, i_ptr, remaining);
+        if (ret < 0)
+            goto clean_ctx;
+
+        o_ptr += o_len;
+        i_ptr += remaining;
+        s_len -= remaining;
+        o_len += o_len;
+
+        if (o_len >= (int)msg.size())
+            msg.resize(o_len * 2);
+
+    } while(s_len > 0);
+
+    EVP_DecryptFinal(cp_ctx, o_ptr + o_len, &s_len);
+    o_len += s_len;
+    msg.resize(o_len);
+    EVP_CIPHER_CTX_free(cp_ctx);
+
+    return msg;
+
+clean_ctx:
+    EVP_CIPHER_CTX_free(cp_ctx);
+
+    return {};
+}
 
 std::vector<uint8_t> crypto::crypto_asm_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf) {
     EVP_MD_CTX *md_ctx = nullptr;

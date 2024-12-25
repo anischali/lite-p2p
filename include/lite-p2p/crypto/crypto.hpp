@@ -190,6 +190,20 @@ struct crypto_pkey_ctx_t
     std::map<std::string, struct ossl_param_t> params;
 };
 
+enum crypto_cipher_type {
+    CRYPTO_CIPHER_TYPE_ASYM= 1,
+    CRYPTO_CIPHER_TYPE_SYM = 2,
+};
+
+struct crypto_cipher_ctx_t {
+    
+    int type;
+    EVP_CIPHER *cipher_type;
+    std::vector<uint8_t> key;
+    std::vector<uint8_t> iv;
+    std::map<std::string, struct ossl_param_t> params;
+};
+
 namespace lite_p2p
 {
 
@@ -203,6 +217,9 @@ namespace lite_p2p
 
         static std::vector<uint8_t> crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint8_t> &buf);
         static std::vector<uint8_t> crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint8_t> &enc_buf);
+
+        static std::vector<uint8_t> crypto_sym_encrypt(struct crypto_cipher_ctx_t *ctx, std::vector<uint8_t> &buf);
+        static std::vector<uint8_t> crypto_sym_decrypt(struct crypto_cipher_ctx_t *ctx, std::vector<uint8_t> &enc_buf);
 
         static std::vector<uint8_t> crypto_asm_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf);
         static bool crypto_asm_verify_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf, std::vector<uint8_t> &sign);
