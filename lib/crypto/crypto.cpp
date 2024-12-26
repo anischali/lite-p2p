@@ -495,7 +495,7 @@ std::vector<uint8_t> crypto::crypto_sym_encrypt(struct crypto_cipher_ctx_t *ctx,
     }
 
     do {
-        remaining = std::min(1024, s_len);
+        remaining = std::min(ctx->block_len, s_len);
         ret = EVP_EncryptUpdate(cp_ctx, o_ptr, &len, i_ptr, remaining);
         if (ret < 0)
             goto clean_ctx;
@@ -555,7 +555,7 @@ std::vector<uint8_t> crypto::crypto_sym_decrypt(struct crypto_cipher_ctx_t *ctx,
     }
 
      do {
-        remaining = std::min(1024, s_len);
+        remaining = std::min(ctx->block_len, s_len);
         ret = EVP_DecryptUpdate(cp_ctx, o_ptr, &len, i_ptr, remaining);
         if (ret < 0)
             goto clean_ctx;

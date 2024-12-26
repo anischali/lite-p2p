@@ -195,6 +195,7 @@ struct crypto_cipher_ctx_t {
     std::vector<uint8_t> key;
     std::vector<uint8_t> iv;
     std::map<std::string, struct ossl_param_t> params;
+    int block_len = 16;
 };
 
 namespace lite_p2p

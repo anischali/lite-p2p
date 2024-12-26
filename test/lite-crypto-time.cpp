@@ -14,7 +14,7 @@
 #include <chrono>
 #include <openssl/thread.h>
 
-#define MAX_TEST_LOOP 100
+#define MAX_TEST_LOOP 1000
 
 struct algo_stat_t {
     std::string algo;
@@ -48,6 +48,7 @@ void encrypt_decrypt_measure(std::string algo, std::string filename, std::vector
         .cipher_type = cipher,
         .key = key,
         .iv = iv,
+        .block_len = !strncmp(algo.c_str(), "ChaCha20", 8) ? 64 : 16
     };
 
     file_buf = lite_p2p::common::read_file(filename);
