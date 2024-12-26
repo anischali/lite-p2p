@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
     lite_p2p::crypto::crypto_free_keypair(&pkey2);
 
     struct crypto_cipher_ctx_t c_ctx = {
-        .cipher_type = EVP_chacha20_poly1305(), 
+        .cipher_type = EVP_aes_256_gcm(), 
         .key = lite_p2p::crypto::crypto_random_bytes(256),
         .iv = lite_p2p::crypto::crypto_random_bytes(96),
     };
