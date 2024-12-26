@@ -190,15 +190,8 @@ struct crypto_pkey_ctx_t
     std::map<std::string, struct ossl_param_t> params;
 };
 
-enum crypto_cipher_type {
-    CRYPTO_CIPHER_TYPE_ASYM= 1,
-    CRYPTO_CIPHER_TYPE_SYM = 2,
-};
-
 struct crypto_cipher_ctx_t {
-    
-    int type;
-    EVP_CIPHER *cipher_type;
+    const EVP_CIPHER *cipher_type;
     std::vector<uint8_t> key;
     std::vector<uint8_t> iv;
     std::map<std::string, struct ossl_param_t> params;

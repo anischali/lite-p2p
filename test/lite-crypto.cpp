@@ -132,12 +132,7 @@ int main(int argc, char *argv[]) {
     struct crypto_pkey_ctx_t p_ctx2(EVP_PKEY_ED448);
 
     EVP_PKEY *pkey2 = lite_p2p::crypto::crypto_generate_keypair(&p_ctx2, "");
-    int fd = open(argv[2], O_RDONLY);
-    size_t size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-    std::vector<uint8_t> file_buf(size);
-    read(fd, file_buf.data(), size);
-    printf("size: %ld\n", size);
+    auto file_buf = lite_p2p::common::read_file(argv[2]);
     //openssl pkeyutl -sign -inkey ed448.priv -keyform PEM -rawin -in ~/Documents/qr-code.png -hexdump
     auto pkey_sign = lite_p2p::crypto::crypto_asm_sign(nullptr, pkey2, file_buf);
     lite_p2p::common::print_hexbuf("sign", pkey_sign);
@@ -148,7 +143,19 @@ int main(int argc, char *argv[]) {
     }
     lite_p2p::crypto::crypto_free_keypair(&pkey);
     lite_p2p::crypto::crypto_free_keypair(&pkey2);
+
+    struct crypto_cipher_ctx_t c_ctx = {
+        .cipher_type = EVP_chacha20_poly1305(), 
+        .key = lite_p2p::crypto::crypto_random_bytes(256),
+        .iv = lite_p2p::crypto::crypto_random_bytes(96),
+    };
     
+    auto menc = lite_p2p::crypto::crypto_sym_encrypt(&c_ctx, file_buf);
+    lite_p2p::common::write_file(menc, "qr-code-crypted", false);
+    auto rfile = lite_p2p::common::read_file("qr-code-crypted");
+    auto other = lite_p2p::crypto::crypto_sym_decrypt(&c_ctx, rfile);
+    lite_p2p::common::write_file(other, "qr-code-crypted-nw.png", false);
+
 
     auto shake_128 = lite_p2p::crypto::xof_checksum(EVP_shake256(), der, 128);
     lite_p2p::common::print_hexbuf("shake-256", shake_128);
