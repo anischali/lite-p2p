@@ -487,7 +487,9 @@ std::vector<uint8_t> crypto::crypto_sym_encrypt(struct crypto_cipher_ctx_t *ctx,
     }
 
     OPENSSL_assert(EVP_CIPHER_CTX_key_length(cp_ctx) == (int)ctx->key.size());
-    OPENSSL_assert(EVP_CIPHER_CTX_iv_length(cp_ctx) == (int)ctx->iv.size());
+    if (ctx->iv.size()) {
+        OPENSSL_assert(EVP_CIPHER_CTX_iv_length(cp_ctx) == (int)ctx->iv.size());
+    }
 
     do {
         remaining = std::min(1024, s_len);
@@ -545,7 +547,9 @@ std::vector<uint8_t> crypto::crypto_sym_decrypt(struct crypto_cipher_ctx_t *ctx,
     }
 
     OPENSSL_assert(EVP_CIPHER_CTX_key_length(cp_ctx) == (int)ctx->key.size());
-    OPENSSL_assert(EVP_CIPHER_CTX_iv_length(cp_ctx) == (int)ctx->iv.size());
+    if (ctx->iv.size()) {
+        OPENSSL_assert(EVP_CIPHER_CTX_iv_length(cp_ctx) == (int)ctx->iv.size());
+    }
 
      do {
         remaining = std::min(1024, s_len);
