@@ -106,6 +106,9 @@ std::vector<uint8_t> crypto::crypto_random_bytes(int bits) {
     size_t byte_len = (bits / 8);
     std::vector<uint8_t> pass(byte_len);
 
+    if (!pass.size())
+        return {};
+
     ret = RAND_bytes(pass.data(), byte_len);
     if (!ret)
         return {};
@@ -488,7 +491,7 @@ std::vector<uint8_t> crypto::crypto_sym_encrypt(struct crypto_cipher_ctx_t *ctx,
 
     OPENSSL_assert(EVP_CIPHER_CTX_key_length(cp_ctx) == (int)ctx->key.size());
     if (ctx->iv.size()) {
-        OPENSSL_assert(EVP_CIPHER_CTX_iv_length(cp_ctx) == (int)ctx->iv.size());
+        OPENSSL_assert(EVP_CIPHER_CTX_iv_length(cp_ctx) == (int)ctx->iv.size());  
     }
 
     do {

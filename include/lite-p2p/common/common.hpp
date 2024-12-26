@@ -54,7 +54,7 @@ namespace lite_p2p::common
         std::vector<uint8_t> file_buf(size);
         read(fd, file_buf.data(), size);
         close(fd);
-        
+
         return file_buf;
     }
 
@@ -62,6 +62,9 @@ namespace lite_p2p::common
         
         int fd;
         
+        if (!file_buf.size())
+            return;
+
         if (append) {
             fd = open(filename.c_str(), O_WRONLY | O_APPEND);
             if (fd < 0)
