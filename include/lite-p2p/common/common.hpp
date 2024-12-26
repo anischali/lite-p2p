@@ -9,6 +9,9 @@
 #include <cstdlib>
 #include <cstdint>
 #include <string>
+#include <unistd.h>
+#include <fcntl.h>
+
 
 namespace lite_p2p::common
 {
@@ -36,6 +39,42 @@ namespace lite_p2p::common
         }
 
         printf("\n");
+    }
+
+    static inline std::vector<uint8_t> read_file(const std::string filename) {
+        
+        int fd;
+        
+        fd = open(filename.c_str(), O_RDONLY);
+        if (fd < 0)
+            return {};
+
+        size_t size = lseek(fd, 0, SEEK_END);
+        lseek(fd, 0, SEEK_SET);
+        std::vector<uint8_t> file_buf(size);
+        read(fd, file_buf.data(), size);
+        close(fd);
+        
+        return file_buf;
+    }
+
+    static inline void write_file(std::vector<uint8_t> file_buf, const std::string filename, bool append) {
+        
+        int fd;
+        
+        if (append) {
+            fd = open(filename.c_str(), O_WRONLY | O_APPEND);
+            if (fd < 0)
+                return;
+        }
+        else {
+            fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0666);
+            if (fd < 0)
+                return;
+        }
+
+        write(fd, file_buf.data(), file_buf.size());
+        close(fd);
     }
 
     static inline std::string parse(std::string label)
