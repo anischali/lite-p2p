@@ -39,7 +39,7 @@ void encrypt_decrypt_measure(std::string algo, std::string filename, std::vector
 {
     EVP_CIPHER *cipher = EVP_CIPHER_fetch(nullptr, algo.c_str(), nullptr);
     int64_t dec = 0, enc = 0;
-    std::vector<uint8_t> file_buf, menc;
+    std::vector<uint8_t> file_buf, menc, other;
 
     if (!cipher)
         return;
@@ -47,10 +47,11 @@ void encrypt_decrypt_measure(std::string algo, std::string filename, std::vector
     struct crypto_cipher_ctx_t c_ctx = {
         .cipher_type = cipher,
         .key = key,
-        //.iv = iv,
+        .iv = iv,
     };
 
     file_buf = lite_p2p::common::read_file(filename);
+    lite_p2p::types::lpint160_t sha_orig = lite_p2p::crypto::checksum(EVP_sha1(), file_buf);
     
     for (int i = 0; i < MAX_TEST_LOOP; ++i) {
         auto start_enc = std::chrono::high_resolution_clock::now();
@@ -64,68 +65,77 @@ void encrypt_decrypt_measure(std::string algo, std::string filename, std::vector
 
     for (int i = 0; i < MAX_TEST_LOOP; ++i) {
         auto start_dec = std::chrono::high_resolution_clock::now();
-        auto other = lite_p2p::crypto::crypto_sym_decrypt(&c_ctx, menc);
+        other = lite_p2p::crypto::crypto_sym_decrypt(&c_ctx, menc);
         auto stop_dec = std::chrono::high_resolution_clock::now();
         auto duration_dec = std::chrono::duration_cast<std::chrono::microseconds>(stop_dec - start_dec);
         dec += duration_dec.count();
     }
 
     dec /= MAX_TEST_LOOP;
-
-    stats.push_back({
-        .algo = algo,
-        .ms_enc_duration = enc,
-        .ms_dec_duration = dec,
-        .key_size = (int)key.size() * 8,
-    });
+    
+    lite_p2p::types::lpint160_t sha_new = lite_p2p::crypto::checksum(EVP_sha1(), other);
+    
+    if (sha_orig != sha_new) {
+        printf("valid: %s %d\n", algo.c_str(), (sha_orig == sha_new));
+        lite_p2p::common::write_file(other, algo.c_str(), false);
+    }
+    else
+    {
+        stats.push_back({
+            .algo = algo,
+            .ms_enc_duration = enc,
+            .ms_dec_duration = dec,
+            .key_size = (int)key.size() * 8,
+        });
+    }
 
     EVP_CIPHER_free(cipher);
 }
 
 int main(int argc, const char *argv[])
 {
-    encrypt_decrypt_measure(SN_chacha20_poly1305, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));  // 256-bit key
     encrypt_decrypt_measure(SN_aes_128_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96));         // 128-bit key
     encrypt_decrypt_measure(SN_aes_192_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96));         // 192-bit key
     encrypt_decrypt_measure(SN_aes_256_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));         // 256-bit key
-    encrypt_decrypt_measure(SN_aes_128_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96));         // 128-bit key
-    encrypt_decrypt_measure(SN_aes_192_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96));         // 192-bit key
-    encrypt_decrypt_measure(SN_aes_256_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));         // 256-bit key
-    encrypt_decrypt_measure(SN_aes_128_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96));         // 128-bit key
-    encrypt_decrypt_measure(SN_aes_192_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96));         // 192-bit key
-    encrypt_decrypt_measure(SN_aes_256_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));         // 256-bit key
-    encrypt_decrypt_measure(SN_aes_128_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96));         // 128-bit key
-    encrypt_decrypt_measure(SN_aes_192_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96));         // 192-bit key
-    encrypt_decrypt_measure(SN_aes_256_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));         // 256-bit key
-    encrypt_decrypt_measure(SN_rc4, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96));                // 128-bit key
-    encrypt_decrypt_measure(SN_chacha20, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));           // 256-bit key
-    encrypt_decrypt_measure(SN_aria_128_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, CBC mode
-    encrypt_decrypt_measure(SN_aria_192_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, CBC mode
-    encrypt_decrypt_measure(SN_aria_256_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CBC mode
     encrypt_decrypt_measure(SN_aria_128_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, GCM mode
     encrypt_decrypt_measure(SN_aria_192_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, GCM mode
     encrypt_decrypt_measure(SN_aria_256_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, GCM mode
-    encrypt_decrypt_measure(SN_aria_128_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, CTR mode
-    encrypt_decrypt_measure(SN_aria_192_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, CTR mode
-    encrypt_decrypt_measure(SN_aria_256_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CTR mode
-    encrypt_decrypt_measure(SN_aria_128_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, ECB mode
-    encrypt_decrypt_measure(SN_aria_192_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, ECB mode
-    encrypt_decrypt_measure(SN_aria_256_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, ECB mode
-    encrypt_decrypt_measure(SN_camellia_128_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, CBC mode
-    encrypt_decrypt_measure(SN_camellia_192_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, CBC mode
-    encrypt_decrypt_measure(SN_camellia_256_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CBC mode
     encrypt_decrypt_measure(SN_camellia_128_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, GCM mode
     encrypt_decrypt_measure(SN_camellia_192_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, GCM mode
     encrypt_decrypt_measure(SN_camellia_256_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, GCM mode
-    encrypt_decrypt_measure(SN_camellia_128_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, CTR mode
-    encrypt_decrypt_measure(SN_camellia_192_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, CTR mode
-    encrypt_decrypt_measure(SN_camellia_256_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CTR mode
-    encrypt_decrypt_measure(SN_camellia_128_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, ECB mode
-    encrypt_decrypt_measure(SN_camellia_192_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, ECB mode
-    encrypt_decrypt_measure(SN_camellia_256_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, ECB mode
-    encrypt_decrypt_measure(SN_camellia_128_ccm, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96)); // 128-bit key, CCM mode
-    encrypt_decrypt_measure(SN_camellia_192_ccm, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96)); // 192-bit key, CCM mode
-    encrypt_decrypt_measure(SN_camellia_256_ccm, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CCM mode
+    encrypt_decrypt_measure(SN_chacha20_poly1305, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));  // 256-bit key
+    encrypt_decrypt_measure(SN_aes_128_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128));         // 128-bit key
+    encrypt_decrypt_measure(SN_aes_192_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128));         // 192-bit key
+    encrypt_decrypt_measure(SN_aes_256_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128));         // 256-bit key
+    encrypt_decrypt_measure(SN_aes_128_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128));         // 128-bit key
+    encrypt_decrypt_measure(SN_aes_192_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128));         // 192-bit key
+    encrypt_decrypt_measure(SN_aes_256_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(0));         // 256-bit key
+    encrypt_decrypt_measure(SN_aes_128_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(0));         // 128-bit key
+    encrypt_decrypt_measure(SN_aes_192_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(0));         // 192-bit key
+    encrypt_decrypt_measure(SN_aes_256_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(0));         // 256-bit key
+    encrypt_decrypt_measure(SN_rc4, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128));                // 128-bit key
+    encrypt_decrypt_measure(SN_chacha20, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128));           // 256-bit key
+    encrypt_decrypt_measure(SN_aria_128_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128)); // 128-bit key, CBC mode
+    encrypt_decrypt_measure(SN_aria_192_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128)); // 192-bit key, CBC mode
+    encrypt_decrypt_measure(SN_aria_256_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128)); // 256-bit key, CBC mode
+    encrypt_decrypt_measure(SN_aria_128_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128)); // 128-bit key, CTR mode
+    encrypt_decrypt_measure(SN_aria_192_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128)); // 192-bit key, CTR mode
+    encrypt_decrypt_measure(SN_aria_256_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128)); // 256-bit key, CTR mode
+    encrypt_decrypt_measure(SN_aria_128_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(0)); // 128-bit key, ECB mode
+    encrypt_decrypt_measure(SN_aria_192_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(0)); // 192-bit key, ECB mode
+    encrypt_decrypt_measure(SN_aria_256_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(0)); // 256-bit key, ECB mode
+    encrypt_decrypt_measure(SN_camellia_128_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128)); // 128-bit key, CBC mode
+    encrypt_decrypt_measure(SN_camellia_192_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128)); // 192-bit key, CBC mode
+    encrypt_decrypt_measure(SN_camellia_256_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128)); // 256-bit key, CBC mode
+    encrypt_decrypt_measure(SN_camellia_128_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128)); // 128-bit key, CTR mode
+    encrypt_decrypt_measure(SN_camellia_192_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128)); // 192-bit key, CTR mode
+    encrypt_decrypt_measure(SN_camellia_256_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128)); // 256-bit key, CTR mode
+    encrypt_decrypt_measure(SN_camellia_128_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(0)); // 128-bit key, ECB mode
+    encrypt_decrypt_measure(SN_camellia_192_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(0)); // 192-bit key, ECB mode
+    encrypt_decrypt_measure(SN_camellia_256_ecb, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(0)); // 256-bit key, ECB mode
+    encrypt_decrypt_measure(SN_camellia_128_ccm, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(128)); // 128-bit key, CCM mode
+    encrypt_decrypt_measure(SN_camellia_192_ccm, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(128)); // 192-bit key, CCM mode
+    encrypt_decrypt_measure(SN_camellia_256_ccm, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(128)); // 256-bit key, CCM mode
     encrypt_decrypt_measure(SN_kuznyechik_cbc, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CBC mode
     encrypt_decrypt_measure(SN_kuznyechik_kexp15, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, GCM mode
     encrypt_decrypt_measure(SN_kuznyechik_ctr, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96)); // 256-bit key, CTR mode
