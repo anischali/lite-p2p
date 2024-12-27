@@ -86,21 +86,27 @@ namespace lite_p2p
     {
     private:
         SSL_CTX *ctx;
-        X509 *x509;
+        SSL *session;
         EVP_PKEY *keys;
         const SSL_METHOD *method;
+        std::string tls_cipher = TLS1_3_RFC_CHACHA20_POLY1305_SHA256;
+        X509 *x509;
         std::map<std::string, std::string> x509_info = {
             {"C", "US"},
             {"O", "My organization"},
             {"CN", "example.com"}
         };
     
+        int (*ssl_peer_certificate_check)(X509 *cert) = nullptr;
 
         int s_socket_ssl_init();
+        int s_socket_ssl_client();
+        int s_socket_ssl_server();
 
     public:
-        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, SSL_METHOD *_method);
-        s_socket(int fd, SSL_METHOD *_method);
+        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher);
+        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert);
+        s_socket(int fd, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert);
         ~s_socket();
 
         int bind(struct sockaddr_t *addr);
@@ -111,6 +117,10 @@ namespace lite_p2p
         size_t send(void *buf, size_t len);
         size_t recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote);
         size_t recv(void *buf, size_t len);
+
+        void ssl_set_peer_validate_cb(int (*ssl_peer_check)(X509 *cert)) {
+            ssl_peer_certificate_check = ssl_peer_check;
+        };
     };
 };
 
