@@ -333,6 +333,53 @@ void crypto::crypto_free_keypair(EVP_PKEY **pkey) {
     }
 };
 
+void crypto::crypto_free_x509(X509 **crt) {
+    
+    if (*crt) {
+        X509_free(*crt);
+        *crt = nullptr;
+    }
+};
+
+X509 *crypto::crypto_pkey_to_x509(EVP_PKEY *pkey, std::map<std::string, std::string> info, long expiration_sec) {
+    int ret;
+    X509 *x509;
+    
+    
+    x509 = X509_new();
+    if (!x509)
+        return nullptr;
+
+    X509_set_version(x509, 2);
+
+    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+    X509_gmtime_adj(X509_get_notBefore(x509), 0);
+    X509_gmtime_adj(X509_get_notAfter(x509), expiration_sec);
+
+    ret = X509_set_pubkey(x509, pkey); 
+    if (ret != 1) {
+        
+    }
+
+    // Set the subject name
+    X509_NAME *name = X509_get_subject_name(x509);
+    for (auto &&i : info) {
+        X509_NAME_add_entry_by_txt(name, i.first.c_str(), MBSTRING_ASC, (unsigned char *)i.second.c_str(), -1, -1, 0);
+    }
+
+    X509_set_issuer_name(x509, name); // Self-signed, so issuer is the same as subject
+
+    // Sign the certificate with the private key
+    if (X509_sign(x509, pkey, EVP_sha256()) == 0) {
+        goto free_x509;
+    }
+
+    return x509;
+free_x509:
+    X509_free(x509);
+    return nullptr;
+}
+
 std::vector<uint8_t> crypto::crypto_kdf_derive(
     struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, 
     std::vector<uint8_t> salt, int nbits) {

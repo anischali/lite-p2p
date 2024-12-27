@@ -57,7 +57,7 @@ namespace lite_p2p
 
         virtual int bind(struct sockaddr_t *addr) = 0;
         virtual int connect(struct sockaddr_t *addr) = 0;
-        virtual base_socket *listen(int n) = 0;
+        virtual int listen(int n) = 0;
         virtual base_socket *accept(struct sockaddr_t *addr) = 0;
         virtual size_t send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr) = 0;
         virtual size_t send(void *buf, size_t len) = 0;
@@ -74,7 +74,7 @@ namespace lite_p2p
 
         int bind(struct sockaddr_t *addr) override { return lite_p2p::network::bind_socket(fd, addr); };
         int connect(struct sockaddr_t *addr) override { return lite_p2p::network::connect_socket(fd, addr); };
-        base_socket *listen(int n) { return new n_socket(lite_p2p::network::listen_socket(fd, n)); };
+        int listen(int n) { return lite_p2p::network::listen_socket(fd, n); };
         base_socket *accept(struct sockaddr_t *addr) override { return new n_socket(lite_p2p::network::accept_socket(fd, addr)); };
         size_t send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr) override { return lite_p2p::network::send_to(fd, buf, len, flags, addr); };
         size_t send(void *buf, size_t len) override { return write(fd, buf, len); };
@@ -85,17 +85,27 @@ namespace lite_p2p
     class s_socket : public base_socket
     {
     private:
-        const SSL_METHOD *method;
         SSL_CTX *ctx;
+        X509 *x509;
         EVP_PKEY *keys;
+        const SSL_METHOD *method;
+        std::map<std::string, std::string> x509_info = {
+            {"C", "US"},
+            {"O", "My organization"},
+            {"CN", "example.com"}
+        };
     
+
+        int s_socket_ssl_init();
+
     public:
-        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey);
+        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, SSL_METHOD *_method);
+        s_socket(int fd, SSL_METHOD *_method);
         ~s_socket();
 
         int bind(struct sockaddr_t *addr);
         int connect(struct sockaddr_t *addr);
-        base_socket *listen(int n);
+        int listen(int n);
         base_socket *accept(struct sockaddr_t *addr);
         size_t send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr);
         size_t send(void *buf, size_t len);

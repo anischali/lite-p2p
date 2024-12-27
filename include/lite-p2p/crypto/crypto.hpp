@@ -207,6 +207,8 @@ namespace lite_p2p
     public:
         static EVP_PKEY * crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::string password);
         static void crypto_free_keypair(EVP_PKEY **pkey);
+        static X509 *crypto_pkey_to_x509(EVP_PKEY *pkey, std::map<std::string, std::string> info, long expiration_sec);
+        static void crypto_free_x509(X509 **cert);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, int nbits);
         static std::vector<uint8_t> crypto_kdf_derive(struct crypto_kdf_ctx_t *ctx, std::vector<uint8_t> password, std::vector<uint8_t> salt, int nbits);
 
