@@ -63,6 +63,7 @@ target_sources(lite-p2p PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/ice/agent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/crypto/crypto.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/network/network.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/lib/network/socket.cpp
 )
 
 
