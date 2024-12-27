@@ -4,6 +4,7 @@
 #include <cstring>
 #include <vector>
 #include <map>
+#include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/sha.h>
 #include <openssl/evp.h>

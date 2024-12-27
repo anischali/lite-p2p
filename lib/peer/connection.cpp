@@ -9,25 +9,25 @@ using namespace lite_p2p::protocol::stun;
 using namespace lite_p2p::protocol::turn;
 
 
-connection::connection(sa_family_t _family, std::string _addr, uint16_t _port, int _type, int _protocol) : 
-    family {_family}, local_addr{_addr}, type{_type}, protocol{_protocol} {
+connection::connection(sa_family_t family, std::string _addr, uint16_t _port, int type, int protocol) : 
+    local_addr{_addr} 
+{
     timeval tv = { .tv_sec = 5 };
     const int enable = 1;
-        
-    sock_fd = socket(family, type, protocol);
-    if (sock_fd <= 0) {
-        printf("failed to open socket\n");
-        return;
+
+    sock = new lite_p2p::n_socket(family, type, protocol);
+    if (!sock) {
+        throw std::runtime_error("failed to create socket");
     }
     
-    setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-    setsockopt(sock_fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     
     network::string_to_addr(family, _addr, &local);
     network::set_port(&local, _port);
 
-    network::bind_socket(sock_fd, &local);
+    sock->bind(&local);
 };
 
 connection::connection(uint16_t _port) : connection(AF_INET, std::string(""), _port, SOCK_DGRAM, IPPROTO_UDP)
@@ -43,18 +43,18 @@ connection::connection(sa_family_t _family, std::string _addr, uint16_t _port) :
 };
 
 connection::~connection() {
-    close(sock_fd);
+    delete sock;
 };
 
-ssize_t connection::send(int fd, uint8_t *buf, size_t len, struct sockaddr_t *r) {
+ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r) {
 
     switch (connection_type)
     {
     case PEER_DIRECT_CONNECTION:
-        if (protocol == IPPROTO_TCP)
-            return write(fd, buf, len);
+        if (nsock->protocol == IPPROTO_TCP)
+            return nsock->send(buf, len);
         
-        return network::send_to(fd, buf, len, r);
+        return nsock->send_to(buf, len, 0, r);
     
     case PEER_RELAYED_CONNECTION:
         if (!relay || !session)
@@ -73,31 +73,31 @@ ssize_t connection::send(int fd, uint8_t *buf, size_t len, struct sockaddr_t *r)
 
 ssize_t connection::send(uint8_t *buf, size_t len) {
 
-    return send(sock_fd, buf, len, &remote);
+    return sock->send_to(buf, len, 0, &remote);
 }
 
-ssize_t connection::send(int fd, uint8_t *buf, size_t len) {
+ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len) {
 
-    return send(fd, buf, len, &remote);
+    return send(nsock, buf, len, &remote);
 }
 
 
-ssize_t connection::send(int new_fd, std::vector<uint8_t> &buf) {
-    return send(new_fd, buf.data(), buf.size(), &remote);
+ssize_t connection::send(lite_p2p::base_socket *nsock, std::vector<uint8_t> &buf) {
+    return send(nsock, buf.data(), buf.size(), &remote);
 }
 
 
 
 ssize_t connection::send(std::vector<uint8_t> &buf) {
 
-    return send(sock_fd, buf.data(), buf.size(), &remote);
+    return send(sock, buf.data(), buf.size(), &remote);
 }
 
-ssize_t connection::recv(int new_fd, uint8_t *buf, size_t len, struct sockaddr_t *r) {
-    if (protocol == IPPROTO_TCP)
-        return read(new_fd, buf, len);    
+ssize_t connection::recv(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r) {
+    if (nsock->protocol == IPPROTO_TCP)
+        return nsock->recv(buf, len);    
     
-    return network::recv_from(new_fd, buf, len, r);   
+    return nsock->recv_from(buf, len, 0, r);   
 }
 
 ssize_t connection::recv(uint8_t *buf, size_t len, struct sockaddr_t *r) {
@@ -106,10 +106,7 @@ ssize_t connection::recv(uint8_t *buf, size_t len, struct sockaddr_t *r) {
     struct stun_attr_t attr;
     size_t length;
 
-    if (protocol == IPPROTO_TCP)
-        return read(sock_fd, buf, len);    
-    
-    ret = network::recv_from(sock_fd, buf, len, r);   
+    ret = recv(sock, buf, len, r);   
     if (ret <= 0)
         return -errno;
     
@@ -142,11 +139,11 @@ ssize_t connection::recv(uint8_t *buf, size_t len, struct sockaddr_t *r) {
     return -EINVAL;
 }
 
-ssize_t connection::recv(int new_fd, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
-    return recv(new_fd, buf.data(), buf.size(), r);
+ssize_t connection::recv(lite_p2p::base_socket *nsock, std::vector<uint8_t> &buf, struct sockaddr_t *r) {
+    return recv(nsock, buf.data(), buf.size(), r);
 }
 
 ssize_t connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r) {
 
-    return recv(sock_fd, buf.data(), buf.size(), r);
+    return recv(sock, buf.data(), buf.size(), r);
 };

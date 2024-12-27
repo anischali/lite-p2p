@@ -33,23 +33,26 @@ void visichat_listener(void *args) {
     int ret;
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args; 
-    conn->fd = conn->sock_fd;
+    lite_p2p::base_socket *s = nullptr;
     struct sockaddr_t s_addr = {
-        .sa_family = conn->family,
+        .sa_family = conn->sock->family,
     };
     
     printf("receiver thread start [OK]\n");
 
-    if (conn->protocol == IPPROTO_TCP) {
-        conn->fd = -1;
-        while (conn->fd < 0) {
-            lite_p2p::network::listen_socket(conn->sock_fd, 1);
-            conn->fd = lite_p2p::network::accept_socket(conn->sock_fd, &s_addr);
+    if (conn->sock->protocol == IPPROTO_TCP) {
+        while (!s) {
+            conn->sock->listen(1);
+            s = conn->sock->accept(&s_addr);
         }
+    }
+    else
+    {
+        s = conn->sock;
     }
 
     while(true) {
-        ret = conn->recv(buf, sizeof(buf), &s_addr);
+        ret = conn->recv(s, buf, sizeof(buf), &s_addr);
         if (ret <= 0 || buf[0] == 0)
             continue;
 
@@ -68,8 +71,8 @@ void visichat_sender(void *args) {
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
 
-    if (conn->protocol == IPPROTO_TCP) {
-        int ret = lite_p2p::network::connect_socket(conn->sock_fd, &conn->remote);
+    if (conn->sock->protocol == IPPROTO_TCP) {
+        int ret = conn->sock->connect(&conn->remote);
         if (ret < 0) {
             ret = errno;
             printf("%d - %s\n", ret, strerror(ret));
@@ -146,7 +149,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
-    lite_p2p::protocol::turn::client turn(conn.sock_fd);
+    lite_p2p::protocol::turn::client turn(conn.socket_fd());
 
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_turn = {
