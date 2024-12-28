@@ -161,7 +161,7 @@ int s_socket::connect(struct sockaddr_t *addr)
 {
     int ret;
 
-    ret = lite_p2p::network::accept_socket(fd, addr);
+    ret = lite_p2p::network::connect_socket(fd, addr);
     if (ret < 0)
         return ret;
 
@@ -195,7 +195,11 @@ base_socket *s_socket::accept(struct sockaddr_t *addr)
 
 size_t s_socket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)
 {
-    return 0;
+    if (!session) {
+        connect(addr);
+    }
+
+    return send(buf, len);
 }
 
 size_t s_socket::send(void *buf, size_t len)
@@ -205,7 +209,11 @@ size_t s_socket::send(void *buf, size_t len)
 
 size_t s_socket::recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote)
 {
-    return 0;
+    if (!session) {
+        connect(remote);
+    }
+
+    return recv(buf, len);
 }
 
 size_t s_socket::recv(void *buf, size_t len)

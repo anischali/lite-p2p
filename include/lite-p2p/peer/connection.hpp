@@ -12,6 +12,11 @@ enum _peer_connection_type {
     PEER_RELAYED_CONNECTION,
 };
 
+enum PEER_CON_FLAGS {
+    PEER_CON_TCP_CLIENT = 1,
+    PEER_CON_TCP_SERVER = 2,
+};
+
 namespace lite_p2p::peer
 {
     template <typename T> class peer_info {
@@ -39,9 +44,11 @@ namespace lite_p2p::peer
         struct stun_session_t *session;
         lite_p2p::protocol::turn::client *relay;
 
-        lite_p2p::base_socket *sock; 
+        lite_p2p::base_socket *sock = nullptr;
+        lite_p2p::base_socket *new_sock = nullptr;
         std::string local_addr;
         int connection_type;
+        int type = PEER_CON_TCP_SERVER;
 
         connection(sa_family_t _family, std::string _addr, uint16_t _port, int _type, int _protocol);
         connection(sa_family_t _family, std::string _addr, uint16_t _port);

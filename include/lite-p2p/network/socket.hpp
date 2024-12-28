@@ -40,10 +40,24 @@ namespace lite_p2p
         explicit base_socket(int _fd) {
             try
             {
-
+                int ret;
+                socklen_t len;
                 fd = _fd;
                 if (fd <= 0)
                     throw std::runtime_error("failed to open socket");
+
+                ret = get_sockopt(SOL_SOCKET, SO_TYPE, (void *)&type, &(len = sizeof(type)));
+                if (ret < 0)
+                    std::runtime_error("failed to get socket type");
+                
+                ret = get_sockopt(SOL_SOCKET, SO_PROTOCOL, (void *)&protocol, &(len = sizeof(protocol)));
+                if (ret < 0)
+                    std::runtime_error("failed to get socket protocol");
+
+                ret = get_sockopt(SOL_SOCKET, SO_DOMAIN, (void *)&family, &(len = sizeof(family)));
+                if (ret < 0)
+                    std::runtime_error("failed to get socket protocol");
+
             }
             catch (const std::exception &e)
             {
@@ -64,6 +78,7 @@ namespace lite_p2p
         virtual size_t recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote) = 0;
         virtual size_t recv(void *buf, size_t len) = 0;
         int set_sockopt(int level, int opt, const void *value, size_t len) { return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value, len); };
+        int get_sockopt(int level, int opt, void *value, socklen_t *len) { return getsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value, len); };
     };
 
     class n_socket : public base_socket

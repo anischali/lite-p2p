@@ -4,7 +4,14 @@ project(liteP2P VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
 enable_language(C CXX ASM)
 
-add_compile_options(-Wall -O3)
+add_compile_options(-Wall -Og)
+
+if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
+message("build type: ${CMAKE_BUILD_TYPE}")
+add_compile_definitions(
+    -DDEBUG=1
+)
+endif()
 
 include(FetchContent)
 
@@ -65,5 +72,20 @@ target_sources(lite-crypto-time PRIVATE
 target_link_libraries(lite-crypto-time lite-p2p)
 
 install(TARGETS lite-crypto-time
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+add_executable(lite-socket)
+target_include_directories(lite-socket PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
+target_sources(lite-socket PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/lite-socket.cpp
+)
+
+target_link_libraries(lite-socket lite-p2p)
+
+install(TARGETS lite-socket
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
