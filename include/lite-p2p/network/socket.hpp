@@ -69,6 +69,8 @@ namespace lite_p2p
             close(fd);
         };
 
+
+        virtual bool is_secure() = 0; 
         virtual int bind(struct sockaddr_t *addr) = 0;
         virtual int connect(struct sockaddr_t *addr) = 0;
         virtual int listen(int n) = 0;
@@ -87,6 +89,8 @@ namespace lite_p2p
         n_socket(sa_family_t _family, int _type, int _protocol) : base_socket(_family, _type, _protocol) {};
         n_socket(int _fd) : base_socket(_fd) {};
 
+
+        bool is_secure() override { return false; }; 
         int bind(struct sockaddr_t *addr) override { return lite_p2p::network::bind_socket(fd, addr); };
         int connect(struct sockaddr_t *addr) override { return lite_p2p::network::connect_socket(fd, addr); };
         int listen(int n) { return lite_p2p::network::listen_socket(fd, n); };
@@ -117,13 +121,16 @@ namespace lite_p2p
         int s_socket_ssl_init();
         int s_socket_ssl_accept();
         int s_socket_ssl_connect();
+        int s_socket_ssl_dgram(bool listen);
 
     public:
-        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher);
-        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert);
-        s_socket(int fd, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert);
+
+        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, std::string cipher);
+        s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, std::string cipher, X509 *cert);
+        s_socket(int fd, EVP_PKEY *pkey, std::string cipher, X509 *cert);
         ~s_socket();
 
+        bool is_secure() override { return true; }; 
         int bind(struct sockaddr_t *addr);
         int connect(struct sockaddr_t *addr);
         int listen(int n);

@@ -14,4 +14,5 @@ openssl genpkey -algorithm ED448 -out server.key
 openssl req -new -x509 -key server.key -out server.crt -days 365 -subj "/CN=localhost"
 
 
-openssl s_server -accept 4433 -cert server.crt -key server.key
+
+openssl s_server -accept 4433 -cert server.crt -key server.key $@

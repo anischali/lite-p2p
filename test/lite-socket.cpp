@@ -28,7 +28,15 @@ void visichat_listener(void *args)
     }
     else
     {
-        conn->new_sock = conn->sock;
+        if (conn->sock->is_secure())
+        {
+            if (conn->type == PEER_CON_TCP_SERVER)
+                conn->new_sock = conn->sock->accept(&conn->remote);
+        }
+        else
+        {
+            conn->new_sock = conn->sock;
+        }
     }
 
     while (!conn->new_sock)
@@ -55,7 +63,7 @@ void visichat_listener(void *args)
 
 void visichat_sender(void *args)
 {
-    int cnt = 0;
+    int cnt = 0, ret;
     uint8_t c = 0;
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
@@ -64,7 +72,7 @@ void visichat_sender(void *args)
     {
         if (conn->type == PEER_CON_TCP_CLIENT)
         {
-            int ret = -1;
+            ret = -1;
             do
             {
                 sleep(2);
@@ -82,7 +90,30 @@ void visichat_sender(void *args)
     }
     else
     {
-        conn->new_sock = conn->sock;
+        if (conn->sock->is_secure())
+        {
+            if (conn->type == PEER_CON_TCP_CLIENT)
+            {
+                ret = -1;
+                do
+                {
+                    sleep(2);
+                    ret = conn->sock->connect(&conn->remote);
+                    if (ret < 0)
+                    {
+                        ret = errno;
+                        printf("%d - %s\n", ret, strerror(ret));
+                    }
+                } while (ret != 0);
+            }
+            
+            conn->new_sock = conn->sock;
+        }
+        else
+        {
+            conn->new_sock = conn->sock;
+        }
+
     }
 
     while (!conn->new_sock)
@@ -140,13 +171,11 @@ int main(int argc, char *argv[])
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     int type = !strncmp(argv[2], "tcp", 3) ? SOCK_STREAM : SOCK_DGRAM;
     int con_type = !strncmp(argv[7], "client", 6) ? PEER_CON_TCP_CLIENT : PEER_CON_TCP_SERVER;
-    const SSL_METHOD *method = type == SOCK_STREAM ? TLS_method() : DTLS_method();
- 
-    //lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
+    // lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
 
     struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
     EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
-    lite_p2p::s_socket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, p_keys, method, TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305);
+    lite_p2p::s_socket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, p_keys, TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305);
     lite_p2p::peer::connection conn(&s, argv[3], atoi(argv[4]));
 
     conn.type = con_type;

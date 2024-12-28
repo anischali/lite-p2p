@@ -14,10 +14,9 @@ void SSL_info_callback(const SSL *ssl, int where, int ret)
     fprintf(stderr, "SSL_info_callback: state=%s\n", str);
 }
 
-static inline const SSL_METHOD *ssl_method_by_type(int type)
+static inline const SSL_METHOD *ssl_method(int protocol)
 {
-
-    return (type == SOCK_DGRAM) ? DTLS_method() : nullptr;
+    return (protocol == IPPROTO_UDP) ? DTLS_method() : TLS_method();
 }
 
 int s_socket::s_socket_ssl_init()
@@ -44,6 +43,51 @@ int s_socket::s_socket_ssl_init()
     ret = SSL_CTX_use_certificate(ctx, x509);
     if (ret <= 0)
         throw std::runtime_error("failed to use the given certificate key");
+
+    return 0;
+}
+
+int s_socket::s_socket_ssl_dgram(bool listen)
+{
+    struct timeval timeout = {5, 0};
+    BIO *bio;
+    BIO_ADDR *addr = BIO_ADDR_new();;
+    int ret;
+    try
+    {
+        session = SSL_new(ctx);
+        if (!session)
+            throw std::runtime_error("failed to create ssl session");
+
+        bio = BIO_new_dgram(fd, BIO_NOCLOSE);
+        if (!bio)
+            throw std::runtime_error("failed to create bio for ssl session");
+
+        //BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &timeout);
+
+        SSL_set_bio(session, bio, bio);
+        if (listen)
+        {
+            ret = DTLSv1_listen(session, addr);
+            if (ret <= 0)
+                throw std::runtime_error("failed to listen on dtls ssl");
+
+            ret = SSL_accept(session);
+            if (ret <= 0)
+                throw std::runtime_error("failed to accept ssl");
+        }
+        else
+        {
+            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
+            ret = SSL_connect(session);
+            if (ret <= 0)
+                throw std::runtime_error("failed to accept ssl");
+        }
+    }
+    catch (std::exception &e)
+    {
+        return -EINVAL;
+    }
 
     return 0;
 }
@@ -113,19 +157,17 @@ int s_socket::s_socket_ssl_connect()
     return 0;
 }
 
-s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher) : base_socket(_family, _type, _protocol),
-                                                                                                                                   keys{pkey}, method{_method}, tls_cipher{cipher}
+s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, std::string cipher) : base_socket(_family, _type, _protocol),
+                                                                                                        keys{pkey}, tls_cipher{cipher}
 {
     try
     {
-        if (method)
-        {
-            x509 = lite_p2p::crypto::crypto_pkey_to_x509(keys, x509_info, 86400L); // until tomorrow
-            if (!x509)
-                throw std::runtime_error("failed to generate certificate from key");
+        method = ssl_method(protocol);
+        x509 = lite_p2p::crypto::crypto_pkey_to_x509(keys, x509_info, 86400L); // until tomorrow
+        if (!x509)
+            throw std::runtime_error("failed to generate certificate from key");
 
-            s_socket_ssl_init();
-        }
+        s_socket_ssl_init();
     }
     catch (const std::exception &e)
     {
@@ -133,15 +175,13 @@ s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey
     }
 }
 
-s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert) : base_socket(_family, _type, _protocol),
-                                                                                                                                               keys{pkey}, method{_method}, tls_cipher{cipher}, x509{cert}
+s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, std::string cipher, X509 *cert) : base_socket(_family, _type, _protocol),
+                                                                                                                    keys{pkey}, tls_cipher{cipher}, x509{cert}
 {
     try
     {
-        if (method)
-        {
-            s_socket_ssl_init();
-        }
+        method = ssl_method(protocol);
+        s_socket_ssl_init();
     }
     catch (const std::exception &e)
     {
@@ -149,15 +189,13 @@ s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey
     }
 }
 
-s_socket::s_socket(int _fd, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert) : base_socket(_fd),
-                                                                                                         keys{pkey}, method{_method}, tls_cipher{cipher}, x509{cert}
+s_socket::s_socket(int _fd, EVP_PKEY *pkey, std::string cipher, X509 *cert) : base_socket(_fd),
+                                                                              keys{pkey}, tls_cipher{cipher}, x509{cert}
 {
     try
     {
-        if (method)
-        {
-            s_socket_ssl_init();
-        }
+        method = ssl_method(protocol);
+        s_socket_ssl_init();
     }
     catch (const std::exception &e)
     {
@@ -182,14 +220,20 @@ int s_socket::bind(struct sockaddr_t *addr)
 int s_socket::connect(struct sockaddr_t *addr)
 {
     int ret;
-
     ret = lite_p2p::network::connect_socket(fd, addr);
     if (ret < 0)
         return ret;
-
-    ret = s_socket_ssl_connect();
-    if (ret < 0)
-        return ret;
+    
+    if (type == SOCK_STREAM)
+    {
+        ret = s_socket_ssl_connect();
+        if (ret < 0)
+            return ret;
+    }
+    else
+    {
+        return s_socket_ssl_dgram(false);
+    }
 
     return 0;
 }
@@ -202,17 +246,30 @@ int s_socket::listen(int n)
 base_socket *s_socket::accept(struct sockaddr_t *addr)
 {
     int ret;
-    int nfd = lite_p2p::network::accept_socket(fd, addr);
-    if (nfd <= 0)
-        return nullptr;
+    if (type == SOCK_STREAM)
+    {
+        int nfd = lite_p2p::network::accept_socket(fd, addr);
+        if (nfd <= 0)
+            return nullptr;
 
-    auto s = new s_socket(nfd, keys, TLS_method(), tls_cipher, x509);
+        auto s = new s_socket(nfd, keys, tls_cipher, x509);
 
-    ret = s->s_socket_ssl_accept();
-    if (ret < 0)
-        return nullptr;
+        ret = s->s_socket_ssl_accept();
+        if (ret < 0)
+            return nullptr;
 
-    return s;
+        return s;
+    }
+    else
+    {
+        ret = s_socket_ssl_dgram(true);
+        if (ret < 0)
+            return nullptr;
+
+        return this;
+    }
+
+    return nullptr;
 }
 
 size_t s_socket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)
@@ -233,14 +290,15 @@ size_t s_socket::send(void *buf, size_t len)
 size_t s_socket::recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote)
 {
     if (!session)
-    {
-        connect(remote);
-    }
+        return -EINVAL;
 
     return recv(buf, len);
 }
 
 size_t s_socket::recv(void *buf, size_t len)
 {
+    if (!session)
+        return -EINVAL;
+
     return SSL_read(session, buf, len);
 }
