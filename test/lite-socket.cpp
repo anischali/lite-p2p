@@ -14,12 +14,15 @@ void visichat_listener(void *args)
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
 
-    if (conn->sock->protocol == IPPROTO_TCP && conn->type == PEER_CON_TCP_SERVER)
+    if (conn->sock->protocol == IPPROTO_TCP)
     {
-        while (!conn->new_sock)
+        if (conn->type == PEER_CON_TCP_SERVER)
         {
-            conn->sock->listen(1);
-            conn->new_sock = conn->sock->accept(&conn->remote);
+            while (!conn->new_sock)
+            {
+                conn->sock->listen(1);
+                conn->new_sock = conn->sock->accept(&conn->remote);
+            }
         }
     }
     else
@@ -27,12 +30,13 @@ void visichat_listener(void *args)
         conn->new_sock = conn->sock;
     }
 
-    while (!conn->new_sock) {
+    while (!conn->new_sock)
+    {
         continue;
     }
 
     printf("receiver thread start [OK]\n");
-    
+
     while (true)
     {
         ret = conn->recv(conn->new_sock, buf, sizeof(buf), &conn->remote);
@@ -54,29 +58,37 @@ void visichat_sender(void *args)
     uint8_t c = 0;
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
-    
-    if (conn->sock->protocol == IPPROTO_TCP && conn->type == PEER_CON_TCP_CLIENT)
-    {
-        int ret = -1;
-        do
-        {
-            sleep(2);
-            ret = conn->sock->connect(&conn->remote);
-            if (ret < 0)
-            {
-                ret = errno;
-                printf("%d - %s\n", ret, strerror(ret));
-            }
-            
-        } while (ret != 0);
 
+    if (conn->sock->protocol == IPPROTO_TCP)
+    {
+        if (conn->type == PEER_CON_TCP_CLIENT)
+        {
+            int ret = -1;
+            do
+            {
+                sleep(2);
+                ret = conn->sock->connect(&conn->remote);
+                if (ret < 0)
+                {
+                    ret = errno;
+                    printf("%d - %s\n", ret, strerror(ret));
+                }
+
+            } while (ret != 0);
+
+            conn->new_sock = conn->sock;
+        }
+    }
+    else
+    {
         conn->new_sock = conn->sock;
     }
 
-    while (!conn->new_sock) {
+    while (!conn->new_sock)
+    {
         continue;
-    }    
-    
+    }
+
     printf("sender thread start [OK]\n");
 
     while (true)
@@ -136,7 +148,6 @@ int main(int argc, char *argv[])
         lite_p2p::peer::connection *c = (lite_p2p::peer::connection *)ctx;
 
         c->~connection(); });
-
 
     lite_p2p::network::string_to_addr(family, argv[5], &conn.remote);
     lite_p2p::network::set_port(&conn.remote, atoi(argv[6]));
