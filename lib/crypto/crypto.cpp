@@ -370,7 +370,9 @@ X509 *crypto::crypto_pkey_to_x509(EVP_PKEY *pkey, std::map<std::string, std::str
     X509_set_issuer_name(x509, name); // Self-signed, so issuer is the same as subject
 
     // Sign the certificate with the private key
-    if (X509_sign(x509, pkey, EVP_sha256()) == 0) {
+    ret = X509_sign(x509, pkey, nullptr);
+    if (ret <= 0) {
+        ret = errno;
         goto free_x509;
     }
 

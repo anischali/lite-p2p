@@ -53,7 +53,7 @@ namespace lite_p2p::peer
         connection(sa_family_t _family, std::string _addr, uint16_t _port, int _type, int _protocol);
         connection(sa_family_t _family, std::string _addr, uint16_t _port);
         connection(sa_family_t family, uint16_t port);
-        connection(base_socket s);
+        connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _port);
         connection(uint16_t port);
 
         int socket_fd() {return sock->fd; };

@@ -2,6 +2,18 @@
 
 using namespace lite_p2p;
 
+void SSL_info_callback(const SSL *ssl, int where, int ret)
+{
+    if (ret == 0)
+    {
+        fprintf(stderr, "SSL_info_callback: error occurred\n");
+        return;
+    }
+
+    const char *str = SSL_state_string_long(ssl);
+    fprintf(stderr, "SSL_info_callback: state=%s\n", str);
+}
+
 static inline const SSL_METHOD *ssl_method_by_type(int type)
 {
 
@@ -11,10 +23,15 @@ static inline const SSL_METHOD *ssl_method_by_type(int type)
 int s_socket::s_socket_ssl_init()
 {
     int ret;
+    SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
 
     ctx = SSL_CTX_new(method);
     if (!ctx)
         throw std::runtime_error("failed to create ssl context");
+
+    SSL_CTX_set_info_callback(ctx, SSL_info_callback);
 
     ret = SSL_CTX_set_cipher_list(ctx, tls_cipher.c_str());
     if (ret <= 0)
@@ -31,23 +48,21 @@ int s_socket::s_socket_ssl_init()
     return 0;
 }
 
-int s_socket::s_socket_ssl_client()
+int s_socket::s_socket_ssl_accept()
 {
     int ret;
-    try {
+    try
+    {
+        session = SSL_new(ctx);
+        if (!session)
+            throw std::runtime_error("failed to create ssl session");
 
-    session = SSL_new(ctx);
-    SSL_set_fd(session, fd);
-    if (!session)
-        throw std::runtime_error("failed to create ssl session");
-
-    
-    ret = SSL_accept(session);
-    if (ret <= 0)
-        throw std::runtime_error("failed to accept ssl");
-    
+        SSL_set_fd(session, fd);
+        ret = SSL_accept(session);
+        if (ret <= 0)
+            throw std::runtime_error("failed to accept ssl");
     }
-    catch(std::exception& e)
+    catch (std::exception &e)
     {
         return -EINVAL;
     }
@@ -55,37 +70,44 @@ int s_socket::s_socket_ssl_client()
     return 0;
 }
 
-
-int s_socket::s_socket_ssl_server()
+int s_socket::s_socket_ssl_connect()
 {
     int ret;
-    try {
-
-    session = SSL_new(ctx);
-    SSL_set_fd(session, fd);
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
-
-    if (!session)
-        throw std::runtime_error("failed to create ssl session");
-
-    ret = SSL_connect(session);
-    if (ret <= 0)
-        throw std::runtime_error("failed to accept ssl");
-
-    X509 *server_cert = SSL_get_peer_certificate(session);
-    if (!server_cert)
-        throw std::runtime_error("failed to get peer certificate");
-    
-    if (ssl_peer_certificate_check) {
-        ret = ssl_peer_certificate_check(server_cert);
-        if (ret < 0)
-            throw std::runtime_error("failed to validate peer certificate");
-    }
-
-    }
-    catch(std::exception& e)
+    try
     {
-        return -EINVAL;
+        session = SSL_new(ctx);
+        if (!session)
+            throw std::runtime_error("failed to create ssl session");
+
+        // SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+        ret = SSL_set_fd(session, fd);
+        if (ret <= 0)
+        {
+            ret = SSL_get_error(session, ret);
+            throw std::runtime_error("failed to associate socket to session");
+        }
+
+        ret = SSL_connect(session);
+        if (ret <= 0)
+        {
+            ret = SSL_get_error(session, ret);
+            throw std::runtime_error("failed to accept ssl");
+        }
+
+        X509 *server_cert = SSL_get_peer_certificate(session);
+        if (!server_cert)
+            throw std::runtime_error("failed to get peer certificate");
+
+        if (ssl_peer_certificate_check)
+        {
+            ret = ssl_peer_certificate_check(server_cert);
+            if (ret < 0)
+                throw std::runtime_error("failed to validate peer certificate");
+        }
+    }
+    catch (std::exception &e)
+    {
+        return -(ret);
     }
 
     return 0;
@@ -112,7 +134,7 @@ s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey
 }
 
 s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert) : base_socket(_family, _type, _protocol),
-                                        keys{pkey}, method{_method}, tls_cipher{cipher}, x509{cert}
+                                                                                                                                               keys{pkey}, method{_method}, tls_cipher{cipher}, x509{cert}
 {
     try
     {
@@ -128,7 +150,7 @@ s_socket::s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey
 }
 
 s_socket::s_socket(int _fd, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher, X509 *cert) : base_socket(_fd),
-                        keys{pkey}, method{_method}, tls_cipher{cipher}, x509{cert}
+                                                                                                         keys{pkey}, method{_method}, tls_cipher{cipher}, x509{cert}
 {
     try
     {
@@ -165,7 +187,7 @@ int s_socket::connect(struct sockaddr_t *addr)
     if (ret < 0)
         return ret;
 
-    ret = s_socket_ssl_server();
+    ret = s_socket_ssl_connect();
     if (ret < 0)
         return ret;
 
@@ -184,9 +206,9 @@ base_socket *s_socket::accept(struct sockaddr_t *addr)
     if (nfd <= 0)
         return nullptr;
 
-    auto s = new s_socket(nfd, keys, TLS_client_method(), tls_cipher, x509);
+    auto s = new s_socket(nfd, keys, TLS_method(), tls_cipher, x509);
 
-    ret = s->s_socket_ssl_client();
+    ret = s->s_socket_ssl_accept();
     if (ret < 0)
         return nullptr;
 
@@ -195,7 +217,8 @@ base_socket *s_socket::accept(struct sockaddr_t *addr)
 
 size_t s_socket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)
 {
-    if (!session) {
+    if (!session)
+    {
         connect(addr);
     }
 
@@ -209,7 +232,8 @@ size_t s_socket::send(void *buf, size_t len)
 
 size_t s_socket::recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote)
 {
-    if (!session) {
+    if (!session)
+    {
         connect(remote);
     }
 

@@ -104,7 +104,7 @@ namespace lite_p2p
         SSL *session;
         EVP_PKEY *keys;
         const SSL_METHOD *method;
-        std::string tls_cipher = TLS1_3_RFC_CHACHA20_POLY1305_SHA256;
+        std::string tls_cipher = TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305;
         X509 *x509;
         std::map<std::string, std::string> x509_info = {
             {"C", "US"},
@@ -115,8 +115,8 @@ namespace lite_p2p
         int (*ssl_peer_certificate_check)(X509 *cert) = nullptr;
 
         int s_socket_ssl_init();
-        int s_socket_ssl_client();
-        int s_socket_ssl_server();
+        int s_socket_ssl_accept();
+        int s_socket_ssl_connect();
 
     public:
         s_socket(sa_family_t _family, int _type, int _protocol, EVP_PKEY *pkey, const SSL_METHOD *_method, std::string cipher);

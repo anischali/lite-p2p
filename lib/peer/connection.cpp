@@ -42,7 +42,26 @@ connection::connection(sa_family_t _family, std::string _addr, uint16_t _port) :
 {
 };
 
+connection::connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _port) : sock{s},  local_addr{_addr} 
+{
+    timeval tv = { .tv_sec = 5 };
+    const int enable = 1;
+
+    sock = s;
+    sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    
+    network::string_to_addr(s->family, _addr, &local);
+    network::set_port(&local, _port);
+
+    sock->bind(&local);
+}
+
 connection::~connection() {
+    if (new_sock != sock)
+        delete new_sock;
+
     delete sock;
 };
 

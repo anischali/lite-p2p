@@ -6,6 +6,7 @@
 #include "lite-p2p/protocol/stun/client.hpp"
 #include "lite-p2p/peer/connection.hpp"
 #include "lite-p2p/network/network.hpp"
+#include "lite-p2p/network/socket.hpp"
 #include "lite-p2p/protocol/ice/agent.hpp"
 
 void visichat_listener(void *args)
@@ -139,8 +140,14 @@ int main(int argc, char *argv[])
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     int type = !strncmp(argv[2], "tcp", 3) ? SOCK_STREAM : SOCK_DGRAM;
     int con_type = !strncmp(argv[7], "client", 6) ? PEER_CON_TCP_CLIENT : PEER_CON_TCP_SERVER;
+    const SSL_METHOD *method = type == SOCK_STREAM ? TLS_method() : DTLS_method();
+ 
+    //lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
 
-    lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
+    struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
+    EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
+    lite_p2p::s_socket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, p_keys, method, TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305);
+    lite_p2p::peer::connection conn(&s, argv[3], atoi(argv[4]));
 
     conn.type = con_type;
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx)
