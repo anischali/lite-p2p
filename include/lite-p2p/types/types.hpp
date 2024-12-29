@@ -27,6 +27,13 @@ namespace lite_p2p::types
             std::copy(std::rbegin(other), std::rend(other), bytes);
         };
 
+        lite_number(const uint8_t *data, size_t len) : lite_number()
+        {
+            for (int i = (int)len; i > 0; --i) {
+                bytes[len - i] = data[i - 1];
+            }
+        };
+
         lite_number(std::vector<uint8_t> other) : lite_number()
         {
             std::copy(std::rbegin(other), std::rend(other), bytes);

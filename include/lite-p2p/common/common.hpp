@@ -104,27 +104,30 @@ namespace lite_p2p::common
         struct at_exit_context_t
         {
             void (*cleanup)(void *context);
-            void *context;
-            struct list_head list;
+            void *context = nullptr;
+            struct list_head list = {0};
         };
 
-        static void on_exit_engine_cleanup(int status, void *context)
+        static void on_exit_engine_cleanup(int status, void *list)
         {
-            struct at_exit_context_t *ctx = NULL, *save = NULL;
-            struct list_head *array = reinterpret_cast<struct list_head *>(context);
+            struct at_exit_context_t *ctx = nullptr, *save = nullptr;
+            struct list_head *array = nullptr;
+            
+            array = reinterpret_cast<struct list_head *>(list);
 
             if (!array || list_empty(array))
                 return;
 
             list_for_each_entry_safe(ctx, save, array, list)
             {
-                if (ctx && ctx->cleanup && ctx->context)
-                {
-                    ctx->cleanup(ctx->context);
-                    list_del(&ctx->list);
-                    free(ctx);
-                    ctx = NULL;
-                }
+                if (!ctx || !ctx->cleanup || !ctx->context)
+                    continue;
+
+                ctx->cleanup(ctx->context);
+                list_del(&ctx->list);
+                free(ctx);
+                ctx = NULL;
+                
             }
         };
 

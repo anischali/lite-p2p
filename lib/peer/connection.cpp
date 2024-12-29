@@ -59,10 +59,13 @@ connection::connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _po
 }
 
 connection::~connection() {
-    if (new_sock != sock)
-        delete new_sock;
+    if (sock != new_sock){
+        if (new_sock != nullptr)
+            delete new_sock;
+    }
 
-    delete sock;
+    if (sock != nullptr)
+        delete sock;
 };
 
 ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r) {

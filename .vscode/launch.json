@@ -39,7 +39,7 @@
       //"args": ["test", "~/Documents/qr-code.png", "~/Documents/qr_code3.png"],
       //crypto-time
       //"args": ["~/Documents/qr-code.png"],
-      "args": ["4", "udp", "192.168.0.10", "4453", "192.168.0.10", "4433", "server"],
+      "args": ["4", "udp", "192.168.0.12", "4443", "192.168.0.12", "4433", "server"],
       "stopAtEntry": false,
       "externalConsole": false,
       "cwd": "${workspaceFolder}/build/",

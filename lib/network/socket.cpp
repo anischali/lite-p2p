@@ -1,4 +1,5 @@
 #include <lite-p2p/network/socket.hpp>
+#include <fcntl.h>
 
 using namespace lite_p2p;
 
@@ -22,139 +23,204 @@ static inline const SSL_METHOD *ssl_method(int protocol)
 int tsocket::tsocket_ssl_init()
 {
     int ret;
+    
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
 
+    if (!tls.method)
+        return -ENOENT;
+
     tls.ctx = SSL_CTX_new(tls.method);
     if (!tls.ctx)
-        throw std::runtime_error("failed to create ssl context");
+        return -ENOMEM;
 
     ret = SSL_CTX_set_cipher_list(tls.ctx, config->ciphers.c_str());
     if (ret <= 0)
-        throw std::runtime_error("failed to set cipher list");
+        goto err_out;
 
     ret = SSL_CTX_use_PrivateKey(tls.ctx, config->keys);
     if (ret <= 0)
-        throw std::runtime_error("failed to use the given private key");
+        goto err_out;
 
     ret = SSL_CTX_use_certificate(tls.ctx, config->x509);
     if (ret <= 0)
-        throw std::runtime_error("failed to use the given certificate key");
+        goto err_out;
 
     return 0;
+
+err_out:
+    SSL_CTX_free(tls.ctx);
+    tls.ctx = nullptr;
+    return ret;
 }
 
-int tsocket::tsocket_ssl_dgram(bool listen)
+int tsocket::tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen)
 {
-    struct timeval timeout = {5, 0};
-    BIO *bio;
+    struct timeval timeout = {60, 0};
+    int ret;
 
-    try
+    if (!tls.ctx)
+        return -ENOENT;
+
+    tls.session = SSL_new(tls.ctx);
+    if (!tls.session)
+        return -ENOMEM;
+
+    SSL_set_app_data(tls.session, &tls);
+
+    tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
+    if (!tls.bio)
+        goto err_sll;
+
+    SSL_set_bio(tls.session, tls.bio, tls.bio);
+    BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
+    BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr);
+    BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
+
+    if (listen)
     {
-        tls.session = SSL_new(tls.ctx);
-        if (!tls.session)
-            throw std::runtime_error("failed to create ssl session");
+        if (config && config->ops && config->ops->generate_cookie)
+            SSL_CTX_set_cookie_generate_cb(tls.ctx, config->ops->generate_cookie);
 
-        bio = BIO_new_dgram(fd, BIO_NOCLOSE);
-        if (!bio)
-            throw std::runtime_error("failed to create bio for ssl session");
+        if (config && config->ops && config->ops->verify_cookie)
+            SSL_CTX_set_cookie_verify_cb(tls.ctx, config->ops->verify_cookie);
 
-        // BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &timeout);
+        ret = SSL_accept(tls.session);
+        if (ret <= 0)
+            goto err_bio;
 
-        SSL_set_bio(tls.session, bio, bio);
-        if (listen)
-        {
-            SSL_set_accept_state(tls.session);
-            if (!SSL_is_init_finished(tls.session))
-                ;
-            SSL_do_handshake(tls.session);
-        }
-        else
-        {
-            BIO_ctrl(bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
-            SSL_set_connect_state(tls.session);
-            SSL_do_handshake(tls.session);
-        }
+        // SSL_CTX_set_options(tls.ctx, SSL_OP_COOKIE_EXCHANGE);
+        // SSL_set_accept_state(tls.session);
+        // DTLSv1_listen(tls.session, nullptr);
+        // if (!SSL_is_init_finished(tls.session)) {
+        //     do {
+        //         ret = SSL_do_handshake(tls.session);
+        //     } while (ret <= 0);
+        // }
+
+        // BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_GET_PEER, 0, &peer_addr);
     }
-    catch (std::exception &e)
+    else
     {
-        return -EINVAL;
+        SSL_connect(tls.session);
+        do
+        {
+            ret = SSL_do_handshake(tls.session);
+        } while (ret <= 0);
     }
-
     return 0;
+
+err_bio:
+    BIO_free(tls.bio);
+    tls.bio = nullptr;
+
+err_sll:
+    SSL_free(tls.session);
+    tls.session = nullptr;
+    return ret;
 }
 
 int tsocket::tsocket_ssl_accept()
 {
     int ret;
-    try
-    {
-        tls.session = SSL_new(tls.ctx);
-        if (!tls.session)
-            throw std::runtime_error("failed to create ssl session");
 
-        SSL_set_fd(tls.session, fd);
-        ret = SSL_accept(tls.session);
-        if (ret <= 0)
-            throw std::runtime_error("failed to accept ssl");
-    }
-    catch (std::exception &e)
-    {
-        return -EINVAL;
-    }
+    if (!tls.ctx)
+        return -ENOENT;
+
+    tls.session = SSL_new(tls.ctx);
+    if (!tls.session)
+        return -ENOMEM;
+
+    SSL_set_fd(tls.session, fd);
+    ret = SSL_accept(tls.session);
+    if (ret <= 0)
+        goto err_ssl;
 
     return 0;
+
+err_ssl:
+    SSL_free(tls.session);
+    tls.session = nullptr;
+
+    return ret;
 }
 
 int tsocket::tsocket_ssl_connect()
 {
+    X509 *server_cert;
     int ret;
-    try
+
+    if (!tls.ctx)
+        return -ENOENT;
+
+    tls.session = SSL_new(tls.ctx);
+    if (!tls.session)
+        throw std::runtime_error("failed to create ssl session");
+
+    ret = SSL_set_fd(tls.session, fd);
+    if (ret <= 0)
+        goto err_ssl;
+
+    ret = SSL_connect(tls.session);
+    if (ret <= 0)
+        goto err_ssl;
+
+    server_cert = SSL_get_peer_certificate(tls.session);
+    if (!server_cert)
+        goto err_ssl;
+
+    if (config->ops && config->ops->ssl_peer_validate)
     {
-        tls.session = SSL_new(tls.ctx);
-        if (!tls.session)
-            throw std::runtime_error("failed to create ssl session");
-
-        // SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
-        ret = SSL_set_fd(tls.session, fd);
-        if (ret <= 0)
-        {
-            ret = SSL_get_error(tls.session, ret);
-            throw std::runtime_error("failed to associate socket to session");
-        }
-
-        ret = SSL_connect(tls.session);
-        if (ret <= 0)
-        {
-            ret = SSL_get_error(tls.session, ret);
-            throw std::runtime_error("failed to accept ssl");
-        }
-
-        X509 *server_cert = SSL_get_peer_certificate(tls.session);
-        if (!server_cert)
-            throw std::runtime_error("failed to get peer certificate");
-
-        if (config->ops && config->ops->ssl_peer_validate)
-        {
-            ret = config->ops->ssl_peer_validate(server_cert);
-            if (ret < 0)
-                throw std::runtime_error("failed to validate peer certificate");
-        }
-    }
-    catch (std::exception &e)
-    {
-        return -(ret);
+        ret = config->ops->ssl_peer_validate(server_cert);
+        if (ret < 0)
+            goto err_ssl;
     }
 
     return 0;
+
+err_ssl:
+    SSL_free(tls.session);
+    tls.session = nullptr;
+
+    return ret;
+}
+
+void tsocket::tsocket_ssl_cleanup() {
+    if (tls.session)
+    {
+        if (SSL_get_shutdown(tls.session) != 0)
+            SSL_shutdown(tls.session);
+        
+        SSL_free(tls.session);
+        tls.session = nullptr;
+
+        if (tls.bio)
+        {
+            BIO_free(tls.bio);
+            tls.bio = nullptr;
+        }            
+    }
+
+    if (tls.ctx)
+    {
+        SSL_CTX_free(tls.ctx);
+        tls.ctx = nullptr;
+    }
+
+    if (config->x509_auto_generate && config->x509 != nullptr)
+    {
+        lite_p2p::crypto::crypto_free_x509(&config->x509);
+        config->x509 = nullptr;
+    }
 }
 
 tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_config_t *cfg) : base_socket(_family, _type, _protocol),
-                                                                                             config{cfg}
+                                                                                            config{cfg}
 {
     try
     {
+        tls.cfg = cfg;
         tls.method = ssl_method(protocol);
         if (!config->x509)
         {
@@ -164,38 +230,34 @@ tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_confi
                 throw std::runtime_error("failed to generate certificate from key");
         }
 
-        tsocket_ssl_init();
+        if (tsocket_ssl_init() < 0)
+            throw std::runtime_error("failed to create ssl context");
     }
     catch (const std::exception &e)
     {
-        throw e;
+        tsocket_ssl_cleanup();
     }
 }
 
 tsocket::tsocket(int _fd, struct tls_config_t *cfg) : base_socket(_fd),
-                                                       config{cfg}
+                                                      config{cfg}
 {
     try
     {
+        tls.cfg = cfg;
         tls.method = ssl_method(protocol);
-        tsocket_ssl_init();
+        if (tsocket_ssl_init() < 0)
+            throw std::runtime_error("failed to create ssl context");
     }
     catch (const std::exception &e)
     {
-        throw e;
+        tsocket_ssl_cleanup();
     }
 }
 
 tsocket::~tsocket()
 {
-    SSL_shutdown(tls.session);
-    SSL_free(tls.session);
-    SSL_CTX_free(tls.ctx);
-    
-    if (config->x509_auto_generate)
-        lite_p2p::crypto::crypto_free_x509(&config->x509);
-    
-    close(fd);
+    tsocket_ssl_cleanup();
 }
 
 int tsocket::bind(struct sockaddr_t *addr)
@@ -206,6 +268,7 @@ int tsocket::bind(struct sockaddr_t *addr)
 int tsocket::connect(struct sockaddr_t *addr)
 {
     int ret;
+        
     ret = lite_p2p::network::connect_socket(fd, addr);
     if (ret < 0)
         return ret;
@@ -218,7 +281,7 @@ int tsocket::connect(struct sockaddr_t *addr)
     }
     else
     {
-        return tsocket_ssl_dgram(false);
+        return tsocket_ssl_dgram(addr, false);
     }
 
     return 0;
@@ -232,6 +295,7 @@ int tsocket::listen(int n)
 base_socket *tsocket::accept(struct sockaddr_t *addr)
 {
     int ret;
+
     if (type == SOCK_STREAM)
     {
         int nfd = lite_p2p::network::accept_socket(fd, addr);
@@ -248,11 +312,12 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     }
     else
     {
-        ret = tsocket_ssl_dgram(true);
+        auto s = new tsocket(fd, config);
+        ret = s->tsocket_ssl_dgram(addr, true);
         if (ret < 0)
             return nullptr;
 
-        return this;
+        return s;
     }
 
     return nullptr;
@@ -261,19 +326,20 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
 size_t tsocket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)
 {
     if (!tls.session)
-    {
-        connect(addr);
-    }
+        return -ENOENT;
 
     return send(buf, len);
 }
 
 size_t tsocket::send(void *buf, size_t len)
 {
+    if (!tls.session)
+        return -ENOENT;
+
     return SSL_write(tls.session, buf, len);
 }
 
-size_t tsocket::recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote)
+size_t tsocket::recv_from(void *buf, size_t len, int flags, struct sockaddr_t *addr)
 {
     if (!tls.session)
         return -EINVAL;

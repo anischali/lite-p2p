@@ -9,18 +9,25 @@
 #include <netinet/ip.h>
 #include <netinet/if_ether.h>
 #include <lite-p2p/crypto/crypto.hpp>
+#include <lite-p2p/types/types.hpp>
 #include <lite-p2p/network/network.hpp>
 
 struct tls_ops_t
 {
     int (*ssl_peer_validate)(X509 *cert) = nullptr;
     void (*ssl_info)(const SSL *ssl, int where, int ret) = nullptr;
+    int (*generate_cookie) (SSL *ssl, uint8_t *cookie, uint32_t *len) = nullptr;
+    int (*verify_cookie) (SSL *ssl, const uint8_t *cookie, uint32_t len) = nullptr;
 };
 struct tls_context_t
 {
     const SSL_METHOD *method;
-    SSL_CTX *ctx;
-    SSL *session;
+    SSL_CTX *ctx = nullptr;
+    SSL *session = nullptr;
+    BIO *bio = nullptr;
+    std::vector<uint8_t> cookie;
+    bool is_cookie = false;
+    struct tls_config_t *cfg = nullptr;
 };
 
 struct tls_config_t
@@ -86,13 +93,17 @@ namespace lite_p2p
             }
             catch (const std::exception &e)
             {
+                if (fd > 0)
+                    close(fd);
+
                 throw e;
             }
         };
 
         virtual ~base_socket()
         {
-            close(fd);
+            if (fd > 0)
+                close(fd);
         };
 
         virtual bool is_secure() = 0;
@@ -134,7 +145,8 @@ namespace lite_p2p
         int tsocket_ssl_init();
         int tsocket_ssl_accept();
         int tsocket_ssl_connect();
-        int tsocket_ssl_dgram(bool listen);
+        int tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen);
+        void tsocket_ssl_cleanup();
 
     public:
         tsocket(sa_family_t _family, int _type, int _protocol, struct tls_config_t *cfg);

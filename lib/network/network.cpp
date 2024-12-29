@@ -192,9 +192,9 @@ int network::string_to_addr(int family, std::string saddr, struct sockaddr_t *ad
 
 std::string network::to_string()
 {
-    std::string str_info;
+    std::string str_info = {0};
 
-    char buf[STR_INFO_SZ];
+    char buf[STR_INFO_SZ] = {0};
 
     snprintf(buf, STR_INFO_SZ, "interface: %s\n", iface.c_str());
     str_info += buf;
@@ -334,9 +334,9 @@ ssize_t network::send_to(int fd, void *buf, size_t len, struct sockaddr_t *remot
 
 ssize_t network::recv_from(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote) {
 
-    socklen_t slen;
-    struct sockaddr_in *addr;
-    struct sockaddr_in6 *addr6;
+    socklen_t slen = 0;
+    struct sockaddr_in *addr = nullptr;
+    struct sockaddr_in6 *addr6 = nullptr;
 
     if (!remote) {
         return recvfrom(fd, buf, len, flags, 
@@ -347,11 +347,13 @@ ssize_t network::recv_from(int fd, void *buf, size_t len, int flags, struct sock
     {
     case AF_INET6:
         addr6 = network::inet6_address(remote);
+        slen = sizeof(addr6);
         return recvfrom(fd, buf, len, flags, 
             (struct sockaddr *)addr6, &slen);
     
     case AF_INET:
         addr = network::inet_address(remote);
+        slen = sizeof(addr);
         return recvfrom(fd, buf, len, flags, 
             (struct sockaddr *)addr, &slen);
     }
@@ -416,9 +418,9 @@ int network::accept_socket(int fd, struct sockaddr_t *addr) {
 
 int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname)
 {
-    struct addrinfo hints, *servinfo, *p;
-    char *host, *service, hst[512];
-    int ret;
+    struct addrinfo hints = {0}, *servinfo = nullptr, *p = nullptr;
+    char *host = nullptr, *service = nullptr, hst[512] = {0};
+    int ret = -1;
 
     ret = network::string_to_addr(family, hostname, hostaddr);
     if (ret)
@@ -458,7 +460,7 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
 
 
 int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname, uint16_t port) {
-    int ret;
+    int ret = -1;
 
     ret = resolve(hostaddr, family, hostname);
     if (ret < 0)
