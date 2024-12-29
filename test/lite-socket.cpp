@@ -106,7 +106,7 @@ void visichat_sender(void *args)
                     }
                 } while (ret != 0);
             }
-            
+
             conn->new_sock = conn->sock;
         }
         else
@@ -175,7 +175,12 @@ int main(int argc, char *argv[])
 
     struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
     EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
-    lite_p2p::s_socket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, p_keys, TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305);
+    struct tls_config_t cfg = {
+        .keys = p_keys,
+        .x509_expiration = 86400L,
+        .ciphers = TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+    };
+    lite_p2p::tsocket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     lite_p2p::peer::connection conn(&s, argv[3], atoi(argv[4]));
 
     conn.type = con_type;

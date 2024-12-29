@@ -15,7 +15,7 @@ connection::connection(sa_family_t family, std::string _addr, uint16_t _port, in
     timeval tv = { .tv_sec = 5 };
     const int enable = 1;
 
-    sock = new lite_p2p::n_socket(family, type, protocol);
+    sock = new lite_p2p::ssocket(family, type, protocol);
     if (!sock) {
         throw std::runtime_error("failed to create socket");
     }
