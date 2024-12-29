@@ -284,13 +284,13 @@ bool crypto::crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t
 }
 
 EVP_PKEY * crypto::crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::string password) {
-    EVP_PKEY *pkey = nullptr;
-    EVP_PKEY_CTX *evp_ctx = nullptr;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *evp_ctx = NULL;
     int ret = -1;
 
-    evp_ctx = EVP_PKEY_CTX_new_id(ctx->id, nullptr);
+    evp_ctx = EVP_PKEY_CTX_new_id(ctx->id, NULL);
     if (!evp_ctx)
-        return nullptr;
+        return NULL;
 
     ret = EVP_PKEY_keygen_init(evp_ctx);
     if (ret <= 0)
@@ -321,7 +321,7 @@ EVP_PKEY * crypto::crypto_generate_keypair(struct crypto_pkey_ctx_t *ctx, std::s
 clean_ctx:
     EVP_PKEY_CTX_free(evp_ctx);
 
-    return nullptr;
+    return NULL;
 }
 
 
@@ -329,7 +329,7 @@ void crypto::crypto_free_keypair(EVP_PKEY **pkey) {
     
     if (*pkey) {
         EVP_PKEY_free(*pkey);
-        *pkey = nullptr;
+        *pkey = NULL;
     }
 };
 
@@ -337,7 +337,7 @@ void crypto::crypto_free_x509(X509 **crt) {
     
     if (*crt) {
         X509_free(*crt);
-        *crt = nullptr;
+        *crt = NULL;
     }
 };
 
@@ -348,7 +348,7 @@ X509 *crypto::crypto_pkey_to_x509(EVP_PKEY *pkey, std::map<std::string, std::str
     
     x509 = X509_new();
     if (!x509)
-        return nullptr;
+        return NULL;
 
     X509_set_version(x509, 2);
 
@@ -370,7 +370,7 @@ X509 *crypto::crypto_pkey_to_x509(EVP_PKEY *pkey, std::map<std::string, std::str
     X509_set_issuer_name(x509, name); // Self-signed, so issuer is the same as subject
 
     // Sign the certificate with the private key
-    ret = X509_sign(x509, pkey, nullptr);
+    ret = X509_sign(x509, pkey, NULL);
     if (ret <= 0) {
         ret = errno;
         goto free_x509;
@@ -379,7 +379,7 @@ X509 *crypto::crypto_pkey_to_x509(EVP_PKEY *pkey, std::map<std::string, std::str
     return x509;
 free_x509:
     X509_free(x509);
-    return nullptr;
+    return NULL;
 }
 
 std::vector<uint8_t> crypto::crypto_kdf_derive(
@@ -442,12 +442,12 @@ std::vector<uint8_t> crypto::crypto_kdf_derive(
 }
 
 std::vector<uint8_t> crypto::crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint8_t> &buf) {
-    EVP_PKEY_CTX *evp_ctx = nullptr;
+    EVP_PKEY_CTX *evp_ctx = NULL;
     std::vector<uint8_t> enc_msg;
     size_t o_len = 0;
     int ret;
 
-    evp_ctx = EVP_PKEY_CTX_new(pkey, nullptr);
+    evp_ctx = EVP_PKEY_CTX_new(pkey, NULL);
     if (!evp_ctx)
         return {};
     
@@ -455,7 +455,7 @@ std::vector<uint8_t> crypto::crypto_asm_encrypt(EVP_PKEY *pkey, std::vector<uint
     if (ret <= 0)
         goto clean_ctx;
 
-    ret = EVP_PKEY_encrypt(evp_ctx, nullptr, &o_len, buf.data(), buf.size());
+    ret = EVP_PKEY_encrypt(evp_ctx, NULL, &o_len, buf.data(), buf.size());
     if (ret <= 0)
         goto clean_ctx;
     
@@ -475,7 +475,7 @@ clean_ctx:
 }
 
 std::vector<uint8_t> crypto::crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint8_t> &enc_buf) {
-    EVP_PKEY_CTX *evp_ctx = nullptr;
+    EVP_PKEY_CTX *evp_ctx = NULL;
     std::vector<uint8_t> msg(enc_buf.size());
     size_t o_len = 0;
     int ret;
@@ -483,7 +483,7 @@ std::vector<uint8_t> crypto::crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint
     if (!enc_buf.size() || !pkey)
         return {};
 
-    evp_ctx = EVP_PKEY_CTX_new(pkey, nullptr);
+    evp_ctx = EVP_PKEY_CTX_new(pkey, NULL);
     if (!evp_ctx)
         return {};
     
@@ -491,7 +491,7 @@ std::vector<uint8_t> crypto::crypto_asm_decrypt(EVP_PKEY *pkey, std::vector<uint
     if (ret <= 0)
         goto clean_ctx;
 
-    ret = EVP_PKEY_decrypt(evp_ctx, nullptr, &o_len, enc_buf.data(), enc_buf.size());
+    ret = EVP_PKEY_decrypt(evp_ctx, NULL, &o_len, enc_buf.data(), enc_buf.size());
     if (ret <= 0)
         goto clean_ctx;
     
@@ -513,7 +513,7 @@ clean_ctx:
 
 
 std::vector<uint8_t> crypto::crypto_sym_encrypt(struct crypto_cipher_ctx_t *ctx, std::vector<uint8_t> &buf) {
-    EVP_CIPHER_CTX *cp_ctx = nullptr;
+    EVP_CIPHER_CTX *cp_ctx = NULL;
     std::vector<uint8_t> enc_msg(buf.size());
     int o_len = 0, remaining, s_len = buf.size(), len = 0;
     uint8_t *o_ptr = enc_msg.data(), *i_ptr = buf.data();
@@ -573,7 +573,7 @@ clean_ctx:
 }
 
 std::vector<uint8_t> crypto::crypto_sym_decrypt(struct crypto_cipher_ctx_t *ctx, std::vector<uint8_t> &enc_buf) {
-    EVP_CIPHER_CTX *cp_ctx = nullptr;
+    EVP_CIPHER_CTX *cp_ctx = NULL;
     std::vector<uint8_t> msg(enc_buf.size());
     int o_len = 0, s_len = enc_buf.size(), remaining, len;
     uint8_t *o_ptr = msg.data(), *i_ptr = enc_buf.data();
@@ -633,7 +633,7 @@ clean_ctx:
 }
 
 std::vector<uint8_t> crypto::crypto_asm_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf) {
-    EVP_MD_CTX *md_ctx = nullptr;
+    EVP_MD_CTX *md_ctx = NULL;
     std::vector<uint8_t> sign_msg;
     size_t o_len = 0;
     int ret;
@@ -645,12 +645,12 @@ std::vector<uint8_t> crypto::crypto_asm_sign(const EVP_MD *algo, EVP_PKEY *pkey,
     if (!md_ctx)
         goto clean_algo;
 
-    ret = EVP_DigestSignInit(md_ctx, nullptr, algo, nullptr, pkey);
+    ret = EVP_DigestSignInit(md_ctx, NULL, algo, NULL, pkey);
     if (ret <= 0)
         goto clean_algo;
 
 
-    ret = EVP_DigestSign(md_ctx, nullptr, &o_len, buf.data(), buf.size());
+    ret = EVP_DigestSign(md_ctx, NULL, &o_len, buf.data(), buf.size());
     if (ret <= 0)
         goto clean_algo;
     
@@ -670,7 +670,7 @@ clean_algo:
 }
 
 bool crypto::crypto_asm_verify_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vector<uint8_t> &buf, std::vector<uint8_t> &sign) {
-    EVP_MD_CTX *md_ctx = nullptr;
+    EVP_MD_CTX *md_ctx = NULL;
     int ret;
 
     if (!sign.size() || !buf.size() || !pkey)
@@ -680,7 +680,7 @@ bool crypto::crypto_asm_verify_sign(const EVP_MD *algo, EVP_PKEY *pkey, std::vec
     if (!md_ctx)
         return {};
     
-    ret = EVP_DigestVerifyInit(md_ctx, nullptr, algo, nullptr, pkey);
+    ret = EVP_DigestVerifyInit(md_ctx, NULL, algo, NULL, pkey);
     if (ret <= 0)
         goto clean_ctx;
 

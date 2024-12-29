@@ -47,7 +47,6 @@ connection::connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _po
     timeval tv = { .tv_sec = 5 };
     const int enable = 1;
 
-    sock = s;
     sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
     sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -60,12 +59,16 @@ connection::connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _po
 
 connection::~connection() {
     if (sock != new_sock){
-        if (new_sock != nullptr)
+        if (new_sock != NULL) {
             delete new_sock;
+            new_sock = NULL;
+        }
     }
 
-    if (sock != nullptr)
+    if (sock != NULL) {
         delete sock;
+        sock = NULL;
+    }
 };
 
 ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r) {

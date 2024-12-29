@@ -26,7 +26,7 @@ struct stun_session_t *session_config::stun_session_get(struct sockaddr_t *addr)
         return s->second;
     }
 
-    return nullptr;
+    return NULL;
 }
 
 

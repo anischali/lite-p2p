@@ -44,8 +44,8 @@ namespace lite_p2p::peer
         struct stun_session_t *session;
         lite_p2p::protocol::turn::client *relay;
 
-        lite_p2p::base_socket *sock = nullptr;
-        lite_p2p::base_socket *new_sock = nullptr;
+        lite_p2p::base_socket *sock = NULL;
+        lite_p2p::base_socket *new_sock = NULL;
         std::string local_addr;
         int connection_type;
         int type = PEER_CON_TCP_SERVER;

@@ -10,7 +10,7 @@ namespace lite_p2p::types
     struct btree_node_t
     {
         bool leaf = false;
-        struct btree_node_t *children[2] = {nullptr, nullptr};
+        struct btree_node_t *children[2] = {NULL, NULL};
     };
 
     template <typename T>
@@ -18,7 +18,7 @@ namespace lite_p2p::types
     {
 
     private:
-        struct btree_node_t *root = nullptr;
+        struct btree_node_t *root = NULL;
         size_t depth = sizeof(T) * 8;
 
         static inline int allocate_node(struct btree_node_t **node)
@@ -38,7 +38,7 @@ namespace lite_p2p::types
 
         static inline void btree_free(struct btree_node_t *bt, int depth)
         {
-            struct btree_node_t *c1 = nullptr, *c2 = nullptr;
+            struct btree_node_t *c1 = NULL, *c2 = NULL;
             
             if (!bt || depth == 0)
                 return;
@@ -56,7 +56,7 @@ namespace lite_p2p::types
             
             if (bt) {
                 free(bt);
-                bt = nullptr;
+                bt = NULL;
             }
             
         }
@@ -110,11 +110,11 @@ namespace lite_p2p::types
         }
 
     public:
-        btree() {}
+        btree() :  root{NULL}, depth{sizeof(T) *8} {};
         ~btree()
         {
             btree_free(root, depth);
-            root = nullptr;
+            root = NULL;
         }
 
         int btree_insert_key(struct btree_node_t *node, T key)
@@ -153,14 +153,14 @@ namespace lite_p2p::types
 
             bt = root;
             if (!bt)
-                return nullptr;
+                return NULL;
 
             for (size_t i = 0; i < vsize - 1 && bt; ++i)
             {
                 int vbit = key.at(i);
                 if (!bt->children[vbit])
                 {
-                    return nullptr;
+                    return NULL;
                 }
 
                 bt = bt->children[vbit];

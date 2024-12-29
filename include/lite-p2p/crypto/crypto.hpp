@@ -86,7 +86,7 @@ struct crypto_mac_ctx_t
 
     crypto_mac_ctx_t(std::vector<uint8_t> _key) : crypto_mac_ctx_t("hmac", _key,
     {
-        {OSSL_MAC_PARAM_CIPHER, {.ossl_type = ossl_utf8_string, .size = 0, .str_val = nullptr}},
+        {OSSL_MAC_PARAM_CIPHER, {.ossl_type = ossl_utf8_string, .size = 0, .str_val = NULL}},
         {OSSL_MAC_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = (char *)std::string(SN_sha256).c_str()}}
     }) {};
 

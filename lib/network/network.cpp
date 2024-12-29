@@ -31,7 +31,7 @@ network::network_interfaces(void)
     struct ifaddrs *addrs;
     getifaddrs(&addrs);
 
-    for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
+    for (struct ifaddrs *addr = addrs; addr != NULL; addr = addr->ifa_next)
     {
         if (addr->ifa_addr && addr->ifa_name != NULL)
         {
@@ -56,7 +56,7 @@ void network::ip_getinfo(void) {
     std::string key;
     struct sockaddr_t saddr;
 
-    for (struct ifaddrs *addr = addrs; addr != nullptr; addr = addr->ifa_next)
+    for (struct ifaddrs *addr = addrs; addr != NULL; addr = addr->ifa_next)
     {
         if (!addr || !addr->ifa_name || !addr->ifa_addr)
             continue;
@@ -335,8 +335,8 @@ ssize_t network::send_to(int fd, void *buf, size_t len, struct sockaddr_t *remot
 ssize_t network::recv_from(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote) {
 
     socklen_t slen = 0;
-    struct sockaddr_in *addr = nullptr;
-    struct sockaddr_in6 *addr6 = nullptr;
+    struct sockaddr_in *addr = NULL;
+    struct sockaddr_in6 *addr6 = NULL;
 
     if (!remote) {
         return recvfrom(fd, buf, len, flags, 
@@ -418,8 +418,8 @@ int network::accept_socket(int fd, struct sockaddr_t *addr) {
 
 int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostname)
 {
-    struct addrinfo hints = {0}, *servinfo = nullptr, *p = nullptr;
-    char *host = nullptr, *service = nullptr, hst[512] = {0};
+    struct addrinfo hints = {0}, *servinfo = NULL, *p = NULL;
+    char *host = NULL, *service = NULL, hst[512] = {0};
     int ret = -1;
 
     ret = network::string_to_addr(family, hostname, hostaddr);

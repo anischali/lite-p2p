@@ -33,7 +33,7 @@ void visichat_listener(void *args) {
     int ret;
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args; 
-    lite_p2p::base_socket *s = nullptr;
+    lite_p2p::base_socket *s = NULL;
     struct sockaddr_t s_addr = {
         .sa_family = conn->sock->family,
     };

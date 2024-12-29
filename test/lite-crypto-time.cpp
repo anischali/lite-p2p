@@ -37,7 +37,7 @@ void cipher_stats(std::string label, std::vector<struct algo_stat_t> stats) {
 
 void encrypt_decrypt_measure(std::string algo, std::string filename, std::vector<uint8_t> key, std::vector<uint8_t> iv)
 {
-    EVP_CIPHER *cipher = EVP_CIPHER_fetch(nullptr, algo.c_str(), nullptr);
+    EVP_CIPHER *cipher = EVP_CIPHER_fetch(NULL, algo.c_str(), NULL);
     int64_t dec = 0, enc = 0;
     std::vector<uint8_t> file_buf, menc, other;
 

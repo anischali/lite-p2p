@@ -100,34 +100,35 @@ namespace lite_p2p::common
     class at_exit_cleanup
     {
     private:
-        struct list_head list = {0};
+        struct list_head cleanup_list = { &cleanup_list, &cleanup_list }; 
         struct at_exit_context_t
         {
             void (*cleanup)(void *context);
-            void *context = nullptr;
-            struct list_head list = {0};
+            void *context;
+            struct list_head list;
         };
 
-        static void on_exit_engine_cleanup(int status, void *list)
+        static void on_exit_engine_cleanup(int status, void *context)
         {
-            struct at_exit_context_t *ctx = nullptr, *save = nullptr;
-            struct list_head *array = nullptr;
+            struct at_exit_context_t *ctx = NULL, *save = NULL;
+            struct list_head *array = NULL;
             
-            array = reinterpret_cast<struct list_head *>(list);
+            if (!context)
+                return;
 
+            array = (struct list_head *)context;
             if (!array || list_empty(array))
                 return;
 
             list_for_each_entry_safe(ctx, save, array, list)
             {
-                if (!ctx || !ctx->cleanup || !ctx->context)
-                    continue;
-
-                ctx->cleanup(ctx->context);
-                list_del(&ctx->list);
-                free(ctx);
-                ctx = NULL;
-                
+                if (ctx && ctx->cleanup && ctx->context)
+                {
+                    ctx->cleanup(ctx->context);
+                    list_del(&ctx->list);
+                    free(ctx);
+                    ctx = NULL;
+                }
             }
         };
 
@@ -137,13 +138,13 @@ namespace lite_p2p::common
         };
 
     public:
-        at_exit_cleanup()
+        explicit at_exit_cleanup()
         {
-            INIT_LIST_HEAD(&list);
+            INIT_LIST_HEAD(&cleanup_list);
 #if defined(__ANDROID__)
             // not suppot cleanup for now
 #else
-            on_exit(at_exit_cleanup::on_exit_engine_cleanup, &list);
+            on_exit(at_exit_cleanup::on_exit_engine_cleanup, &cleanup_list);
 #endif
         };
 
@@ -158,8 +159,12 @@ namespace lite_p2p::common
 
         void at_exit_cleanup_add(void *context, void (*cleanup)(void *context))
         {
-            struct at_exit_context_t *ctx = (struct at_exit_context_t *)calloc(1, sizeof(struct at_exit_context_t));
+            struct at_exit_context_t *ctx; 
+            
+            if (!cleanup)
+                return;
 
+            ctx = (struct at_exit_context_t *)calloc(1, sizeof(struct at_exit_context_t));
             if (!ctx)
                 return;
 
@@ -167,7 +172,7 @@ namespace lite_p2p::common
             ctx->context = context;
             ctx->cleanup = cleanup;
 
-            list_add_tail(&ctx->list, &list);
+            list_add_tail(&ctx->list, &cleanup_list);
         }
 
         void at_exit()

@@ -134,10 +134,10 @@ int main(int argc, char *argv[]) {
     EVP_PKEY *pkey2 = lite_p2p::crypto::crypto_generate_keypair(&p_ctx2, "");
     auto file_buf = lite_p2p::common::read_file(argv[2]);
     //openssl pkeyutl -sign -inkey ed448.priv -keyform PEM -rawin -in ~/Documents/qr-code.png -hexdump
-    auto pkey_sign = lite_p2p::crypto::crypto_asm_sign(nullptr, pkey2, file_buf);
+    auto pkey_sign = lite_p2p::crypto::crypto_asm_sign(NULL, pkey2, file_buf);
     lite_p2p::common::print_hexbuf("sign", pkey_sign);
     //openssl pkeyutl -verify -rawin -inkey ed448.pub -pubin -hexdump -sigfile in.sign -in ~/Documents/qr-code.png
-    bool valid_sign = lite_p2p::crypto::crypto_asm_verify_sign(nullptr, pkey2, file_buf, pkey_sign);
+    bool valid_sign = lite_p2p::crypto::crypto_asm_verify_sign(NULL, pkey2, file_buf, pkey_sign);
     if (valid_sign) {
         printf("Signature is valid !!!\n");
     }

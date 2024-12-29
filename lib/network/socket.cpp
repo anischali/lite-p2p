@@ -51,7 +51,7 @@ int tsocket::tsocket_ssl_init()
 
 err_out:
     SSL_CTX_free(tls.ctx);
-    tls.ctx = nullptr;
+    tls.ctx = NULL;
     return ret;
 }
 
@@ -92,7 +92,7 @@ int tsocket::tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen)
 
         // SSL_CTX_set_options(tls.ctx, SSL_OP_COOKIE_EXCHANGE);
         // SSL_set_accept_state(tls.session);
-        // DTLSv1_listen(tls.session, nullptr);
+        // DTLSv1_listen(tls.session, NULL);
         // if (!SSL_is_init_finished(tls.session)) {
         //     do {
         //         ret = SSL_do_handshake(tls.session);
@@ -113,11 +113,11 @@ int tsocket::tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen)
 
 err_bio:
     BIO_free(tls.bio);
-    tls.bio = nullptr;
+    tls.bio = NULL;
 
 err_sll:
     SSL_free(tls.session);
-    tls.session = nullptr;
+    tls.session = NULL;
     return ret;
 }
 
@@ -141,7 +141,7 @@ int tsocket::tsocket_ssl_accept()
 
 err_ssl:
     SSL_free(tls.session);
-    tls.session = nullptr;
+    tls.session = NULL;
 
     return ret;
 }
@@ -181,7 +181,7 @@ int tsocket::tsocket_ssl_connect()
 
 err_ssl:
     SSL_free(tls.session);
-    tls.session = nullptr;
+    tls.session = NULL;
 
     return ret;
 }
@@ -193,25 +193,25 @@ void tsocket::tsocket_ssl_cleanup() {
             SSL_shutdown(tls.session);
         
         SSL_free(tls.session);
-        tls.session = nullptr;
+        tls.session = NULL;
 
         if (tls.bio)
         {
             BIO_free(tls.bio);
-            tls.bio = nullptr;
+            tls.bio = NULL;
         }            
     }
 
     if (tls.ctx)
     {
         SSL_CTX_free(tls.ctx);
-        tls.ctx = nullptr;
+        tls.ctx = NULL;
     }
 
-    if (config->x509_auto_generate && config->x509 != nullptr)
+    if (config->x509_auto_generate && config->x509 != NULL)
     {
         lite_p2p::crypto::crypto_free_x509(&config->x509);
-        config->x509 = nullptr;
+        config->x509 = NULL;
     }
 }
 
@@ -300,13 +300,13 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     {
         int nfd = lite_p2p::network::accept_socket(fd, addr);
         if (nfd <= 0)
-            return nullptr;
+            return NULL;
 
         auto s = new tsocket(nfd, config);
 
         ret = s->tsocket_ssl_accept();
         if (ret < 0)
-            return nullptr;
+            return NULL;
 
         return s;
     }
@@ -315,12 +315,12 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
         auto s = new tsocket(fd, config);
         ret = s->tsocket_ssl_dgram(addr, true);
         if (ret < 0)
-            return nullptr;
+            return NULL;
 
         return s;
     }
 
-    return nullptr;
+    return NULL;
 }
 
 size_t tsocket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)

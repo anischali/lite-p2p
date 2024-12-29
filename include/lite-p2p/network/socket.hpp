@@ -14,20 +14,20 @@
 
 struct tls_ops_t
 {
-    int (*ssl_peer_validate)(X509 *cert) = nullptr;
-    void (*ssl_info)(const SSL *ssl, int where, int ret) = nullptr;
-    int (*generate_cookie) (SSL *ssl, uint8_t *cookie, uint32_t *len) = nullptr;
-    int (*verify_cookie) (SSL *ssl, const uint8_t *cookie, uint32_t len) = nullptr;
+    int (*ssl_peer_validate)(X509 *cert) = NULL;
+    void (*ssl_info)(const SSL *ssl, int where, int ret) = NULL;
+    int (*generate_cookie) (SSL *ssl, uint8_t *cookie, uint32_t *len) = NULL;
+    int (*verify_cookie) (SSL *ssl, const uint8_t *cookie, uint32_t len) = NULL;
 };
 struct tls_context_t
 {
     const SSL_METHOD *method;
-    SSL_CTX *ctx = nullptr;
-    SSL *session = nullptr;
-    BIO *bio = nullptr;
+    SSL_CTX *ctx = NULL;
+    SSL *session = NULL;
+    BIO *bio = NULL;
     std::vector<uint8_t> cookie;
     bool is_cookie = false;
-    struct tls_config_t *cfg = nullptr;
+    struct tls_config_t *cfg = NULL;
 };
 
 struct tls_config_t
