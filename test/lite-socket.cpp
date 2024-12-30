@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        .ciphers = TLS1_RFC_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
         .ops = &lite_tls_ops};
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));

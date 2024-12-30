@@ -35,9 +35,10 @@ int tsocket::tsocket_ssl_init()
     if (!tls.ctx)
         return -ENOMEM;
 
-    ret = SSL_CTX_set_cipher_list(tls.ctx, config->ciphers.c_str());
+    ret = SSL_CTX_set_ciphersuites(tls.ctx, config->ciphers.c_str());
     if (ret <= 0)
         goto err_out;
+
     ret = SSL_CTX_use_PrivateKey(tls.ctx, config->keys);
     if (ret <= 0)
         goto err_out;
