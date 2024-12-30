@@ -23,7 +23,7 @@ static inline const SSL_METHOD *ssl_method(int protocol)
 int tsocket::tsocket_ssl_init()
 {
     int ret;
-    
+
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
@@ -57,10 +57,10 @@ err_out:
     return ret;
 }
 
-int tsocket::tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen)
+int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
 {
-    struct timeval timeout = {60, 0};
     int ret;
+    struct sockaddr_storage s_tmp;
 
     if (!tls.ctx)
         return -ENOENT;
@@ -70,75 +70,24 @@ int tsocket::tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen)
         return -ENOMEM;
 
     SSL_set_app_data(tls.session, &tls);
-
-    tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
-    if (!tls.bio)
-        goto err_sll;
-
-    SSL_set_bio(tls.session, tls.bio, tls.bio);
-    BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
-    BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr);
-    BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
-
-    if (listen)
-    {
-        if (config && config->ops && config->ops->generate_cookie)
-            SSL_CTX_set_cookie_generate_cb(tls.ctx, config->ops->generate_cookie);
-
-        if (config && config->ops && config->ops->verify_cookie)
-            SSL_CTX_set_cookie_verify_cb(tls.ctx, config->ops->verify_cookie);
-
-        ret = SSL_accept(tls.session);
-        if (ret <= 0)
-            goto err_bio;
-
-        // SSL_CTX_set_options(tls.ctx, SSL_OP_COOKIE_EXCHANGE);
-        // SSL_set_accept_state(tls.session);
-        // DTLSv1_listen(tls.session, NULL);
-        // if (!SSL_is_init_finished(tls.session)) {
-        //     do {
-        //         ret = SSL_do_handshake(tls.session);
-        //     } while (ret <= 0);
-        // }
-
-        // BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_GET_PEER, 0, &peer_addr);
-    }
-    else
-    {
-        SSL_connect(tls.session);
-        do
-        {
-            ret = SSL_do_handshake(tls.session);
-        } while (ret <= 0);
-    }
-    return 0;
-
-err_bio:
-    BIO_free(tls.bio);
-    tls.bio = NULL;
-
-err_sll:
-    SSL_free(tls.session);
-    tls.session = NULL;
-    return ret;
-}
-
-int tsocket::tsocket_ssl_accept()
-{
-    int ret;
-
-    if (!tls.ctx)
-        return -ENOENT;
-
-    tls.session = SSL_new(tls.ctx);
-    if (!tls.session)
-        return -ENOMEM;
-
-    SSL_set_app_data(tls.session, &tls);
-
-    SSL_set_fd(tls.session, fd);
 
     SSL_set_accept_state(tls.session);
+
+    SSL_set_fd(tls.session, fd);
+    if (type == SOCK_DGRAM)
+    {
+        tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
+        if (!tls.bio)
+            goto err_ssl;
+
+        SSL_set_bio(tls.session, tls.bio, tls.bio);
+        BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
+        BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
+
+        ret = DTLSv1_listen(tls.session, (BIO_ADDR *)&s_tmp);
+        if (ret <= 0)
+            goto err_ssl;
+    }
 
     ret = SSL_accept(tls.session);
     if (ret <= 0)
@@ -147,14 +96,22 @@ int tsocket::tsocket_ssl_accept()
     return 0;
 
 err_ssl:
-    SSL_free(tls.session);
-    tls.session = NULL;
+    if (tls.session)
+    {
+        ret = SSL_shutdown(tls.session);
+        if (!ret)
+            ret = SSL_shutdown(tls.session);
+
+        SSL_free(tls.session);
+        tls.session = NULL;
+    }
 
     return ret;
 }
 
-int tsocket::tsocket_ssl_connect()
+int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
 {
+    timeval tv = {.tv_sec = timeout_s};
     X509 *server_cert;
     int ret;
 
@@ -167,11 +124,23 @@ int tsocket::tsocket_ssl_connect()
 
     SSL_set_app_data(tls.session, &tls);
 
+    SSL_set_connect_state(tls.session);
+
+    if (type == SOCK_DGRAM)
+    {
+        tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
+        if (!tls.bio)
+            goto err_ssl;
+
+        SSL_set_bio(tls.session, tls.bio, tls.bio);
+        BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
+        BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
+        BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+    }
+
     ret = SSL_set_fd(tls.session, fd);
     if (ret <= 0)
         goto err_ssl;
-
-    SSL_set_connect_state(tls.session);
 
     ret = SSL_connect(tls.session);
     if (ret <= 0)
@@ -195,13 +164,21 @@ int tsocket::tsocket_ssl_connect()
 err_srv:
     X509_free(server_cert);
 err_ssl:
-    SSL_free(tls.session);
-    tls.session = NULL;
+    if (tls.session)
+    {
+        ret = SSL_shutdown(tls.session);
+        if (!ret)
+            ret = SSL_shutdown(tls.session);
+
+        SSL_free(tls.session);
+        tls.session = NULL;
+    }
 
     return ret;
 }
 
-void tsocket::tsocket_ssl_cleanup() {
+void tsocket::tsocket_ssl_cleanup()
+{
     int ret;
 
     if (tls.session)
@@ -210,15 +187,8 @@ void tsocket::tsocket_ssl_cleanup() {
         if (!ret)
             SSL_shutdown(tls.session);
 
-        
         SSL_free(tls.session);
         tls.session = NULL;
-
-        if (tls.bio)
-        {
-            BIO_free(tls.bio);
-            tls.bio = NULL;
-        }            
     }
 
     if (tls.ctx)
@@ -227,8 +197,10 @@ void tsocket::tsocket_ssl_cleanup() {
         tls.ctx = NULL;
     }
 
-    if (config) {
-        if (config->x509_auto_generate && config->x509) {
+    if (config)
+    {
+        if (config->x509_auto_generate && config->x509)
+        {
             lite_p2p::crypto::crypto_free_x509(config->x509);
             config->x509 = NULL;
         }
@@ -267,7 +239,7 @@ tsocket::tsocket(int _fd, struct tls_config_t *cfg) : base_socket(_fd)
     try
     {
         config = new struct tls_config_t(*cfg);
-        
+
         config->x509_auto_generate = false;
         if (!config->x509)
         {
@@ -301,21 +273,14 @@ int tsocket::bind(struct sockaddr_t *addr)
 int tsocket::connect(struct sockaddr_t *addr)
 {
     int ret;
-        
+
     ret = lite_p2p::network::connect_socket(fd, addr);
     if (ret < 0)
         return ret;
 
-    if (type == SOCK_STREAM)
-    {
-        ret = tsocket_ssl_connect();
-        if (ret < 0)
-            return ret;
-    }
-    else
-    {
-        return tsocket_ssl_dgram(addr, false);
-    }
+    ret = tsocket_ssl_connect(addr, config->recv_timeout_s);
+    if (ret < 0)
+        return ret;
 
     return 0;
 }
@@ -327,33 +292,39 @@ int tsocket::listen(int n)
 
 base_socket *tsocket::accept(struct sockaddr_t *addr)
 {
-    int ret;
+    int ret, nfd, enable = 1;
+    uint8_t buf[16];
 
     if (type == SOCK_STREAM)
     {
-        int nfd = lite_p2p::network::accept_socket(fd, addr);
+        nfd = lite_p2p::network::accept_socket(fd, addr);
         if (nfd <= 0)
             return NULL;
-
-        auto s = new tsocket(nfd, config);
-
-        ret = s->tsocket_ssl_accept();
-        if (ret < 0)
-            return NULL;
-
-        return s;
     }
     else
     {
-        auto s = new tsocket(fd, config);
-        ret = s->tsocket_ssl_dgram(addr, true);
-        if (ret < 0)
-            return NULL;
+        do
+        {
 
-        return s;
+            ret = lite_p2p::network::recv_from(fd, buf, sizeof(buf), addr);
+            if (ret > 0)
+            {
+                nfd = socket(addr->sa_family, SOCK_DGRAM | SOCK_NONBLOCK, 0);
+                if (nfd < 0)
+                    return NULL;
+            }
+        } while (ret <= 0);
     }
 
-    return NULL;
+    auto s = new tsocket(nfd, config);
+    s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, (const void *)&enable, sizeof(enable));
+    ret = s->tsocket_ssl_accept(addr);
+    if (ret < 0) {
+        delete s;
+        return NULL;
+    }
+
+    return s;
 }
 
 size_t tsocket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)

@@ -44,7 +44,7 @@ void visichat_listener(void *args)
         }
     }
 
-    while (!conn->new_sock)
+    while (!conn->new_sock && !terminate.load())
     {
         continue;
     }

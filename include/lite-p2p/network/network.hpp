@@ -16,6 +16,7 @@ struct sockaddr_t
     sa_family_t sa_family;
     union
     {
+        struct sockaddr_storage addr;
         struct sockaddr_in addr_in;
         struct sockaddr_in6 addr_in6;
     } sa_addr;

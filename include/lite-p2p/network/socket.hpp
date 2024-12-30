@@ -2,6 +2,7 @@
 #define __SOCKET_HPP__
 #include <unistd.h>
 #include <stdexcept>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -34,7 +35,8 @@ struct tls_config_t
 {
     EVP_PKEY *keys = NULL;
     X509 *x509 = NULL;
-    long x509_expiration = 0;
+    long int x509_expiration = 0;
+    long int recv_timeout_s = 0;
     bool x509_auto_generate = false;
 
     std::string ciphers = TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305;
@@ -143,9 +145,8 @@ namespace lite_p2p
         struct tls_config_t *config;
 
         int tsocket_ssl_init();
-        int tsocket_ssl_accept();
-        int tsocket_ssl_connect();
-        int tsocket_ssl_dgram(struct sockaddr_t *addr, bool listen);
+        int tsocket_ssl_accept(struct sockaddr_t *addr);
+        int tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s);
         void tsocket_ssl_cleanup();
 
     public:

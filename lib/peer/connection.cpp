@@ -65,6 +65,9 @@ connection::~connection()
 ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r)
 {
 
+    if (!nsock)
+        return -ENOENT;
+
     switch (connection_type)
     {
     case PEER_DIRECT_CONNECTION:
