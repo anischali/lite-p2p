@@ -38,7 +38,6 @@ int tsocket::tsocket_ssl_init()
     ret = SSL_CTX_set_cipher_list(tls.ctx, config->ciphers.c_str());
     if (ret <= 0)
         goto err_out;
-
     ret = SSL_CTX_use_PrivateKey(tls.ctx, config->keys);
     if (ret <= 0)
         goto err_out;
@@ -174,11 +173,15 @@ int tsocket::tsocket_ssl_connect()
     {
         ret = config->ops->ssl_peer_validate(server_cert);
         if (ret < 0)
-            goto err_ssl;
+            goto err_srv;
     }
+
+    X509_free(server_cert);
 
     return 0;
 
+err_srv:
+    X509_free(server_cert);
 err_ssl:
     SSL_free(tls.session);
     tls.session = NULL;
@@ -187,10 +190,14 @@ err_ssl:
 }
 
 void tsocket::tsocket_ssl_cleanup() {
+    int ret;
+
     if (tls.session)
     {
-        if (SSL_get_shutdown(tls.session) != 0)
+        ret = SSL_shutdown(tls.session);
+        if (!ret)
             SSL_shutdown(tls.session);
+
         
         SSL_free(tls.session);
         tls.session = NULL;

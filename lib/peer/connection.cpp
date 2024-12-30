@@ -55,11 +55,10 @@ connection::connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _po
 
 connection::~connection()
 {
-    if (new_sock != NULL)
-    {
+    if (new_sock != NULL && sock != new_sock)
         delete new_sock;
-        new_sock = NULL;
-    }
+
+    new_sock = NULL;
     sock = NULL;
 };
 

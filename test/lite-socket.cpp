@@ -72,10 +72,11 @@ void visichat_sender(void *args)
     uint8_t c = 0;
     uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
+    bool connected = false;
 
     memset(buf, 0x0, sizeof(buf));
 
-    if (conn->sock->protocol == IPPROTO_TCP)
+    if (conn->sock->protocol == IPPROTO_TCP || conn->sock->is_secure())
     {
         if (conn->type == PEER_CON_TCP_CLIENT)
         {
@@ -91,40 +92,19 @@ void visichat_sender(void *args)
                 }
 
             } while (ret != 0);
-
-            conn->new_sock = conn->sock;
         }
+
+        conn->new_sock = conn->sock;
+        connected = true;
     }
-    else
-    {
-        if (conn->sock->is_secure())
-        {
-            if (conn->type == PEER_CON_TCP_CLIENT)
-            {
-                ret = -1;
-                do
-                {
-                    sleep(2);
-                    ret = conn->sock->connect(&conn->remote);
-                    if (ret < 0)
-                    {
-                        ret = errno;
-                        printf("%d - %s\n", ret, strerror(ret));
-                    }
-                } while (ret != 0);
-            }
-
-            conn->new_sock = conn->sock;
-        }
-        else
-        {
-            conn->new_sock = conn->sock;
-        }
+    else {
+        connected = true;
     }
 
-    while (!conn->new_sock)
+
+    while (!connected)
     {
-        continue;
+        sleep(1);
     }
 
     printf("sender thread start [OK]\n");
@@ -255,11 +235,19 @@ int main(int argc, char *argv[])
 
     __at_exit.at_exit_cleanup_add(s, [](void *a){
         lite_p2p::tsocket *s = (lite_p2p::tsocket *)a;
+
+        if (!s)
+            return;
+
         delete s;
     });
 
     __at_exit.at_exit_cleanup_add(conn, [](void *c) {
         lite_p2p::peer::connection *cn = (lite_p2p::peer::connection *)c;
+        
+        if (!cn)
+            return;
+
         delete cn;
     });
 
