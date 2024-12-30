@@ -35,6 +35,8 @@ int tsocket::tsocket_ssl_init()
     if (!tls.ctx)
         return -ENOMEM;
 
+    SSL_CTX_set_app_data(tls.ctx, &tls);
+
     ret = SSL_CTX_set_ciphersuites(tls.ctx, config->ciphers.c_str());
     if (ret <= 0)
         goto err_out;
@@ -132,6 +134,8 @@ int tsocket::tsocket_ssl_accept()
     if (!tls.session)
         return -ENOMEM;
 
+    SSL_set_app_data(tls.session, &tls);
+
     SSL_set_fd(tls.session, fd);
 
     SSL_set_accept_state(tls.session);
@@ -161,6 +165,7 @@ int tsocket::tsocket_ssl_connect()
     if (!tls.session)
         throw std::runtime_error("failed to create ssl session");
 
+    SSL_set_app_data(tls.session, &tls);
 
     ret = SSL_set_fd(tls.session, fd);
     if (ret <= 0)
