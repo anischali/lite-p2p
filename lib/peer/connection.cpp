@@ -12,7 +12,7 @@ using namespace lite_p2p::protocol::turn;
 connection::connection(sa_family_t family, std::string _addr, uint16_t _port, int type, int protocol) : 
     local_addr{_addr} 
 {
-    timeval tv = { .tv_sec = 30 };
+    timeval tv = { .tv_sec = 5 };
     const int enable = 1;
 
     sock = new lite_p2p::ssocket(family, type, protocol);
@@ -22,7 +22,7 @@ connection::connection(sa_family_t family, std::string _addr, uint16_t _port, in
     
     sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO_NEW, &tv, sizeof(tv));
 
     network::string_to_addr(family, _addr, &local);
     network::set_port(&local, _port);

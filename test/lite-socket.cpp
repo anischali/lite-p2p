@@ -151,9 +151,6 @@ void visichat_sender(void *args)
         if (!strncmp("exit", (char *)&buf[0], 4))
         {
             terminate = true;
-            exit(0);
-            printf("sender thread stop [OK]\n");
-            return;
         }
     }
 }
@@ -209,7 +206,7 @@ int lite_verify_cookie(SSL *ssl, const uint8_t *cookie, uint32_t len)
     return c2 == c1;
 }
 
-static struct tls_ops_t lite_tls_ops = {
+static struct tls_ops_t __attribute_maybe_unused__ lite_tls_ops = {
     .generate_cookie = lite_generate_cookie,
     .verify_cookie = lite_verify_cookie,
 };
@@ -222,12 +219,12 @@ int main(int argc, char *argv[])
         usage(argv[0]);
     }
 
-    lite_p2p::common::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}));
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     int type = !strncmp(argv[2], "tcp", 3) ? SOCK_STREAM : SOCK_DGRAM;
     int con_type = !strncmp(argv[7], "client", 6) ? PEER_CON_TCP_CLIENT : PEER_CON_TCP_SERVER;
-    lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
+    lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM});
 
     // struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
     // EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
@@ -239,44 +236,32 @@ int main(int argc, char *argv[])
     // lite_p2p::tsocket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     // lite_p2p::peer::connection conn(&s, argv[3], atoi(argv[4]));
 
-    conn.type = con_type;
+    conn->type = con_type;
 
-    lite_p2p::network::string_to_addr(family, argv[5], &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(argv[6]));
+    lite_p2p::network::string_to_addr(family, argv[5], &conn->remote);
+    lite_p2p::network::set_port(&conn->remote, atoi(argv[6]));
 
-    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
-    printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.remote).c_str(), lite_p2p::network::get_port(&conn.remote));
-    conn.connection_type = PEER_DIRECT_CONNECTION;
+    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->local).c_str(), lite_p2p::network::get_port(&conn->local));
+    printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
+    conn->connection_type = PEER_DIRECT_CONNECTION;
+    
+    __at_exit.at_exit_cleanup_add(conn, [](void *c) {
+        lite_p2p::peer::connection *cn = (lite_p2p::peer::connection *)c;
+        delete cn;
+    });
 
-    //std::thread sender(visichat_sender, &conn);
-    //std::thread recver(visichat_listener, &conn);
-
-    auto thread_cleanup = [](void *ctx)
-    {
-        std::thread *t = (std::thread *)ctx;
-#if defined(__ANDROID__)
-        t->~thread();
-#else
-        try
-        {
-            //pthread_cancel(t->native_handle());
-        }
-        catch (...)
-        {
-        }
-#endif
+    std::thread sender(visichat_sender, conn);
+    std::thread recver(visichat_listener, conn);
+    
+    auto th_cleanup = [](void *ctx) {
+        terminate = true;
     };
 
-    __at_exit.at_exit_cleanup_add(&conn, [](void *ctx)
-                                  {
-        lite_p2p::peer::connection *c = (lite_p2p::peer::connection *)ctx;
-    c->~connection(); });
+    __at_exit.at_exit_cleanup_add(&sender, th_cleanup);
+    __at_exit.at_exit_cleanup_add(&recver, th_cleanup);
 
-    //__at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
-    //__at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
-
-    //sender.join();
-    //recver.join();
+    sender.join();
+    recver.join();
 
     return 0;
 }

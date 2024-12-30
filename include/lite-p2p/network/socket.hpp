@@ -115,8 +115,8 @@ namespace lite_p2p
         virtual size_t send(void *buf, size_t len) = 0;
         virtual size_t recv_from(void *buf, size_t len, int flags, struct sockaddr_t *remote) = 0;
         virtual size_t recv(void *buf, size_t len) = 0;
-        int set_sockopt(int level, int opt, const void *value, size_t len) { return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value, len); };
-        int get_sockopt(int level, int opt, void *value, socklen_t *len) { return getsockopt(fd, SOL_SOCKET, SO_REUSEADDR, value, len); };
+        int set_sockopt(int level, int opt, const void *value, size_t len) { return setsockopt(fd, level, opt, value, len); };
+        int get_sockopt(int level, int opt, void *value, socklen_t *len) { return getsockopt(fd, level, opt, value, len); };
     };
 
     class ssocket : public base_socket
