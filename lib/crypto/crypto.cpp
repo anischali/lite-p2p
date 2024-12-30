@@ -325,19 +325,19 @@ clean_ctx:
 }
 
 
-void crypto::crypto_free_keypair(EVP_PKEY **pkey) {
+void crypto::crypto_free_keypair(EVP_PKEY *pkey) {
     
-    if (*pkey) {
-        EVP_PKEY_free(*pkey);
-        *pkey = NULL;
+    if (pkey != NULL) {
+        EVP_PKEY_free(pkey);
+        pkey = NULL;
     }
 };
 
-void crypto::crypto_free_x509(X509 **crt) {
+void crypto::crypto_free_x509(X509 *crt) {
     
-    if (*crt) {
-        X509_free(*crt);
-        *crt = NULL;
+    if (crt) {
+        X509_free(crt);
+        crt = NULL;
     }
 };
 

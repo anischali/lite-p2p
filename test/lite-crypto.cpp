@@ -141,8 +141,8 @@ int main(int argc, char *argv[]) {
     if (valid_sign) {
         printf("Signature is valid !!!\n");
     }
-    lite_p2p::crypto::crypto_free_keypair(&pkey);
-    lite_p2p::crypto::crypto_free_keypair(&pkey2);
+    lite_p2p::crypto::crypto_free_keypair(pkey);
+    lite_p2p::crypto::crypto_free_keypair(pkey2);
 
     struct crypto_cipher_ctx_t c_ctx = {
         .cipher_type = EVP_aes_256_gcm(), 

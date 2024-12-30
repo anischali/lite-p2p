@@ -32,9 +32,9 @@ struct tls_context_t
 
 struct tls_config_t
 {
-    EVP_PKEY *keys;
-    X509 *x509;
-    long x509_expiration;
+    EVP_PKEY *keys = NULL;
+    X509 *x509 = NULL;
+    long x509_expiration = 0;
     bool x509_auto_generate = false;
 
     std::string ciphers = TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305;
@@ -167,4 +167,4 @@ namespace lite_p2p
     };
 };
 
-#endif
+#endif 

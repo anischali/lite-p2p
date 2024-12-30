@@ -208,24 +208,28 @@ void tsocket::tsocket_ssl_cleanup() {
         tls.ctx = NULL;
     }
 
-    if (config->x509_auto_generate && config->x509 != NULL)
-    {
-        lite_p2p::crypto::crypto_free_x509(&config->x509);
-        config->x509 = NULL;
+    if (config) {
+        if (config->x509_auto_generate && config->x509) {
+            lite_p2p::crypto::crypto_free_x509(config->x509);
+            config->x509 = NULL;
+        }
+        delete config;
+        config = NULL;
     }
 }
 
-tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_config_t *cfg) : base_socket(_family, _type, _protocol),
-                                                                                            config{cfg}
+tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_config_t *cfg) : base_socket(_family, _type, _protocol)
 {
     try
     {
-        tls.cfg = cfg;
+        config = new struct tls_config_t(*cfg);
+        tls.cfg = config;
+
         tls.method = ssl_method(protocol);
         if (!config->x509)
         {
             config->x509_auto_generate = true;
-            config->x509 = lite_p2p::crypto::crypto_pkey_to_x509(config->keys, config->x509_info, config->x509_expiration); // until tomorrow
+            config->x509 = lite_p2p::crypto::crypto_pkey_to_x509(config->keys, config->x509_info, config->x509_expiration);
             if (!config->x509)
                 throw std::runtime_error("failed to generate certificate from key");
         }
@@ -239,12 +243,22 @@ tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_confi
     }
 }
 
-tsocket::tsocket(int _fd, struct tls_config_t *cfg) : base_socket(_fd),
-                                                      config{cfg}
+tsocket::tsocket(int _fd, struct tls_config_t *cfg) : base_socket(_fd)
 {
     try
     {
-        tls.cfg = cfg;
+        config = new struct tls_config_t(*cfg);
+        
+        config->x509_auto_generate = false;
+        if (!config->x509)
+        {
+            config->x509_auto_generate = true;
+            config->x509 = lite_p2p::crypto::crypto_pkey_to_x509(config->keys, config->x509_info, config->x509_expiration);
+            if (!config->x509)
+                throw std::runtime_error("failed to generate certificate from key");
+        }
+
+        tls.cfg = config;
         tls.method = ssl_method(protocol);
         if (tsocket_ssl_init() < 0)
             throw std::runtime_error("failed to create ssl context");

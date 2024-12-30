@@ -223,18 +223,18 @@ int main(int argc, char *argv[])
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     int type = !strncmp(argv[2], "tcp", 3) ? SOCK_STREAM : SOCK_DGRAM;
     int con_type = !strncmp(argv[7], "client", 6) ? PEER_CON_TCP_CLIENT : PEER_CON_TCP_SERVER;
-    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
+    //lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM});
 
-    // struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
-    // EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
-    // struct tls_config_t cfg = {
-    //     .keys = p_keys,
-    //     .x509_expiration = 86400L,
-    //     .ciphers = TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-    //     .ops = &lite_tls_ops};
-    // lite_p2p::tsocket s(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
-    // lite_p2p::peer::connection conn(&s, argv[3], atoi(argv[4]));
+    struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
+    EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
+    struct tls_config_t cfg = {
+        .keys = p_keys,
+        .x509_expiration = 86400L,
+        .ciphers = TLS1_RFC_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+        .ops = &lite_tls_ops};
+    lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
 
     conn->type = con_type;
 
@@ -245,6 +245,19 @@ int main(int argc, char *argv[])
     printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
     conn->connection_type = PEER_DIRECT_CONNECTION;
     
+    __at_exit.at_exit_cleanup_add(p_keys, [](void *a){
+        EVP_PKEY *p = (EVP_PKEY *)a;
+        if (!p)
+            return;
+
+        EVP_PKEY_free(p);
+    });
+
+    __at_exit.at_exit_cleanup_add(s, [](void *a){
+        lite_p2p::tsocket *s = (lite_p2p::tsocket *)a;
+        delete s;
+    });
+
     __at_exit.at_exit_cleanup_add(conn, [](void *c) {
         lite_p2p::peer::connection *cn = (lite_p2p::peer::connection *)c;
         delete cn;
