@@ -133,6 +133,9 @@ int tsocket::tsocket_ssl_accept()
         return -ENOMEM;
 
     SSL_set_fd(tls.session, fd);
+
+    SSL_set_accept_state(tls.session);
+
     ret = SSL_accept(tls.session);
     if (ret <= 0)
         goto err_ssl;
@@ -158,9 +161,12 @@ int tsocket::tsocket_ssl_connect()
     if (!tls.session)
         throw std::runtime_error("failed to create ssl session");
 
+
     ret = SSL_set_fd(tls.session, fd);
     if (ret <= 0)
         goto err_ssl;
+
+    SSL_set_connect_state(tls.session);
 
     ret = SSL_connect(tls.session);
     if (ret <= 0)
