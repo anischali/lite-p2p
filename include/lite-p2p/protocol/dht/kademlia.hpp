@@ -24,14 +24,16 @@ namespace lite_p2p::protocol::dht
     {
     private:
         T self_key;
-        struct lite_p2p::types::btree<T> kad_tree;
+        lite_p2p::types::btree<T> *kad_tree = new lite_p2p::types::btree<T>();
 
     public:
         kademlia(T skey) : self_key{skey} {}
         ~kademlia()
         {
+            if (!kad_tree)
+                return;
 
-            kad_tree.btree_callback_on_leaf([](lite_p2p::types::btree_node_t **n)
+            kad_tree->btree_callback_on_leaf([](lite_p2p::types::btree_node_t **n)
             {
                 lite_p2p::protocol::dht::kademlia_bucket<T> *bucket = NULL;
 
@@ -48,7 +50,8 @@ namespace lite_p2p::protocol::dht
                 }
             });
 
-            kad_tree.~btree();
+            delete kad_tree;
+            kad_tree = NULL;
         }
 
         lite_p2p::types::btree_node_t *find_closest_node(T key)
@@ -56,7 +59,7 @@ namespace lite_p2p::protocol::dht
             lite_p2p::types::btree_node_t *node = NULL;
             T s_key = key ^ self_key;
 
-            node = kad_tree.btree_find_node(s_key);
+            node = kad_tree->btree_find_node(s_key);
             if (node)
                 return node;
 
@@ -74,7 +77,7 @@ namespace lite_p2p::protocol::dht
                 bucket = (lite_p2p::protocol::dht::kademlia_bucket<T> *)calloc(1, sizeof(lite_p2p::protocol::dht::kademlia_bucket<T>));
                 bucket->node.leaf = true;
                 s_key = self_key ^ info.key;
-                kad_tree.btree_insert_key(&bucket->node, s_key);
+                kad_tree->btree_insert_key(&bucket->node, s_key);
             }
             else
             {
@@ -84,7 +87,7 @@ namespace lite_p2p::protocol::dht
                     bucket = (lite_p2p::protocol::dht::kademlia_bucket<T> *)calloc(1, sizeof(lite_p2p::protocol::dht::kademlia_bucket<T>));
                     bucket->node.leaf = true;
                     s_key = self_key ^ info.key;
-                    kad_tree.btree_insert_key(&bucket->node, s_key);
+                    kad_tree->btree_insert_key(&bucket->node, s_key);
                 }
             }
 

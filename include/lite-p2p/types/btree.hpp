@@ -18,8 +18,8 @@ namespace lite_p2p::types
     {
 
     private:
-        struct btree_node_t *root = NULL;
-        size_t depth = sizeof(T) * 8;
+        struct btree_node_t *root;
+        size_t depth;
 
         static inline int allocate_node(struct btree_node_t **node)
         {
@@ -110,7 +110,10 @@ namespace lite_p2p::types
         }
 
     public:
-        btree() :  root{NULL}, depth{sizeof(T) *8} {};
+        btree() {
+            allocate_node(&root);
+            depth = sizeof(T) * 8;
+        };
         ~btree()
         {
             btree_free(root, depth);

@@ -63,7 +63,7 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
  * @return int 1 if a list head is empty, 0 otherwise.
  */
 static inline int list_empty(struct list_head *head) {
-    return head->next == head;
+    return (head && head->next == head);
 };
 
 /**

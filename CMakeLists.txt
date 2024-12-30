@@ -4,7 +4,7 @@ project(liteP2P VERSION 1.0.1 DESCRIPTION "a lite p2p library")
 
 enable_language(C CXX ASM)
 
-add_compile_options(-Wall)
+add_compile_options(-Wall -O0)
 add_library(lite-p2p)
 
 if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
@@ -55,6 +55,7 @@ target_include_directories(lite-p2p PUBLIC
 )
 
 target_sources(lite-p2p PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/lib/common/common.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/peer/connection.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/attrs.cpp
     ${CMAKE_CURRENT_LIST_DIR}/lib/protocol/stun/client.cpp

@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
         usage(argv[0]);
     }
 
-    lite_p2p::common::at_exit_cleanup __at_exit(std::vector<int>({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM})); 
+    lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
