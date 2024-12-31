@@ -2,7 +2,6 @@
 #include <lite-p2p/common/common.hpp>
 #include <openssl/err.h>
 
-
 using namespace lite_p2p;
 
 static inline const SSL_METHOD *ssl_method(int protocol)
@@ -42,6 +41,16 @@ int tsocket::tsocket_ssl_init()
     if (ret <= 0)
         goto err_out;
 
+    if (config->min_version != 0)
+    {
+        SSL_CTX_set_min_proto_version(tls.ctx, config->min_version);
+    }
+
+    if (config->max_version != 0)
+    {
+        SSL_CTX_set_max_proto_version(tls.ctx, config->min_version);
+    }
+
     tsocket_set_ssl_ops(config->ops);
 
     return 0;
@@ -79,7 +88,8 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         if (!tls.bio)
             goto err_ssl;
 
-        if (timeout_s != 0) {
+        if (timeout_s != 0)
+        {
             BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
             BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
         }
@@ -91,6 +101,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
             SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
 
         SSL_set_bio(tls.session, tls.bio, tls.bio);
+        BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
 
         s_tmp = BIO_ADDR_new();
         ret = DTLSv1_listen(tls.session, s_tmp);
@@ -103,13 +114,18 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         if (!ret)
         {
             err = SSL_get_error(tls.session, ret);
+
+            if ((err == SSL_ERROR_SSL) ||
+                (err == SSL_ERROR_SYSCALL) ||
+                (err == SSL_ERROR_ZERO_RETURN))
+                goto err_ssl;
+
             if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
             {
             }
         }
 
-        BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
-        BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
+        BIO_ctrl_set_connected(SSL_get_rbio(tls.session), s_tmp);
     }
 
     ret = SSL_accept(tls.session);
@@ -158,8 +174,9 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
         SSL_set_bio(tls.session, tls.bio, tls.bio);
         BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
         BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
-        
-         if (timeout_s != 0) {
+
+        if (timeout_s != 0)
+        {
             BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
             BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
         }
@@ -427,7 +444,7 @@ void tsocket::tsocket_set_ssl_ops(struct tls_ops_t *ops)
 
         if (config->ops && config->ops->verify_cookie)
             SSL_CTX_set_cookie_verify_cb(tls.ctx, config->ops->verify_cookie);
-        
+
         if (config->ops && config->ops->generate_stateless_cookie)
             SSL_CTX_set_stateless_cookie_generate_cb(tls.ctx, config->ops->generate_stateless_cookie);
 

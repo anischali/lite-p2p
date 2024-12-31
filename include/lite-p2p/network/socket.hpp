@@ -43,8 +43,10 @@ struct tls_config_t
     bool x509_auto_generate = false;
     bool mtu_discover = true;
     int verify_mode = 0;
+    int min_version = 0;
+    int max_version = 0;
 
-    std::string ciphers;
+    std::string ciphers = "";
     std::map<std::string, std::string> x509_info = {
         {"C", "US"},
         {"O", "My organization"},

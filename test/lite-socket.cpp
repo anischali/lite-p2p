@@ -22,13 +22,15 @@ void visichat_listener(void *args)
 
     memset(buf, 0x0, sizeof(buf));
 
-    if ((conn->sock->type & SOCK_STREAM) != 0)
+    if ((conn->sock->type & SOCK_STREAM) != 0 || conn->sock->is_secure())
     {
         if (conn->type == PEER_CON_TCP_SERVER)
         {
             while (!accepted)
             {
-                conn->sock->listen(1);
+                if ((conn->sock->type & SOCK_STREAM) != 0)
+                    conn->sock->listen(1);
+                
                 s = conn->sock->accept(&conn->remote);
                 accepted = s != NULL;
             }
@@ -38,21 +40,11 @@ void visichat_listener(void *args)
     }
     else
     {
-        if (conn->sock->is_secure())
-        {
-            if (conn->type == PEER_CON_TCP_SERVER)
-                conn->new_sock = conn->sock->accept(&conn->remote);
-        }
-        else
-        {
-            conn->new_sock = conn->sock;
-        }
+        s = conn->new_sock = conn->sock;
     }
 
-    while (!s && !terminate.load())
-    {
-        continue;
-    }
+    while (!conn->new_sock && !terminate.load())
+        sleep(1);
 
     printf("receiver thread start [OK]\n");
 
@@ -97,20 +89,18 @@ void visichat_sender(void *args)
                 }
 
             } while (ret != 0);
+            conn->new_sock = conn->sock;
         }
         connected = true;
-        conn->new_sock = conn->sock;
     }
-    else {
+    else
+    {
         conn->new_sock = conn->sock;
         connected = true;
     }
 
-
     while (!connected || !conn->new_sock)
-    {
         sleep(1);
-    }
 
     printf("sender thread start [OK]\n");
 
@@ -162,12 +152,14 @@ int lite_generate_stateless_cookie(SSL *ssl, uint8_t *cookie, size_t *len)
 
     tls = (struct tls_context_t *)ctx;
 
-    if (!tls->cookie_initialized) {
+    if (!tls->cookie_initialized)
+    {
         tls->cookie_secret = lite_p2p::crypto::crypto_random_bytes(128);
         tls->cookie_initialized = true;
     }
 
-     if (SSL_is_dtls(ssl)) {
+    if (SSL_is_dtls(ssl))
+    {
         lpeer = peer = BIO_ADDR_new();
         if (!peer)
             return 0;
@@ -175,7 +167,8 @@ int lite_generate_stateless_cookie(SSL *ssl, uint8_t *cookie, size_t *len)
         (void)BIO_dgram_get_peer(SSL_get_rbio(ssl), peer);
     }
 
-    if (!BIO_ADDR_rawaddress(peer, NULL, &length)) {
+    if (!BIO_ADDR_rawaddress(peer, NULL, &length))
+    {
         BIO_ADDR_free(lpeer);
         return 0;
     }
@@ -216,10 +209,7 @@ int lite_verify_stateless_cookie(SSL *ssl, const uint8_t *cookie, size_t len)
 
     tls = (struct tls_context_t *)ctx;
 
-    if (tls->cookie_initialized
-        && lite_generate_stateless_cookie(ssl, v_cookie, &length)
-        && len == length
-        && memcmp(v_cookie, cookie, length) == 0)
+    if (tls->cookie_initialized && lite_generate_stateless_cookie(ssl, v_cookie, &length) && len == length && memcmp(v_cookie, cookie, length) == 0)
         return 1;
 
     return 0;
@@ -229,7 +219,6 @@ int lite_verify_cookie(SSL *ssl, const uint8_t *cookie, uint32_t len)
 {
     return lite_verify_stateless_cookie(ssl, cookie, len);
 }
-
 
 void ssl_info_callback(const SSL *ssl, int where, int ret)
 {
@@ -243,7 +232,8 @@ void ssl_info_callback(const SSL *ssl, int where, int ret)
     fprintf(stderr, "SSL_info_callback: state=%s\n", str);
 }
 
-int ssl_peer_verify(int ok, X509_STORE_CTX *x509_ctx) {
+int ssl_peer_verify(int ok, X509_STORE_CTX *x509_ctx)
+{
     return 1;
 }
 
@@ -268,7 +258,7 @@ int main(int argc, char *argv[])
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     int type = !strncmp(argv[2], "tcp", 3) ? SOCK_STREAM : SOCK_DGRAM;
     int con_type = !strncmp(argv[7], "client", 6) ? PEER_CON_TCP_CLIENT : PEER_CON_TCP_SERVER;
-    //lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
+    // lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM});
 
     struct crypto_pkey_ctx_t ctx(EVP_PKEY_RSA);
@@ -276,10 +266,10 @@ int main(int argc, char *argv[])
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        .verify_mode = SSL_VERIFY_PEER, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
-        .ops = &lite_tls_ops
-    };
+        //.verify_mode = SSL_VERIFY_PEER, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        //.ciphers = TLS1_TXT_ECDHE_RSA_WITH_AES_256_GCM_SHA384, // TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .min_version = TLS1_2_VERSION,
+        .ops = &lite_tls_ops};
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
     conn->connection_type = PEER_DIRECT_CONNECTION;
@@ -289,37 +279,38 @@ int main(int argc, char *argv[])
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->local).c_str(), lite_p2p::network::get_port(&conn->local));
     printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
-    
-    __at_exit.at_exit_cleanup_add(p_keys, [](void *a){
+
+    __at_exit.at_exit_cleanup_add(p_keys, [](void *a)
+                                  {
         EVP_PKEY *p = (EVP_PKEY *)a;
         if (!p)
             return;
 
-        EVP_PKEY_free(p);
-    });
+        EVP_PKEY_free(p); });
 
-    __at_exit.at_exit_cleanup_add(s, [](void *a){
+    __at_exit.at_exit_cleanup_add(s, [](void *a)
+                                  {
         lite_p2p::tsocket *s = (lite_p2p::tsocket *)a;
 
         if (!s)
             return;
 
-        delete s;
-    });
+        delete s; });
 
-    __at_exit.at_exit_cleanup_add(conn, [](void *c) {
+    __at_exit.at_exit_cleanup_add(conn, [](void *c)
+                                  {
         lite_p2p::peer::connection *cn = (lite_p2p::peer::connection *)c;
         
         if (!cn)
             return;
 
-        delete cn;
-    });
+        delete cn; });
 
     std::thread sender(visichat_sender, conn);
     std::thread recver(visichat_listener, conn);
-    
-    auto th_cleanup = [](void *ctx) {
+
+    auto th_cleanup = [](void *ctx)
+    {
         terminate = true;
     };
 
