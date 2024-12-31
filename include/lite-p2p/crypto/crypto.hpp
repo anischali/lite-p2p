@@ -144,7 +144,7 @@ struct crypto_pkey_ctx_t
         { 
             EVP_PKEY_RSA,  
             {
-                { OSSL_PKEY_PARAM_RSA_BITS, {.ossl_type = ossl_numeric_int, .int_val = 1024}},
+                { OSSL_PKEY_PARAM_RSA_BITS, {.ossl_type = ossl_numeric_int, .int_val = 2048}},
                 { OSSL_PKEY_PARAM_RSA_PRIMES, {.ossl_type = ossl_numeric_int, .int_val = 3}},
             }
         },

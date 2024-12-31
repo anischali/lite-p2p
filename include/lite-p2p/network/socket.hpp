@@ -39,8 +39,9 @@ struct tls_config_t
     EVP_PKEY *keys = NULL;
     X509 *x509 = NULL;
     long int x509_expiration = 0;
-    long int recv_timeout_s = 0;
+    long int timeout = 5;
     bool x509_auto_generate = false;
+    bool mtu_discover = true;
     int verify_mode = 0;
 
     std::string ciphers;
@@ -149,7 +150,7 @@ namespace lite_p2p
         struct tls_config_t *config;
 
         int tsocket_ssl_init();
-        int tsocket_ssl_accept(struct sockaddr_t *addr);
+        int tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s);
         int tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s);
         void tsocket_ssl_cleanup();
 

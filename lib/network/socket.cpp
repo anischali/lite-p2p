@@ -1,6 +1,7 @@
 #include <lite-p2p/network/socket.hpp>
 #include <lite-p2p/common/common.hpp>
-#include <fcntl.h>
+#include <openssl/err.h>
+
 
 using namespace lite_p2p;
 
@@ -51,10 +52,12 @@ err_out:
     return ret;
 }
 
-int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
+int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 {
     int ret, err;
     BIO_ADDR *s_tmp;
+    struct timeval tv = {.tv_sec = timeout_s};
+
 
     if (!tls.ctx)
         return -ENOENT;
@@ -72,11 +75,20 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
 
     if ((type & SOCK_DGRAM) != 0)
     {
-        SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
-
         tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
         if (!tls.bio)
             goto err_ssl;
+
+        if (timeout_s != 0) {
+            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
+        }
+
+        if (config->mtu_discover)
+            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
+
+        if (protocol != IPPROTO_SCTP)
+            SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
 
         SSL_set_bio(tls.session, tls.bio, tls.bio);
 
@@ -146,7 +158,11 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
         SSL_set_bio(tls.session, tls.bio, tls.bio);
         BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
         BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
-        BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+        
+         if (timeout_s != 0) {
+            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
+        }
     }
 
     ret = SSL_set_fd(tls.session, fd);
@@ -289,7 +305,7 @@ int tsocket::connect(struct sockaddr_t *addr)
     if (ret < 0)
         return ret;
 
-    ret = tsocket_ssl_connect(addr, config->recv_timeout_s);
+    ret = tsocket_ssl_connect(addr, config->timeout);
     if (ret < 0)
         return ret;
 
@@ -355,7 +371,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     if (!s)
         return NULL;
 
-    ret = s->tsocket_ssl_accept(addr);
+    ret = s->tsocket_ssl_accept(addr, config->timeout);
     if (ret < 0)
         goto err_nsock;
 
