@@ -20,7 +20,7 @@ void visichat_listener(void *args)
 
     memset(buf, 0x0, sizeof(buf));
 
-    if (conn->sock->protocol == IPPROTO_TCP)
+    if ((conn->sock->type & SOCK_STREAM) != 0)
     {
         if (conn->type == PEER_CON_TCP_SERVER)
         {
@@ -76,7 +76,7 @@ void visichat_sender(void *args)
 
     memset(buf, 0x0, sizeof(buf));
 
-    if (conn->sock->protocol == IPPROTO_TCP || conn->sock->is_secure())
+    if ((conn->sock->type & SOCK_STREAM) != 0 || conn->sock->is_secure())
     {
         if (conn->type == PEER_CON_TCP_CLIENT)
         {
@@ -93,16 +93,15 @@ void visichat_sender(void *args)
 
             } while (ret != 0);
         }
-
-        conn->new_sock = conn->sock;
         connected = true;
     }
     else {
+        conn->new_sock = conn->sock;
         connected = true;
     }
 
 
-    while (!connected)
+    while (!connected || !conn->new_sock)
     {
         sleep(1);
     }
@@ -186,7 +185,20 @@ int lite_verify_cookie(SSL *ssl, const uint8_t *cookie, uint32_t len)
     return c2 == c1;
 }
 
+void ssl_info_callback(const SSL *ssl, int where, int ret)
+{
+    if (ret == 0)
+    {
+        fprintf(stderr, "SSL_info_callback: error occurred\n");
+        return;
+    }
+
+    const char *str = SSL_state_string_long(ssl);
+    fprintf(stderr, "SSL_info_callback: state=%s\n", str);
+}
+
 static struct tls_ops_t __attribute_maybe_unused__ lite_tls_ops = {
+    .ssl_info = ssl_info_callback,
     .generate_cookie = lite_generate_cookie,
     .verify_cookie = lite_verify_cookie,
 };
@@ -215,15 +227,13 @@ int main(int argc, char *argv[])
         .ops = &lite_tls_ops};
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
-
+    conn->connection_type = PEER_DIRECT_CONNECTION;
     conn->type = con_type;
-
     lite_p2p::network::string_to_addr(family, argv[5], &conn->remote);
     lite_p2p::network::set_port(&conn->remote, atoi(argv[6]));
 
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->local).c_str(), lite_p2p::network::get_port(&conn->local));
     printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
-    conn->connection_type = PEER_DIRECT_CONNECTION;
     
     __at_exit.at_exit_cleanup_add(p_keys, [](void *a){
         EVP_PKEY *p = (EVP_PKEY *)a;

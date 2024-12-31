@@ -1,19 +1,8 @@
 #include <lite-p2p/network/socket.hpp>
+#include <lite-p2p/common/common.hpp>
 #include <fcntl.h>
 
 using namespace lite_p2p;
-
-void SSL_info_callback(const SSL *ssl, int where, int ret)
-{
-    if (ret == 0)
-    {
-        fprintf(stderr, "SSL_info_callback: error occurred\n");
-        return;
-    }
-
-    const char *str = SSL_state_string_long(ssl);
-    fprintf(stderr, "SSL_info_callback: state=%s\n", str);
-}
 
 static inline const SSL_METHOD *ssl_method(int protocol)
 {
@@ -49,6 +38,8 @@ int tsocket::tsocket_ssl_init()
     if (ret <= 0)
         goto err_out;
 
+    tsocket_set_ssl_ops(config->ops);
+
     return 0;
 
 err_out:
@@ -60,7 +51,7 @@ err_out:
 int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
 {
     int ret;
-    struct sockaddr_storage s_tmp;
+    BIO_ADDR *s_tmp;
 
     if (!tls.ctx)
         return -ENOENT;
@@ -84,9 +75,13 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
         BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
         BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
 
-        ret = DTLSv1_listen(tls.session, (BIO_ADDR *)&s_tmp);
+        s_tmp = BIO_ADDR_new();
+        ret = DTLSv1_listen(tls.session, s_tmp);
         if (ret <= 0)
+        {
+            BIO_ADDR_free(s_tmp);
             goto err_ssl;
+        }
     }
 
     ret = SSL_accept(tls.session);
@@ -292,20 +287,31 @@ int tsocket::listen(int n)
 
 base_socket *tsocket::accept(struct sockaddr_t *addr)
 {
-    int ret, nfd, enable = 1;
+    int ret, nfd;
     uint8_t buf[16];
+    struct sockaddr_t bind_addr;
+    tsocket *s;
 
     if (type == SOCK_STREAM)
     {
         nfd = lite_p2p::network::accept_socket(fd, addr);
         if (nfd <= 0)
             return NULL;
+
+        s = new tsocket(nfd, config);
+        if (!s)
+            return NULL;
+        
+        ret = lite_p2p::network::get_sockname(fd, &bind_addr);
+        if (ret < 0)
+            goto err_nsock;
+
+        lite_p2p::network::print_addr(&bind_addr);
     }
     else
     {
         do
         {
-
             ret = lite_p2p::network::recv_from(fd, buf, sizeof(buf), addr);
             if (ret > 0)
             {
@@ -314,17 +320,39 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
                     return NULL;
             }
         } while (ret <= 0);
+
+        s = new tsocket(nfd, config);
+        if (!s)
+            return NULL;
+        
+        ret = lite_p2p::network::get_sockname(fd, &bind_addr);
+        if (ret < 0)
+            goto err_nsock;
+
+        lite_p2p::network::print_addr(&bind_addr);
+        lite_p2p::network::set_port(&bind_addr, lite_p2p::common::rand_int(40000, 50000));
+        lite_p2p::network::print_addr(&bind_addr);
+        ret = lite_p2p::network::bind_socket(fd, &bind_addr);
+        if (ret < 0)
+        {
+            ret = errno;
+            printf("%s\n", strerror(ret));
+            goto err_nsock;
+        }
     }
 
-    auto s = new tsocket(nfd, config);
-    s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, (const void *)&enable, sizeof(enable));
-    ret = s->tsocket_ssl_accept(addr);
-    if (ret < 0) {
-        delete s;
+    if (!s)
         return NULL;
-    }
+
+    ret = s->tsocket_ssl_accept(addr);
+    if (ret < 0)
+        goto err_nsock;
 
     return s;
+
+err_nsock:
+    delete s;
+    return NULL;
 }
 
 size_t tsocket::send_to(void *buf, size_t len, int flags, struct sockaddr_t *addr)
@@ -361,7 +389,7 @@ size_t tsocket::recv(void *buf, size_t len)
 
 void tsocket::tsocket_set_ssl_ops(struct tls_ops_t *ops)
 {
-    if (config)
+    if (config && ops)
     {
         config->ops = ops;
         if (!config->ops && !config->ops->ssl_info)

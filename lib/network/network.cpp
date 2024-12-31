@@ -381,7 +381,6 @@ int network::bind_socket(int fd, struct sockaddr_t *addr) {
 
     case AF_INET:
         return bind(fd, (struct sockaddr *)network::inet_address(addr), sizeof(sockaddr_in));
-        break;
     }
 
     return -1;
@@ -473,5 +472,19 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
 
 void network::print_addr(struct sockaddr_t *a) {
 
-    printf("ip: %s\n", lite_p2p::network::addr_to_string(a).c_str());
+    printf("ip: %s:%d\n", lite_p2p::network::addr_to_string(a).c_str(), get_port(a));
+}
+
+
+int network::get_sockname(int fd, struct sockaddr_t *addr) {
+    int ret;
+    socklen_t len = sizeof(addr->sa_addr.addr);
+
+    ret = getsockname(fd, (struct sockaddr *)&addr->sa_addr.addr, &len);
+    if (ret < 0)
+        return ret;
+    
+    addr->sa_family = addr->sa_addr.addr.ss_family;
+
+    return 0;
 }

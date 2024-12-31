@@ -16,9 +16,9 @@ struct sockaddr_t
     sa_family_t sa_family;
     union
     {
-        struct sockaddr_storage addr;
         struct sockaddr_in addr_in;
         struct sockaddr_in6 addr_in6;
+        struct sockaddr_storage addr;
     } sa_addr;
 };
 namespace lite_p2p
@@ -74,6 +74,7 @@ namespace lite_p2p
         static int connect_socket(int fd, struct sockaddr_t *addr);
         static int accept_socket(int fd, struct sockaddr_t *addr);
         static int listen_socket(int fd, int n);
+        static int get_sockname(int fd, struct sockaddr_t *addr);
 
         static void print_addr(struct sockaddr_t *a);
 
