@@ -72,6 +72,8 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
 
     if ((type & SOCK_DGRAM) != 0)
     {
+        SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
+
         tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
         if (!tls.bio)
             goto err_ssl;
@@ -410,6 +412,12 @@ void tsocket::tsocket_set_ssl_ops(struct tls_ops_t *ops)
         if (config->ops && config->ops->verify_cookie)
             SSL_CTX_set_cookie_verify_cb(tls.ctx, config->ops->verify_cookie);
         
+        if (config->ops && config->ops->generate_stateless_cookie)
+            SSL_CTX_set_stateless_cookie_generate_cb(tls.ctx, config->ops->generate_stateless_cookie);
+
+        if (config->ops && config->ops->verify_stateless_cookie)
+            SSL_CTX_set_stateless_cookie_verify_cb(tls.ctx, config->ops->verify_stateless_cookie);
+
         if (config->ops && config->ops->ssl_peer_verify && config->verify_mode != 0)
             SSL_CTX_set_verify(tls.ctx, config->verify_mode, config->ops->ssl_peer_verify);
     }

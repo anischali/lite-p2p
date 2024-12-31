@@ -16,10 +16,12 @@
 struct tls_ops_t
 {
     int (*ssl_peer_validate)(X509 *cert) = NULL;
-    int (*ssl_peer_verify)(int ok, X509_STORE_CTX *x509_ctx);
+    int (*ssl_peer_verify)(int ok, X509_STORE_CTX *x509_ctx) = NULL;
     void (*ssl_info)(const SSL *ssl, int where, int ret) = NULL;
     int (*generate_cookie) (SSL *ssl, uint8_t *cookie, uint32_t *len) = NULL;
     int (*verify_cookie) (SSL *ssl, const uint8_t *cookie, uint32_t len) = NULL;
+    int (*generate_stateless_cookie) (SSL *ssl, uint8_t *cookie, size_t *len) = NULL;
+    int (*verify_stateless_cookie) (SSL *ssl, const uint8_t *cookie, size_t len) = NULL;
 };
 struct tls_context_t
 {
@@ -27,8 +29,8 @@ struct tls_context_t
     SSL_CTX *ctx = NULL;
     SSL *session = NULL;
     BIO *bio = NULL;
-    std::vector<uint8_t> cookie;
-    bool is_cookie = false;
+    std::vector<uint8_t> cookie_secret;
+    bool cookie_initialized = false;
     struct tls_config_t *cfg = NULL;
 };
 

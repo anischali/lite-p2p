@@ -140,50 +140,90 @@ void usage(const char *prog)
     exit(0);
 }
 
-int lite_generate_cookie(SSL *ssl, uint8_t *cookie, uint32_t *len)
-{
+// based on s_server of openssl.
 
+int lite_generate_stateless_cookie(SSL *ssl, uint8_t *cookie, size_t *len)
+{
     void *ctx = SSL_get_app_data(ssl);
     struct tls_context_t *tls;
+    std::vector<uint8_t> s_cookie, t_cookie;
+    BIO_ADDR *peer = NULL, *lpeer = NULL;
+    size_t length = 0;
+    uint16_t port;
 
     if (!ctx)
         return 0;
 
     tls = (struct tls_context_t *)ctx;
 
-    if (!tls->is_cookie)
+    if (!tls->cookie_initialized) {
+        tls->cookie_secret = lite_p2p::crypto::crypto_random_bytes(128);
+        tls->cookie_initialized = true;
+    }
+
+     if (SSL_is_dtls(ssl)) {
+        lpeer = peer = BIO_ADDR_new();
+        if (!peer)
+            return 0;
+
+        (void)BIO_dgram_get_peer(SSL_get_rbio(ssl), peer);
+    }
+
+    if (!BIO_ADDR_rawaddress(peer, NULL, &length)) {
+        BIO_ADDR_free(lpeer);
+        return 0;
+    }
+
+    port = BIO_ADDR_rawport(peer);
+    length += sizeof(port);
+
+    s_cookie.resize(length);
+
+    memcpy(s_cookie.data(), &port, sizeof(port));
+    BIO_ADDR_rawaddress(peer, s_cookie.data() + sizeof(port), NULL);
+
+    struct crypto_mac_ctx_t hmac_sha1(SN_hmac, "", SN_sha1, tls->cookie_secret);
+    t_cookie = lite_p2p::crypto::crypto_mac_sign(&hmac_sha1, s_cookie);
+
+    memcpy(cookie, t_cookie.data(), t_cookie.size());
+    *len = t_cookie.size();
+
+    BIO_ADDR_free(lpeer);
+
+    return 0;
+}
+
+int lite_generate_cookie(SSL *ssl, uint8_t *cookie, uint32_t *len)
+{
+    return lite_generate_stateless_cookie(ssl, cookie, (size_t *)&len);
+}
+
+int lite_verify_stateless_cookie(SSL *ssl, const uint8_t *cookie, size_t len)
+{
+    void *ctx = SSL_get_app_data(ssl);
+    struct tls_context_t *tls;
+    unsigned char v_cookie[EVP_MAX_MD_SIZE];
+    size_t length;
+
+    if (!ctx)
         return 0;
 
-    auto bytes = lite_p2p::crypto::crypto_random_bytes(128);
-    tls->cookie = lite_p2p::crypto::checksum(EVP_sha1(), bytes);
+    tls = (struct tls_context_t *)ctx;
 
-    *len = sizeof(tls->cookie.size());
+    if (tls->cookie_initialized
+        && lite_generate_stateless_cookie(ssl, v_cookie, &length)
+        && len == length
+        && memcmp(v_cookie, cookie, length) == 0)
+        return 1;
 
-    memcpy(cookie, tls->cookie.data(), tls->cookie.size());
-
-    tls->is_cookie = true;
-
-    return 1;
+    return 0;
 }
 
 int lite_verify_cookie(SSL *ssl, const uint8_t *cookie, uint32_t len)
 {
-    void *ctx = SSL_get_app_data(ssl);
-    struct tls_context_t *tls;
-
-    if (!ctx)
-        return 0;
-
-    tls = (struct tls_context_t *)ctx;
-
-    if (!tls->is_cookie)
-        return 0;
-
-    lite_p2p::types::lpint128_t c1(cookie, len);
-    lite_p2p::types::lpint128_t c2(tls->cookie);
-
-    return c2 == c1;
+    return lite_verify_stateless_cookie(ssl, cookie, len);
 }
+
 
 void ssl_info_callback(const SSL *ssl, int where, int ret)
 {
@@ -206,6 +246,8 @@ static struct tls_ops_t __attribute_maybe_unused__ lite_tls_ops = {
     .ssl_info = ssl_info_callback,
     .generate_cookie = lite_generate_cookie,
     .verify_cookie = lite_verify_cookie,
+    .generate_stateless_cookie = lite_generate_stateless_cookie,
+    .verify_stateless_cookie = lite_verify_stateless_cookie,
 };
 
 int main(int argc, char *argv[])
@@ -228,8 +270,8 @@ int main(int argc, char *argv[])
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        //.verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-        //.ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        .ciphers = std::string(TLS1_3_RFC_CHACHA20_POLY1305_SHA256) + ":" + std::string(TLS1_3_RFC_AES_256_GCM_SHA384),
         .ops = &lite_tls_ops
     };
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);

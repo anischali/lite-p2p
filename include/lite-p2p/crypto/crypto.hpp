@@ -75,6 +75,8 @@ static inline std::vector<OSSL_PARAM> ossl_build_params(std::map<std::string, st
 struct crypto_mac_ctx_t
 {
 
+    crypto_mac_ctx_t() {}
+
     crypto_mac_ctx_t(std::string _algorithm,
                      std::vector<uint8_t> _key,
                      std::map<std::string, struct ossl_param_t> mparams)
@@ -232,9 +234,6 @@ namespace lite_p2p
         static std::vector<uint8_t> xof_checksum(const EVP_MD *algorithm, std::vector<uint8_t> &buf, int bits);
         static std::vector<uint8_t> xof_checksum(const EVP_MD *algorithm, std::string &s, int bits);
 
-        static struct crypto_mac_ctx_t *crypto_mac_new(const char *algorithm, const char *_cipher,
-                                                       const char *_digest, std::vector<uint8_t> &_key);
-        static void crypto_mac_free(crypto_mac_ctx_t *ctx);
         static std::vector<uint8_t> crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf);
         static bool crypto_mac_verify(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf, std::vector<uint8_t> &digest);
 

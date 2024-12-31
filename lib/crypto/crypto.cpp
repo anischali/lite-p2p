@@ -207,27 +207,6 @@ clean_ctx:
     return {};
 }
 
-
-
-struct crypto_mac_ctx_t * crypto::crypto_mac_new(const char *algorithm, const char *_cipher,
-                                const char *_digest, std::vector<uint8_t> &_key) {
-    struct crypto_mac_ctx_t *ctx = new crypto_mac_ctx_t(algorithm, _cipher, _digest, _key);
-    
-    if (!ctx)
-        return NULL;
-    
-    return ctx;
-}
-
-
-void crypto::crypto_mac_free(crypto_mac_ctx_t *ctx) {
-    
-    if (!ctx)
-        return;
-
-    delete ctx;
-}
-
 std::vector<uint8_t> crypto::crypto_mac_sign(struct crypto_mac_ctx_t *ctx, std::vector<uint8_t> &buf) {
     std::vector<uint8_t> digest;
     EVP_MAC_CTX *evp_ctx = NULL;
