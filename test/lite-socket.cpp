@@ -271,8 +271,8 @@ int main(int argc, char *argv[])
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        //.verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-        //.ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
         .ops = &lite_tls_ops
     };
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
