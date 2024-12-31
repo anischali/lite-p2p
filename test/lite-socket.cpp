@@ -17,6 +17,8 @@ void visichat_listener(void *args)
     int ret;
     uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
+    bool accepted = false;
+    lite_p2p::base_socket *s = NULL;
 
     memset(buf, 0x0, sizeof(buf));
 
@@ -24,11 +26,14 @@ void visichat_listener(void *args)
     {
         if (conn->type == PEER_CON_TCP_SERVER)
         {
-            while (!conn->new_sock)
+            while (!accepted)
             {
                 conn->sock->listen(1);
-                conn->new_sock = conn->sock->accept(&conn->remote);
+                s = conn->sock->accept(&conn->remote);
+                accepted = s != NULL;
             }
+
+            conn->new_sock = s;
         }
     }
     else
@@ -44,7 +49,7 @@ void visichat_listener(void *args)
         }
     }
 
-    while (!conn->new_sock && !terminate.load())
+    while (!s && !terminate.load())
     {
         continue;
     }
@@ -271,7 +276,7 @@ int main(int argc, char *argv[])
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        .verify_mode = SSL_VERIFY_PEER, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
         .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
         .ops = &lite_tls_ops
     };
