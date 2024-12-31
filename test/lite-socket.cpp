@@ -197,7 +197,12 @@ void ssl_info_callback(const SSL *ssl, int where, int ret)
     fprintf(stderr, "SSL_info_callback: state=%s\n", str);
 }
 
+int ssl_peer_verify(int ok, X509_STORE_CTX *x509_ctx) {
+    return 1;
+}
+
 static struct tls_ops_t __attribute_maybe_unused__ lite_tls_ops = {
+    .ssl_peer_verify = ssl_peer_verify,
     .ssl_info = ssl_info_callback,
     .generate_cookie = lite_generate_cookie,
     .verify_cookie = lite_verify_cookie,
@@ -218,13 +223,15 @@ int main(int argc, char *argv[])
     //lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(family, argv[3], atoi(argv[4]), type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP);
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM});
 
-    struct crypto_pkey_ctx_t ctx(EVP_PKEY_ED448);
+    struct crypto_pkey_ctx_t ctx(EVP_PKEY_RSA);
     EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
-        .ops = &lite_tls_ops};
+        //.verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        //.ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .ops = &lite_tls_ops
+    };
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
     conn->connection_type = PEER_DIRECT_CONNECTION;

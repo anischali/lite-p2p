@@ -16,6 +16,7 @@
 struct tls_ops_t
 {
     int (*ssl_peer_validate)(X509 *cert) = NULL;
+    int (*ssl_peer_verify)(int ok, X509_STORE_CTX *x509_ctx);
     void (*ssl_info)(const SSL *ssl, int where, int ret) = NULL;
     int (*generate_cookie) (SSL *ssl, uint8_t *cookie, uint32_t *len) = NULL;
     int (*verify_cookie) (SSL *ssl, const uint8_t *cookie, uint32_t len) = NULL;
@@ -38,8 +39,9 @@ struct tls_config_t
     long int x509_expiration = 0;
     long int recv_timeout_s = 0;
     bool x509_auto_generate = false;
+    int verify_mode = 0;
 
-    std::string ciphers = TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305;
+    std::string ciphers;
     std::map<std::string, std::string> x509_info = {
         {"C", "US"},
         {"O", "My organization"},

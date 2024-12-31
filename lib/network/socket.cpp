@@ -26,9 +26,12 @@ int tsocket::tsocket_ssl_init()
 
     SSL_CTX_set_app_data(tls.ctx, &tls);
 
-    ret = SSL_CTX_set_ciphersuites(tls.ctx, config->ciphers.c_str());
-    if (ret <= 0)
-        goto err_out;
+    if (config->ciphers.length() > 0)
+    {
+        ret = SSL_CTX_set_ciphersuites(tls.ctx, config->ciphers.c_str());
+        if (ret <= 0)
+            goto err_out;
+    }
 
     ret = SSL_CTX_use_PrivateKey(tls.ctx, config->keys);
     if (ret <= 0)
@@ -50,8 +53,8 @@ err_out:
 
 int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
 {
-    int ret;
-    struct sockaddr_storage s_tmp;
+    int ret, err;
+    BIO_ADDR *s_tmp;
 
     if (!tls.ctx)
         return -ENOENT;
@@ -75,9 +78,21 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr)
 
         SSL_set_bio(tls.session, tls.bio, tls.bio);
 
-        ret = DTLSv1_listen(tls.session, (BIO_ADDR *)&s_tmp);
-        if (ret <= 0)
+        s_tmp = BIO_ADDR_new();
+        ret = DTLSv1_listen(tls.session, s_tmp);
+        if (ret < 0)
+        {
+            BIO_ADDR_free(s_tmp);
             goto err_ssl;
+        }
+
+        if (!ret)
+        {
+            err = SSL_get_error(tls.session, ret);
+            if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+            {
+            }
+        }
 
         BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
         BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_CONNECTED, 0, &addr->sa_addr.addr);
@@ -386,7 +401,16 @@ void tsocket::tsocket_set_ssl_ops(struct tls_ops_t *ops)
     if (config && ops)
     {
         config->ops = ops;
-        if (!config->ops && !config->ops->ssl_info)
+        if (config->ops && config->ops->ssl_info)
             SSL_CTX_set_info_callback(tls.ctx, config->ops->ssl_info);
+
+        if (config->ops && config->ops->generate_cookie)
+            SSL_CTX_set_cookie_generate_cb(tls.ctx, config->ops->generate_cookie);
+
+        if (config->ops && config->ops->verify_cookie)
+            SSL_CTX_set_cookie_verify_cb(tls.ctx, config->ops->verify_cookie);
+        
+        if (config->ops && config->ops->ssl_peer_verify && config->verify_mode != 0)
+            SSL_CTX_set_verify(tls.ctx, config->verify_mode, config->ops->ssl_peer_verify);
     }
 }
