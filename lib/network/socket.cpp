@@ -6,7 +6,7 @@ using namespace lite_p2p;
 
 static inline const SSL_METHOD *ssl_method(int type)
 {
-    return ((type & SOCK_DGRAM) != 0) ? DTLSv1_method() : TLS_method();
+    return ((type & SOCK_DGRAM) != 0) ? DTLS_method() : TLS_method();
 }
 
 int tsocket::tsocket_ssl_init()
@@ -362,7 +362,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
             ret = lite_p2p::network::recv_from(fd, buf, sizeof(buf), 0, addr);
             if (ret != -1)
             {
-                nfd = socket(addr->sa_family, SOCK_DGRAM | SOCK_NONBLOCK, 0);
+                nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
                 if (nfd < 0)
                     return NULL;
             }
