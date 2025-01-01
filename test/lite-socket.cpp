@@ -268,9 +268,10 @@ int main(int argc, char *argv[])
         .x509_expiration = 86400L,
         .timeout = 5,
         .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-        //.ciphers = TLS1_TXT_ECDHE_RSA_WITH_AES_256_GCM_SHA384, // TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
         .min_version = TLS1_2_VERSION,
-        .ops = &lite_tls_ops};
+        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .ops = &lite_tls_ops
+    };
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
     lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
     conn->connection_type = PEER_DIRECT_CONNECTION;

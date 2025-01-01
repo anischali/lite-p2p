@@ -11,6 +11,7 @@
 #include <netinet/if_ether.h>
 #include <lite-p2p/crypto/crypto.hpp>
 #include <lite-p2p/types/types.hpp>
+#include <lite-p2p/common/common.hpp>
 #include <lite-p2p/network/network.hpp>
 
 struct tls_ops_t
@@ -25,6 +26,7 @@ struct tls_ops_t
 };
 struct tls_context_t
 {
+    int ctx_id = lite_p2p::common::rand_int(INT_MAX / 2, INT_MAX);
     const SSL_METHOD *method;
     SSL_CTX *ctx = NULL;
     SSL *session = NULL;
@@ -46,6 +48,7 @@ struct tls_config_t
     int min_version = 0;
     int max_version = 0;
     int cache_mode = SSL_SESS_CACHE_OFF;
+    bool stateless = false;
 
     std::string ciphers = "";
     std::map<std::string, std::string> x509_info = {

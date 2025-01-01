@@ -53,6 +53,12 @@ int tsocket::tsocket_ssl_init()
 
     SSL_CTX_set_session_cache_mode(tls.ctx, config->cache_mode);
     
+    ret = SSL_CTX_set_session_id_context(tls.ctx, (const uint8_t *)&tls.ctx_id, sizeof(int));
+    if (ret <= 0)
+        goto err_out;
+
+    SSL_CTX_set_read_ahead(tls.ctx, 1);
+
     tsocket_set_ssl_ops(config->ops);
     return 0;
 
@@ -64,7 +70,7 @@ err_out:
 
 int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 {
-    int ret;
+    int ret, retry = 25, err;
     struct timeval tv = {.tv_sec = timeout_s};
 
     if (!tls.ctx)
@@ -100,17 +106,29 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         if (protocol != IPPROTO_SCTP)
             SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
 
+        BIO_set_nbio(tls.bio, 1);
         SSL_set_bio(tls.session, tls.bio, tls.bio);
         BIO_set_fd(tls.bio, fd, BIO_NOCLOSE);
 
-        while (DTLSv1_listen(tls.session, NULL) <= 0 && SSL_stateless(tls.session) <= 0);
+        do {
+            ret = (config->stateless) ? SSL_stateless(tls.session) : 
+                            DTLSv1_listen(tls.session,  NULL);
+            if (ret < 0)
+                goto err_ssl;
+            if (!ret) {
+                err = SSL_get_error(tls.session, ret);
+            }
+        }
+        while (ret <= 0 && retry-- > 0);
 
         BIO_ctrl_set_connected(tls.bio, &addr->sa_addr.addr);
     }
-
-    ret = SSL_accept(tls.session);
-    if (ret <= 0)
-        goto err_ssl;
+    else
+    {
+        ret = SSL_accept(tls.session);
+        if (ret <= 0)
+            goto err_ssl;
+    }
 
     return 0;
 
