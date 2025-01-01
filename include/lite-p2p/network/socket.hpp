@@ -19,6 +19,8 @@ struct tls_ops_t
     int (*ssl_peer_validate)(X509 *cert) = NULL;
     int (*ssl_peer_verify)(int ok, X509_STORE_CTX *x509_ctx) = NULL;
     void (*ssl_info)(const SSL *ssl, int where, int ret) = NULL;
+    void (*msg_callback) (int write_p, int version, int content_type, const void *buf,
+                        size_t len, SSL *ssl, void *arg) = NULL;
     int (*generate_cookie) (SSL *ssl, uint8_t *cookie, uint32_t *len) = NULL;
     int (*verify_cookie) (SSL *ssl, const uint8_t *cookie, uint32_t len) = NULL;
     int (*generate_stateless_cookie) (SSL *ssl, uint8_t *cookie, size_t *len) = NULL;

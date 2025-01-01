@@ -9,6 +9,8 @@ static inline const SSL_METHOD *ssl_method(int type)
     return ((type & SOCK_DGRAM) != 0) ? DTLS_method() : TLS_method();
 }
 
+#define ssl_err(s, c) printf("%s\n", ERR_error_string(SSL_get_error(s, c), NULL));
+
 int tsocket::tsocket_ssl_init()
 {
     int ret;
@@ -52,7 +54,7 @@ int tsocket::tsocket_ssl_init()
     }
 
     SSL_CTX_set_session_cache_mode(tls.ctx, config->cache_mode);
-    
+
     ret = SSL_CTX_set_session_id_context(tls.ctx, (const uint8_t *)&tls.ctx_id, sizeof(int));
     if (ret <= 0)
         goto err_out;
@@ -70,7 +72,7 @@ err_out:
 
 int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 {
-    int ret, retry = 25, err;
+    int ret, retry = 25;
     struct timeval tv = {.tv_sec = timeout_s};
 
     if (!tls.ctx)
@@ -84,9 +86,15 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
     SSL_set_accept_state(tls.session);
 
-    ret = SSL_set_fd(tls.session, fd);
-    if (ret <= 0)
-        goto err_ssl;
+    if (config->ops && config->ops->msg_callback)
+        SSL_set_msg_callback(tls.session, config->ops->msg_callback);
+
+    if ((type & SOCK_STREAM) != 0)
+    {
+        ret = SSL_set_fd(tls.session, fd);
+        if (ret <= 0)
+            goto err_ssl;
+    }
 
     if ((type & SOCK_DGRAM) != 0)
     {
@@ -108,27 +116,29 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
         BIO_set_nbio(tls.bio, 1);
         SSL_set_bio(tls.session, tls.bio, tls.bio);
-        BIO_set_fd(tls.bio, fd, BIO_NOCLOSE);
 
-        do {
-            ret = (config->stateless) ? SSL_stateless(tls.session) : 
-                            DTLSv1_listen(tls.session,  NULL);
+        do
+        {
+            ret = (config->stateless) ? SSL_stateless(tls.session) : DTLSv1_listen(tls.session, NULL);
             if (ret < 0)
+            {
+                ssl_err(tls.session, ret);
                 goto err_ssl;
-            if (!ret) {
-                err = SSL_get_error(tls.session, ret);
             }
-        }
-        while (ret <= 0 && retry-- > 0);
+
+            if (!ret)
+                ssl_err(tls.session, ret);
+
+            sleep(5);
+
+        } while (ret <= 0 && retry-- > 0);
 
         BIO_ctrl_set_connected(tls.bio, &addr->sa_addr.addr);
     }
-    else
-    {
-        ret = SSL_accept(tls.session);
-        if (ret <= 0)
-            goto err_ssl;
-    }
+
+    ret = SSL_accept(tls.session);
+    if (ret <= 0)
+        goto err_ssl;
 
     return 0;
 
@@ -162,6 +172,9 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
     SSL_set_app_data(tls.session, &tls);
 
     SSL_set_connect_state(tls.session);
+
+    if (config->ops && config->ops->msg_callback)
+        SSL_set_msg_callback(tls.session, config->ops->msg_callback);
 
     if (type == SOCK_DGRAM)
     {
@@ -354,7 +367,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     {
         do
         {
-            ret = lite_p2p::network::recv_from(fd, buf, sizeof(buf), 0, addr);
+            ret = lite_p2p::network::recv_from(fd, buf, sizeof(buf), MSG_PEEK, addr);
             if (ret != -1)
             {
                 nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
