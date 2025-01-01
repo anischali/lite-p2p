@@ -6,7 +6,7 @@ using namespace lite_p2p;
 
 static inline const SSL_METHOD *ssl_method(int type)
 {
-    return ((type & SOCK_DGRAM) != 0) ? DTLS_method() : TLS_method();
+    return ((type & SOCK_DGRAM) != 0) ? DTLSv1_method() : TLS_method();
 }
 
 int tsocket::tsocket_ssl_init()
@@ -102,7 +102,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
             SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
 
         SSL_set_bio(tls.session, tls.bio, tls.bio);
-        BIO_set_fd(SSL_get_rbio(tls.session), fd, BIO_NOCLOSE);
+        BIO_set_fd(tls.bio, fd, BIO_NOCLOSE);
 
         s_tmp = BIO_ADDR_new();
         ret = DTLSv1_listen(tls.session, s_tmp);
@@ -123,7 +123,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
             }
         }
 
-        BIO_ctrl_set_connected(SSL_get_rbio(tls.session), s_tmp);
+        BIO_ctrl_set_connected(tls.bio, s_tmp);
     }
 
     ret = SSL_accept(tls.session);
