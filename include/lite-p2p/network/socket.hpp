@@ -71,10 +71,11 @@ namespace lite_p2p
                 fd = socket(family, type, protocol);
                 if (fd <= 0)
                     throw std::runtime_error("failed to open socket");
+
             }
-            catch (const std::exception &e)
+            catch (...)
             {
-                throw e;
+                throw;
             }
         };
 
@@ -100,12 +101,12 @@ namespace lite_p2p
                 if (ret < 0)
                     std::runtime_error("failed to get socket protocol");
             }
-            catch (const std::exception &e)
+            catch (...)
             {
                 if (fd > 0)
                     close(fd);
 
-                throw e;
+                throw;
             }
         };
 

@@ -4,9 +4,9 @@
 
 using namespace lite_p2p;
 
-static inline const SSL_METHOD *ssl_method(int protocol)
+static inline const SSL_METHOD *ssl_method(int type)
 {
-    return (protocol == IPPROTO_UDP) ? DTLS_method() : TLS_method();
+    return ((type & SOCK_DGRAM) != 0) ? DTLS_method() : TLS_method();
 }
 
 int tsocket::tsocket_ssl_init()
@@ -79,8 +79,9 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
     SSL_set_accept_state(tls.session);
 
-    if ((type & SOCK_STREAM) != 0)
-        SSL_set_fd(tls.session, fd);
+    ret = SSL_set_fd(tls.session, fd);
+    if (ret <= 0)
+        goto err_ssl;
 
     if ((type & SOCK_DGRAM) != 0)
     {
@@ -106,10 +107,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         s_tmp = BIO_ADDR_new();
         ret = DTLSv1_listen(tls.session, s_tmp);
         if (ret < 0)
-        {
-            BIO_ADDR_free(s_tmp);
-            goto err_ssl;
-        }
+            goto err_addr;
 
         if (!ret)
         {
@@ -118,7 +116,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
             if ((err == SSL_ERROR_SSL) ||
                 (err == SSL_ERROR_SYSCALL) ||
                 (err == SSL_ERROR_ZERO_RETURN))
-                goto err_ssl;
+                goto err_addr;
 
             if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
             {
@@ -130,10 +128,15 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
     ret = SSL_accept(tls.session);
     if (ret <= 0)
-        goto err_ssl;
+        goto err_addr;
 
     return 0;
 
+err_addr:
+    if (s_tmp) {
+        BIO_ADDR_free(s_tmp);
+        s_tmp = NULL;
+    }
 err_ssl:
     if (tls.session)
     {
@@ -260,7 +263,7 @@ tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_confi
         config = new struct tls_config_t(*cfg);
         tls.cfg = config;
 
-        tls.method = ssl_method(protocol);
+        tls.method = ssl_method(type);
         if (!config->x509)
         {
             config->x509_auto_generate = true;
@@ -294,7 +297,7 @@ tsocket::tsocket(int _fd, struct tls_config_t *cfg) : base_socket(_fd)
         }
 
         tls.cfg = config;
-        tls.method = ssl_method(protocol);
+        tls.method = ssl_method(type);
         if (tsocket_ssl_init() < 0)
             throw std::runtime_error("failed to create ssl context");
     }
