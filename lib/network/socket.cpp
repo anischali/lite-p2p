@@ -51,8 +51,9 @@ int tsocket::tsocket_ssl_init()
         SSL_CTX_set_max_proto_version(tls.ctx, config->min_version);
     }
 
+    SSL_CTX_set_session_cache_mode(tls.ctx, config->cache_mode);
+    
     tsocket_set_ssl_ops(config->ops);
-
     return 0;
 
 err_out:
@@ -63,10 +64,8 @@ err_out:
 
 int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 {
-    int ret, err;
-    BIO_ADDR *s_tmp;
+    int ret;
     struct timeval tv = {.tv_sec = timeout_s};
-
 
     if (!tls.ctx)
         return -ENOENT;
@@ -104,39 +103,17 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         SSL_set_bio(tls.session, tls.bio, tls.bio);
         BIO_set_fd(tls.bio, fd, BIO_NOCLOSE);
 
-        s_tmp = BIO_ADDR_new();
-        ret = DTLSv1_listen(tls.session, s_tmp);
-        if (ret < 0)
-            goto err_addr;
+        while (DTLSv1_listen(tls.session, NULL) <= 0 && SSL_stateless(tls.session) <= 0);
 
-        if (!ret)
-        {
-            err = SSL_get_error(tls.session, ret);
-
-            if ((err == SSL_ERROR_SSL) ||
-                (err == SSL_ERROR_SYSCALL) ||
-                (err == SSL_ERROR_ZERO_RETURN))
-                goto err_addr;
-
-            if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-            {
-            }
-        }
-
-        BIO_ctrl_set_connected(tls.bio, s_tmp);
+        BIO_ctrl_set_connected(tls.bio, &addr->sa_addr.addr);
     }
 
     ret = SSL_accept(tls.session);
     if (ret <= 0)
-        goto err_addr;
+        goto err_ssl;
 
     return 0;
 
-err_addr:
-    if (s_tmp) {
-        BIO_ADDR_free(s_tmp);
-        s_tmp = NULL;
-    }
 err_ssl:
     if (tls.session)
     {

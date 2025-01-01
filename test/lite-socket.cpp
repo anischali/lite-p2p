@@ -266,7 +266,8 @@ int main(int argc, char *argv[])
     struct tls_config_t cfg = {
         .keys = p_keys,
         .x509_expiration = 86400L,
-        .verify_mode = SSL_VERIFY_PEER, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        .timeout = 5,
+        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
         //.ciphers = TLS1_TXT_ECDHE_RSA_WITH_AES_256_GCM_SHA384, // TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
         .min_version = TLS1_2_VERSION,
         .ops = &lite_tls_ops};
