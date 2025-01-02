@@ -102,24 +102,24 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         if (!tls.bio)
             goto err_ssl;
 
+        SSL_set_bio(tls.session, tls.bio, tls.bio);
+
         if (timeout_s != 0)
         {
-            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
-            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
         }
 
         if (config->mtu_discover)
-            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
 
         if (protocol != IPPROTO_SCTP)
             SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
-
-        BIO_set_nbio(tls.bio, 1);
-        SSL_set_bio(tls.session, tls.bio, tls.bio);
-
+        
+        memset(&addr->sa_addr, 0, sizeof(addr->sa_addr));
         do
         {
-            ret = (config->stateless) ? SSL_stateless(tls.session) : DTLSv1_listen(tls.session, NULL);
+            ret = (config->stateless) ? SSL_stateless(tls.session) : DTLSv1_listen(tls.session, (BIO_ADDR *)&addr->sa_addr);
             if (ret < 0)
             {
                 ssl_err(tls.session, ret);
@@ -129,11 +129,12 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
             if (!ret)
                 ssl_err(tls.session, ret);
 
-            sleep(5);
-
         } while (ret <= 0 && retry-- > 0);
 
-        BIO_ctrl_set_connected(tls.bio, &addr->sa_addr.addr);
+        if (ret <= 0)
+            goto err_ssl;
+        
+        BIO_ctrl_set_connected(SSL_get_rbio(tls.session), &addr->sa_addr.addr);
     }
 
     ret = SSL_accept(tls.session);
@@ -349,7 +350,6 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
 {
     int ret, nfd;
     const int enable = 1;
-    uint8_t buf[16];
     struct sockaddr_t bind_addr;
     tsocket *s;
 
@@ -365,16 +365,9 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     }
     else
     {
-        do
-        {
-            ret = lite_p2p::network::recv_from(fd, buf, sizeof(buf), MSG_PEEK, addr);
-            if (ret != -1)
-            {
-                nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
-                if (nfd < 0)
-                    return NULL;
-            }
-        } while (ret <= 0);
+        nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
+        if (nfd < 0)
+            return NULL;
 
         s = new tsocket(nfd, config);
         if (!s)
@@ -389,11 +382,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
 
         ret = lite_p2p::network::bind_socket(nfd, &bind_addr);
         if (ret < 0)
-            goto err_nsock;
-
-        ret = lite_p2p::network::connect_socket(nfd, addr);
-        if (ret < 0)
-            goto err_nsock;
+            goto err_nsock;   
     }
 
     if (!s)
