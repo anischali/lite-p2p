@@ -189,7 +189,7 @@ int lite_generate_stateless_cookie(SSL *ssl, uint8_t *cookie, size_t *len)
 
     BIO_ADDR_free(lpeer);
 
-    return 0;
+    return 1;
 }
 
 int lite_generate_cookie(SSL *ssl, uint8_t *cookie, uint32_t *len)
@@ -267,9 +267,9 @@ int main(int argc, char *argv[])
         .keys = p_keys,
         .x509_expiration = 86400L,
         .timeout = 5,
-        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-        .min_version = TLS1_2_VERSION,
-        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        //.verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        //.min_version = TLS1_2_VERSION,
+        //.ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
         .ops = &lite_tls_ops
     };
     lite_p2p::tsocket *s = new lite_p2p::tsocket(family, type, type == SOCK_DGRAM ? IPPROTO_UDP : IPPROTO_TCP, &cfg);
