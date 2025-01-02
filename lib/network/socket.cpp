@@ -15,10 +15,6 @@ int tsocket::tsocket_ssl_init()
 {
     int ret;
 
-    SSL_library_init();
-    SSL_load_error_strings();
-    OpenSSL_add_ssl_algorithms();
-
     if (!tls.method)
         return -ENOENT;
 
@@ -365,6 +361,10 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     }
     else
     {
+        ret = lite_p2p::network::get_sockname(fd, &bind_addr);
+        if (ret < 0)
+            goto err_nsock;
+        
         nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
         if (nfd < 0)
             return NULL;
@@ -375,10 +375,6 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
 
         s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
         s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-
-        ret = lite_p2p::network::get_sockname(fd, &bind_addr);
-        if (ret < 0)
-            goto err_nsock;
 
         ret = lite_p2p::network::bind_socket(nfd, &bind_addr);
         if (ret < 0)
