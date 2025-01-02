@@ -71,7 +71,8 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
     int ret, retry = 25;
     struct timeval tv = {.tv_sec = timeout_s};
 
-    if (!tls.ctx)
+    ret = tsocket_ssl_init();
+    if (ret < 0 || !tls.ctx)
         return -ENOENT;
 
     tls.session = SSL_new(tls.ctx);
@@ -100,12 +101,6 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
         SSL_set_bio(tls.session, tls.bio, tls.bio);
 
-        if (timeout_s != 0)
-        {
-            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
-            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
-        }
-
         if (config->mtu_discover)
             BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_MTU_DISCOVER, 0, NULL);
 
@@ -130,7 +125,11 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
         if (ret <= 0)
             goto err_ssl;
         
-        BIO_ctrl_set_connected(SSL_get_rbio(tls.session), &addr->sa_addr.addr);
+        if (timeout_s != 0)
+        {
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
+        }
     }
 
     ret = SSL_accept(tls.session);
@@ -140,16 +139,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
     return 0;
 
 err_ssl:
-    if (tls.session)
-    {
-        ret = SSL_shutdown(tls.session);
-        if (!ret)
-            ret = SSL_shutdown(tls.session);
-
-        SSL_free(tls.session);
-        tls.session = NULL;
-    }
-
+    tsocket_ssl_cleanup();
     return ret;
 }
 
@@ -159,7 +149,8 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
     X509 *server_cert;
     int ret;
 
-    if (!tls.ctx)
+    ret = tsocket_ssl_init();
+    if (ret < 0 || !tls.ctx)
         return -ENOENT;
 
     tls.session = SSL_new(tls.ctx);
@@ -216,16 +207,7 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
 err_srv:
     X509_free(server_cert);
 err_ssl:
-    if (tls.session)
-    {
-        ret = SSL_shutdown(tls.session);
-        if (!ret)
-            ret = SSL_shutdown(tls.session);
-
-        SSL_free(tls.session);
-        tls.session = NULL;
-    }
-
+    tsocket_ssl_cleanup();
     return ret;
 }
 
@@ -276,13 +258,9 @@ tsocket::tsocket(sa_family_t _family, int _type, int _protocol, struct tls_confi
             if (!config->x509)
                 throw std::runtime_error("failed to generate certificate from key");
         }
-
-        if (tsocket_ssl_init() < 0)
-            throw std::runtime_error("failed to create ssl context");
     }
-    catch (const std::exception &e)
+    catch (...)
     {
-        tsocket_ssl_cleanup();
     }
 }
 
@@ -303,12 +281,9 @@ tsocket::tsocket(int _fd, struct tls_config_t *cfg) : base_socket(_fd)
 
         tls.cfg = config;
         tls.method = ssl_method(type);
-        if (tsocket_ssl_init() < 0)
-            throw std::runtime_error("failed to create ssl context");
     }
-    catch (const std::exception &e)
+    catch (...)
     {
-        tsocket_ssl_cleanup();
     }
 }
 

@@ -45,7 +45,7 @@ struct tls_config_t
     long int x509_expiration = 0;
     long int timeout = 5;
     bool x509_auto_generate = false;
-    bool mtu_discover = true;
+    bool mtu_discover = false;
     int verify_mode = 0;
     int min_version = 0;
     int max_version = 0;
