@@ -26,6 +26,12 @@ struct tls_ops_t
     int (*generate_stateless_cookie) (SSL *ssl, uint8_t *cookie, size_t *len) = NULL;
     int (*verify_stateless_cookie) (SSL *ssl, const uint8_t *cookie, size_t len) = NULL;
 };
+
+static inline struct tls_ops_t *lite_tls_default_ops() {
+    extern struct tls_ops_t lite_tls_ops;
+
+    return &lite_tls_ops;
+}
 struct tls_context_t
 {
     int ctx_id = lite_p2p::common::rand_int(INT_MAX / 2, INT_MAX);
