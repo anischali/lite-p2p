@@ -29,7 +29,7 @@
 
 using namespace lite_p2p::protocol::stun;
 
-client::client(int socket_fd) : _socket{socket_fd}
+client::client(base_socket *s) : _sock{s}
 {
 }
 
@@ -77,7 +77,7 @@ int client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet
     int ret;
 
     memcpy(transaction_id, packet->transaction_id, sizeof(transaction_id));
-    ret = network::send_to(_socket, (void *)packet, ntohs(packet->msg_len) + 20, stun_server);
+    ret = _sock->send_to((void *)packet, ntohs(packet->msg_len) + 20, 0, stun_server);
     if (ret < 0)
     {
         err_ret("Failed to send data", ret);
@@ -86,7 +86,7 @@ int client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet
     if (!wait)
         return 0;
 
-    ret = network::recv_from(_socket, packet, sizeof(*packet));
+    ret = _sock->recv(packet, sizeof(*packet));
     if (ret < 0)
     {
         err_ret("Failed to recv data", ret);

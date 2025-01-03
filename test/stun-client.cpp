@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
 
-    lite_p2p::protocol::stun::client stun(conn.socket_fd());
+    lite_p2p::protocol::stun::client stun(conn.sock);
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_stun = {
         .user = srv.username,

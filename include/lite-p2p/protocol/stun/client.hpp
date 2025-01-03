@@ -13,6 +13,7 @@
 #include <lite-p2p/network/network.hpp>
 #include <lite-p2p/crypto/crypto.hpp>
 #include <lite-p2p/protocol/stun/session.hpp>
+#include <lite-p2p/network/socket.hpp>
 
 enum STUN_PACKET_TYPE {
     STUN_TYPE_REQUEST,
@@ -213,17 +214,17 @@ namespace lite_p2p::protocol::stun
     class client
     {
     private:
-        int _socket;
+        base_socket *_sock;
     protected:
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait);
         int send_raw(struct sockaddr_t *stun_server, uint8_t *buf, size_t len) { 
-            return network::send_to(_socket, buf, len, stun_server);
+            return _sock->send_to(buf, len, 0, stun_server);
         }
     public:
         session_config sessions;
 
-        client(int socket_fd);
+        client(base_socket *s);
         ~client();
 
         int bind_request(struct stun_session_t *session);

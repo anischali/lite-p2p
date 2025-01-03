@@ -10,7 +10,7 @@ namespace lite_p2p::protocol::turn
     private:
 
     public:
-        client(int sock_fd);
+        client(base_socket *s);
         ~client() {};
 
         int allocate_request(struct stun_session_t *session);

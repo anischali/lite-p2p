@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
-    lite_p2p::protocol::turn::client turn(conn.socket_fd());
+    lite_p2p::protocol::turn::client turn(conn.sock);
 
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_turn = {

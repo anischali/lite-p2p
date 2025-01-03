@@ -6,7 +6,7 @@
 
 using namespace lite_p2p::protocol::turn;
 
-client::client(int sock_fd) : lite_p2p::protocol::stun::client(sock_fd) {}
+client::client(base_socket *s) : lite_p2p::protocol::stun::client(s) {}
 
 #define STUN_ATTRS_LONG_TERM \
 { \
