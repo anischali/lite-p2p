@@ -158,7 +158,20 @@ int main(int argc, char *argv[]) {
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
-    lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
+    struct crypto_pkey_ctx_t ctx(EVP_PKEY_RSA);
+    EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
+    struct tls_config_t cfg = {
+        .keys = p_keys,
+        .x509_expiration = 86400L,
+        .timeout = 5,
+        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        .min_version = TLS1_2_VERSION,
+        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .ops = lite_tls_default_ops(),
+    };
+
+    lite_p2p::tsocket *sock = new lite_p2p::tsocket(family, SOCK_DGRAM, 0, &cfg);
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(sock, argv[3], atoi(argv[4]));
 
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_turn = {
@@ -174,21 +187,7 @@ int main(int argc, char *argv[]) {
         .lt_cred_mech = true,
     };
 
-    lite_p2p::protocol::turn::client turn(conn.sock, &s_turn);
     session_config c;
-
-    __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
-        lite_p2p::peer::connection *c = (lite_p2p::peer::connection *)ctx;
-
-        c->~connection();
-    });
-
-    __at_exit.at_exit_cleanup_add(&turn, [](void *ctx){
-        lite_p2p::protocol::turn::client *c = (lite_p2p::protocol::turn::client *)ctx;
-
-        c->~client();
-    });
-
     lite_p2p::network::resolve(&s_turn.server, family, srv.url, srv.port);
 
     c.stun_generate_key(&s_turn, srv.credential);
@@ -197,9 +196,43 @@ int main(int argc, char *argv[]) {
 
     c.stun_register_session(&s_turn);
 
-    conn.connection_type = PEER_RELAYED_CONNECTION;
-    conn.session = &s_turn;
-    conn.relay = &turn;
+    lite_p2p::protocol::turn::client turn(conn->sock, &s_turn);
+
+    __at_exit.at_exit_cleanup_add(p_keys, [](void *a)
+                                  {
+        EVP_PKEY *p = (EVP_PKEY *)a;
+        if (!p)
+            return;
+
+        EVP_PKEY_free(p); });
+
+    __at_exit.at_exit_cleanup_add(sock, [](void *a)
+                                  {
+        lite_p2p::tsocket *s = (lite_p2p::tsocket *)a;
+
+        if (!s)
+            return;
+
+        delete s; });
+
+    __at_exit.at_exit_cleanup_add(conn, [](void *c)
+                                  {
+        lite_p2p::peer::connection *cn = (lite_p2p::peer::connection *)c;
+        
+        if (!cn)
+            return;
+
+        delete cn; });
+
+    __at_exit.at_exit_cleanup_add(&turn, [](void *ctx){
+        lite_p2p::protocol::turn::client *c = (lite_p2p::protocol::turn::client *)ctx;
+
+        c->~client();
+    });
+
+    conn->connection_type = PEER_RELAYED_CONNECTION;
+    conn->session = &s_turn;
+    conn->relay = &turn;
 
     int ret = turn.allocate_request();
     if (ret < 0) {
@@ -213,20 +246,20 @@ int main(int argc, char *argv[]) {
         lite_p2p::network::addr_to_string(&s_turn.relayed_addr).c_str(), 
         lite_p2p::network::get_port(&s_turn.relayed_addr));
     
-    lite_p2p::network::string_to_addr(family, lite_p2p::common::parse("remote ip"), &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(lite_p2p::common::parse("port").c_str()));
+    lite_p2p::network::string_to_addr(family, lite_p2p::common::parse("remote ip"), &conn->remote);
+    lite_p2p::network::set_port(&conn->remote, atoi(lite_p2p::common::parse("port").c_str()));
     
 
     s_turn.channel = htons(lite_p2p::common::rand_int(0x4000,0x4FFF));
-    ret = turn.create_permission_request(&conn.remote);
-    ret = turn.bind_channel_request(&conn.remote, s_turn.channel);
+    ret = turn.create_permission_request(&conn->remote);
+    ret = turn.bind_channel_request(&conn->remote, s_turn.channel);
     std::string s = "hello world";
     std::vector<uint8_t> p(s.begin(), s.end());
     //ret = turn.refresh_request(&s_turn, s_turn.lifetime);
     //ret = turn.send_request_data(&s_turn, &conn.remote, s_buf);
 
-    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
-    printf("peer: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.remote).c_str(), lite_p2p::network::get_port(&conn.remote));
+    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->local).c_str(), lite_p2p::network::get_port(&conn->local));
+    printf("peer: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);
