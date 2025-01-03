@@ -69,7 +69,7 @@ void visichat_sender(void *args) {
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
 
-    if (conn->sock->protocol == IPPROTO_TCP) {
+    if (conn->sock->type == SOCK_DGRAM || conn->sock->is_secure()) {
         int ret = conn->sock->connect(&conn->remote);
         if (ret < 0) {
             ret = errno;
@@ -142,9 +142,21 @@ int main(int argc, char *argv[]) {
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM}); 
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
-    lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
+    struct crypto_pkey_ctx_t ctx(EVP_PKEY_RSA);
+    EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
+    struct tls_config_t cfg = {
+        .keys = p_keys,
+        .x509_expiration = 86400L,
+        .timeout = 5,
+        .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+        .min_version = TLS1_2_VERSION,
+        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .ops = lite_tls_default_ops(),
+    };
 
-    lite_p2p::protocol::stun::client stun(conn.sock);
+    lite_p2p::tsocket *s = new lite_p2p::tsocket(family, SOCK_DGRAM, 0, &cfg);
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
+
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_stun = {
         .user = srv.username,
@@ -159,12 +171,37 @@ int main(int argc, char *argv[]) {
     };
     
     session_config c;
+    lite_p2p::network::resolve(&s_stun.server, family, srv.url, srv.port);
+    
+    c.stun_register_session(&s_stun);
+    
+    lite_p2p::protocol::stun::client stun(conn->sock, &s_stun);
 
-    __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
-        lite_p2p::peer::connection *c = (lite_p2p::peer::connection *)ctx;
+    __at_exit.at_exit_cleanup_add(p_keys, [](void *a)
+                                  {
+        EVP_PKEY *p = (EVP_PKEY *)a;
+        if (!p)
+            return;
 
-        c->~connection();
-    });
+        EVP_PKEY_free(p); });
+
+    __at_exit.at_exit_cleanup_add(s, [](void *a)
+                                  {
+        lite_p2p::tsocket *s = (lite_p2p::tsocket *)a;
+
+        if (!s)
+            return;
+
+        delete s; });
+
+    __at_exit.at_exit_cleanup_add(conn, [](void *c)
+                                  {
+        lite_p2p::peer::connection *cn = (lite_p2p::peer::connection *)c;
+        
+        if (!cn)
+            return;
+
+        delete cn; });
 
     __at_exit.at_exit_cleanup_add(&stun, [](void *ctx){
         lite_p2p::protocol::stun::client *c = (lite_p2p::protocol::stun::client *)ctx;
@@ -172,23 +209,21 @@ int main(int argc, char *argv[]) {
         c->~client();
     });
 
-    lite_p2p::network::resolve(&s_stun.server, family, srv.url, srv.port);
-    
-    c.stun_register_session(&s_stun);
 
-    ret = stun.bind_request(&s_stun);
+
+    ret = stun.bind_request();
     if (ret < 0) {
         printf("request failed with: %d\n", ret);
         exit(-1);
     }
     
     printf("external ip: %s [%d]\n", lite_p2p::network::addr_to_string(&s_stun.mapped_addr).c_str(), lite_p2p::network::get_port(&s_stun.mapped_addr));
-    lite_p2p::network::string_to_addr(family, lite_p2p::common::parse("remote ip"), &conn.remote);
-    lite_p2p::network::set_port(&conn.remote, atoi(lite_p2p::common::parse("port").c_str()));
+    lite_p2p::network::string_to_addr(family, lite_p2p::common::parse("remote ip"), &conn->remote);
+    lite_p2p::network::set_port(&conn->remote, atoi(lite_p2p::common::parse("port").c_str()));
 
-    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.local).c_str(), lite_p2p::network::get_port(&conn.local));
-    printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn.remote).c_str(), lite_p2p::network::get_port(&conn.remote));
-    conn.connection_type = PEER_DIRECT_CONNECTION;
+    printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->local).c_str(), lite_p2p::network::get_port(&conn->local));
+    printf("remote: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
+    conn->connection_type = PEER_DIRECT_CONNECTION;
 
     std::thread recver(visichat_listener, &conn);
     std::thread sender(visichat_sender, &conn);

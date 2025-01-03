@@ -29,8 +29,10 @@
 
 using namespace lite_p2p::protocol::stun;
 
-client::client(base_socket *s) : _sock{s}
+client::client(base_socket *s, struct stun_session_t *sess) : _sock{s}, session{sess}
 {
+    if (s->is_secure())
+        s->connect(&sess->server);
 }
 
 client::~client()
@@ -109,7 +111,7 @@ int client::request(struct sockaddr_t *stun_server, struct stun_packet_t *packet
     return request(stun_server, packet, true);
 }
 
-int client::bind_request(struct stun_session_t *session)
+int client::bind_request()
 {
     uint16_t msg_type = stun_type(STUN_REQUEST, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);

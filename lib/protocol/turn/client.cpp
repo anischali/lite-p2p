@@ -6,7 +6,7 @@
 
 using namespace lite_p2p::protocol::turn;
 
-client::client(base_socket *s) : lite_p2p::protocol::stun::client(s) {}
+client::client(base_socket *s, struct stun_session_t *sess) : lite_p2p::protocol::stun::client(s, sess) {}
 
 #define STUN_ATTRS_LONG_TERM \
 { \
@@ -42,7 +42,7 @@ client::client(base_socket *s) : lite_p2p::protocol::stun::client(s) {}
     STUN_ATTR_DONT_FRAGMENT, \
 }
 
-int client::allocate_request(struct stun_session_t *session) {
+int client::allocate_request() {
     int ret = 0;
     uint16_t msg_type = stun_type(STUN_ALLOCATE, STUN_TYPE_REQUEST);
     std::vector<uint16_t> attrs(STUN_ATTRS_ALLOCATE);
@@ -74,7 +74,7 @@ retry:
     return ret;
 }
 
-int client::refresh_request(struct stun_session_t *session, uint32_t lifetime) {
+int client::refresh_request(uint32_t lifetime) {
     uint16_t msg_type = stun_type(STUN_REFRESH, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -97,7 +97,7 @@ retry:
     return ret;
 }
 
-int client::send_request_data(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
+int client::send_request_data(struct sockaddr_t *peer, std::vector<uint8_t> &buf) {
     uint16_t msg_type = stun_type(STUN_SEND_REQUEST, STUN_TYPE_INDICATION);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -119,7 +119,7 @@ int client::send_request_data(struct stun_session_t *session, struct sockaddr_t 
     return buf.size();
 }
 
-int client::send_channel(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf) {
+int client::send_channel(struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf) {
     int ret = 0;
     uint8_t packet[512];
 
@@ -135,7 +135,7 @@ int client::send_channel(struct stun_session_t *session, struct sockaddr_t *peer
     return buf.size();
 }
 
-int client::create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer) {
+int client::create_permission_request(struct sockaddr_t *peer) {
     uint16_t msg_type = stun_type(STUN_CREATE_PERM, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);
@@ -164,7 +164,7 @@ retry:
 }
 
 
-int client::bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t chanel_id) {
+int client::bind_channel_request(struct sockaddr_t *peer, uint32_t chanel_id) {
     uint16_t msg_type = stun_type(STUN_CHANNEL_BIND, STUN_TYPE_REQUEST);
     struct stun_packet_t packet(msg_type);
     std::vector<uint16_t> attrs(STUN_ATTRS_LONG_TERM);

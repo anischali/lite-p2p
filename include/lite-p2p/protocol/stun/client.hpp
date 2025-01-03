@@ -216,6 +216,7 @@ namespace lite_p2p::protocol::stun
     private:
         base_socket *_sock;
     protected:
+        struct stun_session_t *session;
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet);
         int request(struct sockaddr_t *stun_server, struct stun_packet_t *packet, bool wait);
         int send_raw(struct sockaddr_t *stun_server, uint8_t *buf, size_t len) { 
@@ -224,10 +225,10 @@ namespace lite_p2p::protocol::stun
     public:
         session_config sessions;
 
-        client(base_socket *s);
+        client(base_socket *s, struct stun_session_t *sess);
         ~client();
 
-        int bind_request(struct stun_session_t *session);
+        int bind_request();
         struct sockaddr_t *stun_get_mapped_addr(struct sockaddr_t *stun_server);
         static uint32_t crc32(uint32_t crc, uint8_t *buf, size_t size);
     };

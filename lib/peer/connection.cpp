@@ -82,9 +82,9 @@ ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len,
 
         std::vector<uint8_t> s_buf(buf, buf + len);
         if (session->channel != 0)
-            return relay->send_channel(session, r, session->channel, s_buf);
+            return relay->send_channel(r, session->channel, s_buf);
 
-        return relay->send_request_data(session, r, s_buf);
+        return relay->send_request_data(r, s_buf);
     }
 
     return -EINVAL;

@@ -10,15 +10,15 @@ namespace lite_p2p::protocol::turn
     private:
 
     public:
-        client(base_socket *s);
+        client(base_socket *s, struct stun_session_t *sess);
         ~client() {};
 
-        int allocate_request(struct stun_session_t *session);
-        int create_permission_request(struct stun_session_t *session, struct sockaddr_t *peer);
-        int refresh_request(struct stun_session_t *session, uint32_t lifetime);
-        int send_request_data(struct stun_session_t *session, struct sockaddr_t *peer, std::vector<uint8_t> &buf);
-        int bind_channel_request(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t chanel_id);
-        int send_channel(struct stun_session_t *session, struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf);
+        int allocate_request();
+        int create_permission_request(struct sockaddr_t *peer);
+        int refresh_request(uint32_t lifetime);
+        int send_request_data(struct sockaddr_t *peer, std::vector<uint8_t> &buf);
+        int bind_channel_request(struct sockaddr_t *peer, uint32_t chanel_id);
+        int send_channel(struct sockaddr_t *peer, uint32_t channel_id, std::vector<uint8_t> &buf);
 
         struct sockaddr_t *stun_get_relayed_addr(struct sockaddr_t *stun_server);
     };

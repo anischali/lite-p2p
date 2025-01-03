@@ -24,6 +24,16 @@ std::map<std::string, struct stun_server_t> servers = {
             .credential = "free",
             .realm = "freestun.net",
             .support_ipv6 = false,
+        },
+        "aws-dtls", 
+        {
+            .type = STUN_SERV_TYPE_STUN_TURN,
+            .port = 3478,
+            .url = "turn:freestun.net",
+            .username = "free",
+            .credential = "free",
+            .realm = "freestun.net",
+            .support_ipv6 = false,
         }
     }
 };
@@ -149,7 +159,6 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
     lite_p2p::peer::connection conn(family, argv[3], atoi(argv[4]));
-    lite_p2p::protocol::turn::client turn(conn.sock);
 
     struct stun_server_t srv = servers[argv[2]];
     struct stun_session_t s_turn = {
@@ -165,6 +174,7 @@ int main(int argc, char *argv[]) {
         .lt_cred_mech = true,
     };
 
+    lite_p2p::protocol::turn::client turn(conn.sock, &s_turn);
     session_config c;
 
     __at_exit.at_exit_cleanup_add(&conn, [](void *ctx){
@@ -191,7 +201,7 @@ int main(int argc, char *argv[]) {
     conn.session = &s_turn;
     conn.relay = &turn;
 
-    int ret = turn.allocate_request(&s_turn);
+    int ret = turn.allocate_request();
     if (ret < 0) {
         printf("request failed with: %d\n", ret);
         exit(-1);
@@ -208,8 +218,8 @@ int main(int argc, char *argv[]) {
     
 
     s_turn.channel = htons(lite_p2p::common::rand_int(0x4000,0x4FFF));
-    ret = turn.create_permission_request(&s_turn, &conn.remote);
-    ret = turn.bind_channel_request(&s_turn, &conn.remote, s_turn.channel);
+    ret = turn.create_permission_request(&conn.remote);
+    ret = turn.bind_channel_request(&conn.remote, s_turn.channel);
     std::string s = "hello world";
     std::vector<uint8_t> p(s.begin(), s.end());
     //ret = turn.refresh_request(&s_turn, s_turn.lifetime);
