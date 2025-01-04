@@ -21,7 +21,7 @@ connection::connection(sa_family_t family, std::string _addr, uint16_t _port, in
 
     sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO_NEW, &tv, sizeof(tv));
+    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     network::string_to_addr(family, _addr, &local);
     network::set_port(&local, _port);
@@ -172,3 +172,35 @@ ssize_t connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r)
 
     return recv(sock, buf.data(), buf.size(), r);
 };
+
+
+base_socket * connection::connect(struct sockaddr_t *remote) {
+    int ret;
+
+    if (!sock->is_secure() && (sock->type & SOCK_DGRAM) != 0)
+        return sock;
+
+    base_socket *s = sock->duplicate();
+    ret = s->connect(remote);
+    if (ret < 0)
+        goto sock_err;
+    
+    return s;
+
+sock_err:
+    delete s;
+    return NULL;
+}
+
+
+base_socket * connection::listen(struct sockaddr_t *remote, int n) {
+
+    if (!sock->is_secure() && (sock->type & SOCK_DGRAM) != 0)
+        return sock;
+
+    if ((sock->type & SOCK_STREAM) != 0)
+        sock->listen(n);
+
+    
+    return sock->accept(remote);
+}

@@ -44,11 +44,11 @@
       "stopAtEntry": false,
       "externalConsole": false,
       "cwd": "${workspaceFolder}/build/",
-      "program": "${workspaceFolder}/build/test/turn-client",
+      //"program": "${workspaceFolder}/build/test/turn-client",
       //"program": "${workspaceFolder}/build/test/lite-crypto",
       //"program": "${workspaceFolder}/build/test/lite-crypto-time",
       //"program": "${workspaceFolder}/build/test/lite-socket",
-      //"program": "${workspaceFolder}/build/test/stun-client",
+      "program": "${workspaceFolder}/build/test/stun-client",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

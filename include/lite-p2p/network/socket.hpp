@@ -129,6 +129,7 @@ namespace lite_p2p
         };
 
         virtual bool is_secure() = 0;
+        virtual base_socket *duplicate() = 0;
         virtual int bind(struct sockaddr_t *addr) = 0;
         virtual int connect(struct sockaddr_t *addr) = 0;
         virtual int listen(int n) = 0;
@@ -148,6 +149,14 @@ namespace lite_p2p
         ssocket(int _fd) : base_socket(_fd) {};
 
         bool is_secure() override { return false; };
+        base_socket *duplicate() {
+            const int enable = 1; 
+            set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+            set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+
+            return new ssocket(fd);
+        };
+
         int bind(struct sockaddr_t *addr) override { return lite_p2p::network::bind_socket(fd, addr); };
         int connect(struct sockaddr_t *addr) override { return lite_p2p::network::connect_socket(fd, addr); };
         int listen(int n) { return lite_p2p::network::listen_socket(fd, n); };
@@ -174,6 +183,8 @@ namespace lite_p2p
         tsocket(int fd, struct tls_config_t *cfg);
         ~tsocket();
 
+
+        base_socket *duplicate();
         bool is_secure() override { return true; };
         int bind(struct sockaddr_t *addr);
         int connect(struct sockaddr_t *addr);

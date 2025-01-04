@@ -106,7 +106,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
         if (protocol != IPPROTO_SCTP)
             SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
-        
+
         memset(&addr->sa_addr, 0, sizeof(addr->sa_addr));
         do
         {
@@ -124,7 +124,7 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
         if (ret <= 0)
             goto err_ssl;
-        
+
         if (timeout_s != 0)
         {
             BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
@@ -292,6 +292,15 @@ tsocket::~tsocket()
     tsocket_ssl_cleanup();
 }
 
+base_socket *tsocket::duplicate()
+{
+    const int enable = 1;
+    set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+
+    return new tsocket(fd, config);
+}
+
 int tsocket::bind(struct sockaddr_t *addr)
 {
     return lite_p2p::network::bind_socket(fd, addr);
@@ -339,7 +348,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
         ret = lite_p2p::network::get_sockname(fd, &bind_addr);
         if (ret < 0)
             goto err_nsock;
-        
+
         nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
         if (nfd < 0)
             return NULL;
@@ -353,7 +362,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
 
         ret = lite_p2p::network::bind_socket(nfd, &bind_addr);
         if (ret < 0)
-            goto err_nsock;   
+            goto err_nsock;
     }
 
     if (!s)
@@ -489,7 +498,7 @@ static int lite_generate_cookie(SSL *ssl, uint8_t *cookie, uint32_t *len)
     ret = lite_generate_stateless_cookie(ssl, cookie, &slen);
     if (!ret)
         return 0;
-    
+
     *len = (uint32_t)slen;
     return 1;
 }
@@ -506,8 +515,8 @@ static int lite_verify_stateless_cookie(SSL *ssl, const uint8_t *cookie, size_t 
 
     tls = (struct tls_context_t *)ctx;
 
-    if (!tls->cookie_initialized || 
-        !lite_generate_stateless_cookie(ssl, v_cookie, &length) || 
+    if (!tls->cookie_initialized ||
+        !lite_generate_stateless_cookie(ssl, v_cookie, &length) ||
         len != length || memcmp(v_cookie, cookie, length) != 0)
         return 0;
 

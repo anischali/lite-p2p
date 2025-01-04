@@ -31,7 +31,7 @@ using namespace lite_p2p::protocol::stun;
 
 client::client(base_socket *s, struct stun_session_t *sess) : _sock{s}, session{sess}
 {
-    if (s->is_secure())
+    if (s->is_secure() || (s->type & SOCK_STREAM) != 0)
         s->connect(&sess->server);
 }
 
