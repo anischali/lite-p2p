@@ -28,7 +28,6 @@ void visichat_listener(void *args)
     int ret;
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
-    struct lite_p2p::base_socket *s = NULL;
     struct sockaddr_t s_addr = {
         .sa_family = conn->sock->family,
     };
@@ -39,7 +38,7 @@ void visichat_listener(void *args)
 
     while (true)
     {
-        ret = conn->recv(s, buf, sizeof(buf), &s_addr);
+        ret = conn->recv(conn->new_sock, buf, sizeof(buf), &s_addr);
         if (ret <= 0 || buf[0] == 0)
             continue;
 
