@@ -106,6 +106,12 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
         if (protocol != IPPROTO_SCTP)
             SSL_set_options(tls.session, SSL_OP_COOKIE_EXCHANGE);
+        
+        if (timeout_s != 0)
+        {
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
+        }
 
         memset(&addr->sa_addr, 0, sizeof(addr->sa_addr));
         do
@@ -126,12 +132,6 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 
         if (ret <= 0)
             goto err_ssl;
-
-        if (timeout_s != 0)
-        {
-            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
-            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
-        }
     }
 
     ret = SSL_accept(tls.session);
