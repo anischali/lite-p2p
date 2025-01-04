@@ -185,7 +185,7 @@ base_socket * connection::estabilish(struct sockaddr_t *remote, int n) {
         if (!s)
             s = listen(remote, n);
 
-    } while (true);
+    } while (!s);
     
     return s;
 }

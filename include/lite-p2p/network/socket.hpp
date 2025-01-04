@@ -56,7 +56,7 @@ struct tls_config_t
     int min_version = 0;
     int max_version = 0;
     int cache_mode = SSL_SESS_CACHE_OFF;
-    bool stateless = true;
+    bool stateless = false;
 
     std::string ciphers = "";
     std::map<std::string, std::string> x509_info = {
