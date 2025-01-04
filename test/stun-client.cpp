@@ -7,6 +7,7 @@
 #include "lite-p2p/peer/connection.hpp"
 #include "lite-p2p/network/network.hpp"
 #include "lite-p2p/protocol/ice/agent.hpp"
+#include <atomic>
 #if __has_include("./servers.hpp")
 #include "./servers.hpp"
 #else
@@ -23,6 +24,8 @@ std::map<std::string, struct stun_server_t> servers = {
      }}};
 #endif
 
+std::atomic<bool> terminate = false;
+
 void visichat_listener(void *args)
 {
     int ret;
@@ -36,7 +39,7 @@ void visichat_listener(void *args)
 
     conn->new_sock = conn->estabilish(&conn->remote, 1);
 
-    while (true)
+    while (!terminate.load())
     {
         ret = conn->recv(conn->new_sock, buf, sizeof(buf), &s_addr);
         if (ret <= 0 || buf[0] == 0)
@@ -63,7 +66,7 @@ void visichat_sender(void *args)
     while (!conn->new_sock)
         sleep(1);
 
-    while (true)
+    while (!terminate.load())
     {
         printf("\r> ");
         while ((c = getc(stdin)) != '\n')
@@ -83,12 +86,7 @@ void visichat_sender(void *args)
         cnt = 0;
 
         if (!strncmp("exit", (char *)&buf[0], 4))
-        {
-            sleep(1);
-            exit(0);
-            printf("sender thread stop [OK]\n");
-            return;
-        }
+            terminate = true;       
     }
 }
 
@@ -96,7 +94,7 @@ void visichat_keepalive(void *args)
 {
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
 
-    while (true)
+    while (!terminate.load())
     {
         conn->send(NULL, 0);
 
@@ -166,7 +164,7 @@ int main(int argc, char *argv[])
 
     c.stun_register_session(&s_stun);
 
-    lite_p2p::protocol::stun::client stun(conn->sock, &s_stun);
+    auto stun = new lite_p2p::protocol::stun::client(conn->sock, &s_stun);
 
     __at_exit.at_exit_cleanup_add(p_keys, [](void *a)
                                   {
@@ -194,13 +192,13 @@ int main(int argc, char *argv[])
 
         delete cn; });
 
-    __at_exit.at_exit_cleanup_add(&stun, [](void *ctx)
+    __at_exit.at_exit_cleanup_add(stun, [](void *ctx)
                                   {
         lite_p2p::protocol::stun::client *c = (lite_p2p::protocol::stun::client *)ctx;
 
-        c->~client(); });
+        delete c; });
 
-    ret = stun.bind_request();
+    ret = stun->bind_request();
     if (ret < 0)
     {
         printf("request failed with: %d\n", ret);
@@ -221,12 +219,7 @@ int main(int argc, char *argv[])
 
     auto thread_cleanup = [](void *ctx)
     {
-        std::thread *t = (std::thread *)ctx;
-#if defined(__ANDROID__)
-        t->~thread();
-#else
-        pthread_cancel(t->native_handle());
-#endif
+        terminate = true;
     };
 
     __at_exit.at_exit_cleanup_add(&recver, thread_cleanup);
@@ -235,6 +228,7 @@ int main(int argc, char *argv[])
 
     recver.join();
     sender.join();
+    keepalive.join();
 
     return 0;
 }
