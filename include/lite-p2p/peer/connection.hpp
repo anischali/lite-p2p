@@ -58,6 +58,7 @@ namespace lite_p2p::peer
 
         base_socket * connect(struct sockaddr_t *remote);
         base_socket * listen(struct sockaddr_t *remote, int n);
+        base_socket * estabilish(struct sockaddr_t *remote, int n);
 
         ssize_t send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r);
         ssize_t send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len);

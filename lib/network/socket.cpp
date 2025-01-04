@@ -68,7 +68,7 @@ err_out:
 
 int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
 {
-    int ret, retry = 25;
+    int ret, retry = 3;
     struct timeval tv = {.tv_sec = timeout_s};
 
     ret = tsocket_ssl_init();
@@ -120,6 +120,8 @@ int tsocket::tsocket_ssl_accept(struct sockaddr_t *addr, long int timeout_s)
             if (!ret)
                 ssl_err(tls.session, ret);
 
+            sleep(1);
+
         } while (ret <= 0 && retry-- > 0);
 
         if (ret <= 0)
@@ -161,10 +163,17 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
 
     SSL_set_connect_state(tls.session);
 
+    if ((type & SOCK_STREAM) != 0)
+    {
+        ret = SSL_set_fd(tls.session, fd);
+        if (ret <= 0)
+            goto err_ssl;
+    }
+
     if (config->ops && config->ops->msg_callback)
         SSL_set_msg_callback(tls.session, config->ops->msg_callback);
 
-    if (type == SOCK_DGRAM)
+    if ((type & SOCK_DGRAM) != 0)
     {
         tls.bio = BIO_new_dgram(fd, BIO_NOCLOSE);
         if (!tls.bio)
@@ -176,14 +185,10 @@ int tsocket::tsocket_ssl_connect(struct sockaddr_t *addr, long int timeout_s)
 
         if (timeout_s != 0)
         {
-            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
-            BIO_ctrl(tls.bio, BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &tv);
+            BIO_ctrl(SSL_get_rbio(tls.session), BIO_CTRL_DGRAM_SET_SEND_TIMEOUT, 0, &tv);
         }
     }
-
-    ret = SSL_set_fd(tls.session, fd);
-    if (ret <= 0)
-        goto err_ssl;
 
     ret = SSL_connect(tls.session);
     if (ret <= 0)
@@ -295,10 +300,37 @@ tsocket::~tsocket()
 base_socket *tsocket::duplicate()
 {
     const int enable = 1;
+    int ret, nfd;
+    struct sockaddr_t b_addr;
+    tsocket *s;
+
     set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
 
-    return new tsocket(fd, config);
+    ret = lite_p2p::network::get_sockname(fd, &b_addr);
+    if (ret < 0)
+        return NULL;
+
+    nfd = socket(b_addr.sa_family, SOCK_DGRAM, 0);
+    if (nfd < 0)
+        return NULL;
+
+    s = new tsocket(nfd, config);
+    if (!s)
+        return NULL;
+
+    s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+
+    ret = lite_p2p::network::bind_socket(nfd, &b_addr);
+    if (ret < 0)
+        goto err_nsock;
+
+    return s;
+
+err_nsock:
+    delete s;
+    return NULL;
 }
 
 int tsocket::bind(struct sockaddr_t *addr)
@@ -329,8 +361,6 @@ int tsocket::listen(int n)
 base_socket *tsocket::accept(struct sockaddr_t *addr)
 {
     int ret, nfd;
-    const int enable = 1;
-    struct sockaddr_t bind_addr;
     tsocket *s;
 
     if (type == SOCK_STREAM)
@@ -345,24 +375,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     }
     else
     {
-        ret = lite_p2p::network::get_sockname(fd, &bind_addr);
-        if (ret < 0)
-            goto err_nsock;
-
-        nfd = socket(addr->sa_family, SOCK_DGRAM, 0);
-        if (nfd < 0)
-            return NULL;
-
-        s = new tsocket(nfd, config);
-        if (!s)
-            return NULL;
-
-        s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-        s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-
-        ret = lite_p2p::network::bind_socket(nfd, &bind_addr);
-        if (ret < 0)
-            goto err_nsock;
+        s = (tsocket *)duplicate();
     }
 
     if (!s)

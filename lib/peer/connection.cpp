@@ -174,6 +174,22 @@ ssize_t connection::recv(std::vector<uint8_t> &buf, struct sockaddr_t *r)
 };
 
 
+base_socket * connection::estabilish(struct sockaddr_t *remote, int n) {
+    base_socket *s;
+
+    do
+    {
+        sleep(1);
+
+        s = connect(remote);
+        if (!s)
+            s = listen(remote, n);
+
+    } while (true);
+    
+    return s;
+}
+
 base_socket * connection::connect(struct sockaddr_t *remote) {
     int ret;
 

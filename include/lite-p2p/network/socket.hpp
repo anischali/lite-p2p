@@ -49,14 +49,14 @@ struct tls_config_t
     EVP_PKEY *keys = NULL;
     X509 *x509 = NULL;
     long int x509_expiration = 0;
-    long int timeout = 5;
+    long int timeout = 30;
     bool x509_auto_generate = false;
     bool mtu_discover = false;
     int verify_mode = 0;
     int min_version = 0;
     int max_version = 0;
     int cache_mode = SSL_SESS_CACHE_OFF;
-    bool stateless = false;
+    bool stateless = true;
 
     std::string ciphers = "";
     std::map<std::string, std::string> x509_info = {
