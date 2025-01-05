@@ -311,7 +311,7 @@ base_socket *tsocket::duplicate()
     if (ret < 0)
         return NULL;
 
-    nfd = socket(b_addr.sa_family, SOCK_DGRAM, 0);
+    nfd = socket(family, type, protocol);
     if (nfd < 0)
         return NULL;
 
@@ -347,7 +347,7 @@ base_socket *ssocket::duplicate()
     if (ret < 0)
         return NULL;
 
-    nfd = socket(b_addr.sa_family, SOCK_DGRAM, 0);
+    nfd = socket(family, type, protocol);
     if (nfd < 0)
         return NULL;
 
