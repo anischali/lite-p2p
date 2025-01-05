@@ -116,14 +116,14 @@ void visichat_keepalive(void *args)
 // 2001:4860:4864:5:8000::1 19302
 void usage(const char *prog)
 {
-    printf("%s: <protocol> <server_name> <lan-ip> <lport>\n", prog);
+    printf("%s: <ip protocol> <tcp|udp> <secure|unsecure> <server_name> <lan-ip> <lport>\n", prog);
     exit(0);
 }
 
 int main(int argc, char *argv[])
 {
 
-    if (argc < 5)
+    if (argc < 7)
     {
         usage(argv[0]);
     }
@@ -131,6 +131,10 @@ int main(int argc, char *argv[])
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM});
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
+    int type = !strncmp("tcp", argv[2], 3) ? SOCK_STREAM : SOCK_DGRAM;
+    bool secure = !strncmp("secure", argv[3], 6);
+    lite_p2p::base_socket *s;
+
     struct crypto_pkey_ctx_t ctx(EVP_PKEY_RSA);
     EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
     struct tls_config_t cfg = {
@@ -143,10 +147,12 @@ int main(int argc, char *argv[])
         .ops = lite_tls_default_ops(),
     };
 
-    auto *s = new lite_p2p::tsocket(family, SOCK_DGRAM, 0, &cfg);
-    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[3], atoi(argv[4]));
 
-    struct stun_server_t srv = servers[argv[2]];
+    s = (secure) ? (lite_p2p::base_socket *)new lite_p2p::tsocket(family, type, 0, &cfg) : 
+                    (lite_p2p::base_socket *)new lite_p2p::ssocket(family, type, 0);
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[5], atoi(argv[6]));
+
+    struct stun_server_t srv = servers[argv[4]];
     struct stun_session_t s_stun = {
         .user = srv.username,
         .software = "lite-p2p v 1.0",
