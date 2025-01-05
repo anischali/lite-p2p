@@ -333,6 +333,42 @@ err_nsock:
     return NULL;
 }
 
+base_socket *ssocket::duplicate()
+{
+    const int enable = 1;
+    int ret, nfd;
+    struct sockaddr_t b_addr;
+    ssocket *s;
+
+    set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+
+    ret = lite_p2p::network::get_sockname(fd, &b_addr);
+    if (ret < 0)
+        return NULL;
+
+    nfd = socket(b_addr.sa_family, SOCK_DGRAM, 0);
+    if (nfd < 0)
+        return NULL;
+
+    s = new ssocket(nfd);
+    if (!s)
+        return NULL;
+
+    s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+
+    ret = lite_p2p::network::bind_socket(nfd, &b_addr);
+    if (ret < 0)
+        goto err_nsock;
+
+    return s;
+
+err_nsock:
+    delete s;
+    return NULL;
+}
+
 int tsocket::bind(struct sockaddr_t *addr)
 {
     return lite_p2p::network::bind_socket(fd, addr);

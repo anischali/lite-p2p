@@ -149,13 +149,7 @@ namespace lite_p2p
         ssocket(int _fd) : base_socket(_fd) {};
 
         bool is_secure() override { return false; };
-        base_socket *duplicate() {
-            const int enable = 1; 
-            set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-            set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-
-            return new ssocket(fd);
-        };
+        base_socket *duplicate();
 
         int bind(struct sockaddr_t *addr) override { return lite_p2p::network::bind_socket(fd, addr); };
         int connect(struct sockaddr_t *addr) override { return lite_p2p::network::connect_socket(fd, addr); };
