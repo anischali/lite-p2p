@@ -399,7 +399,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     int ret, nfd;
     tsocket *s;
 
-    if (type == SOCK_STREAM)
+    if ((type & SOCK_STREAM) != 0)
     {
         nfd = lite_p2p::network::accept_socket(fd, addr);
         if (nfd <= 0)
