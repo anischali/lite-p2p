@@ -140,6 +140,11 @@ namespace lite_p2p
         virtual size_t recv(void *buf, size_t len) = 0;
         int set_sockopt(int level, int opt, const void *value, size_t len) { return setsockopt(fd, level, opt, value, len); };
         int get_sockopt(int level, int opt, void *value, socklen_t *len) { return getsockopt(fd, level, opt, value, len); };
+        int get_sockname(struct sockaddr_t *addr) { return lite_p2p::network::get_sockname(fd, addr); };
+        void close_socket(void) {
+            close(fd);
+            fd = 0;
+        };
     };
 
     class ssocket : public base_socket

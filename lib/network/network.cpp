@@ -18,7 +18,9 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "lite-p2p/network/network.hpp"
+#include <lite-p2p/network/network.hpp>
+#include <lite-p2p/common/common.hpp>
+
 
 using namespace lite_p2p;
 
@@ -300,6 +302,17 @@ uint16_t network::get_port(struct sockaddr_t *addr) {
     }
 
     return -1;
+}
+
+void network::random_port(struct sockaddr_t *addr) {
+    uint16_t p = get_port(addr), a_p;
+    do 
+    {
+        a_p = lite_p2p::common::rand_int(40000, 50000);
+    }
+    while (p == a_p);
+
+    set_port(addr, a_p);
 }
 
 

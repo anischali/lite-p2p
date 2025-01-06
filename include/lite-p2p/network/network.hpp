@@ -56,6 +56,7 @@ namespace lite_p2p
 
         static void set_port(struct sockaddr_t *addr, uint16_t port);
         static uint16_t get_port(struct sockaddr_t *addr);
+        static void random_port(struct sockaddr_t *addr);
         
         static ssize_t send_to(int fd, void *buf, size_t len, struct sockaddr_t *remote);
         static ssize_t send_to(int fd, void *buf, size_t len, int flags, struct sockaddr_t *remote);

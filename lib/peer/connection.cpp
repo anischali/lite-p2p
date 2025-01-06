@@ -192,11 +192,23 @@ base_socket * connection::estabilish(struct sockaddr_t *remote, int n) {
 
 base_socket * connection::connect(struct sockaddr_t *remote) {
     int ret;
+    struct sockaddr_t b_addr;
 
     if (!sock->is_secure() && (sock->type & SOCK_DGRAM) != 0)
         return sock;
 
     base_socket *s = sock->duplicate();
+    if (!s)
+        return NULL;
+
+    ret = sock->get_sockname(&b_addr);
+    if (ret < 0)
+        goto sock_err; 
+
+    ret = s->bind(&b_addr);
+    if (ret < 0)
+        goto sock_err;
+    
     ret = s->connect(remote);
     if (ret < 0)
         goto sock_err;
@@ -210,13 +222,16 @@ sock_err:
 
 
 base_socket * connection::listen(struct sockaddr_t *remote, int n) {
+    int ret = 0;
 
     if (!sock->is_secure() && (sock->type & SOCK_DGRAM) != 0)
         return sock;
 
-    if ((sock->type & SOCK_STREAM) != 0)
-        sock->listen(n);
+    if ((sock->type & SOCK_STREAM) != 0) {
+        ret = sock->listen(n);
+        if (ret < 0)
+            return NULL;
+    }
 
-    
     return sock->accept(remote);
 }

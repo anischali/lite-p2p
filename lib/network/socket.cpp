@@ -300,16 +300,11 @@ tsocket::~tsocket()
 base_socket *tsocket::duplicate()
 {
     const int enable = 1;
-    int ret, nfd;
-    struct sockaddr_t b_addr;
+    int nfd;
     tsocket *s;
 
     set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-
-    ret = lite_p2p::network::get_sockname(fd, &b_addr);
-    if (ret < 0)
-        return NULL;
 
     nfd = socket(family, type, protocol);
     if (nfd < 0)
@@ -320,32 +315,19 @@ base_socket *tsocket::duplicate()
         return NULL;
 
     s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-    s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-
-    ret = lite_p2p::network::bind_socket(nfd, &b_addr);
-    if (ret < 0)
-        goto err_nsock;
+    s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));       
 
     return s;
-
-err_nsock:
-    delete s;
-    return NULL;
 }
 
 base_socket *ssocket::duplicate()
 {
     const int enable = 1;
-    int ret, nfd;
-    struct sockaddr_t b_addr;
+    int nfd;
     ssocket *s;
 
     set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-
-    ret = lite_p2p::network::get_sockname(fd, &b_addr);
-    if (ret < 0)
-        return NULL;
 
     nfd = socket(family, type, protocol);
     if (nfd < 0)
@@ -358,15 +340,7 @@ base_socket *ssocket::duplicate()
     s->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
     s->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
 
-    ret = lite_p2p::network::bind_socket(nfd, &b_addr);
-    if (ret < 0)
-        goto err_nsock;
-
     return s;
-
-err_nsock:
-    delete s;
-    return NULL;
 }
 
 int tsocket::bind(struct sockaddr_t *addr)
@@ -398,6 +372,7 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
 {
     int ret, nfd;
     tsocket *s;
+    struct sockaddr_t b_addr;
 
     if ((type & SOCK_STREAM) != 0)
     {
@@ -412,6 +387,16 @@ base_socket *tsocket::accept(struct sockaddr_t *addr)
     else
     {
         s = (tsocket *)duplicate();
+        if (!s)
+            return NULL;
+
+        ret = get_sockname(&b_addr);
+        if (ret < 0)
+            goto err_nsock; 
+            
+        ret = s->bind(&b_addr);
+        if (ret < 0)
+            goto err_nsock;
     }
 
     if (!s)
