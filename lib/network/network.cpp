@@ -460,6 +460,8 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
         if (p->ai_family == family)
         {
             lite_p2p::network::set_address(family, hostaddr, p->ai_addr);
+            freeaddrinfo(servinfo);
+            servinfo = NULL;
             return 0;
         }
     }
