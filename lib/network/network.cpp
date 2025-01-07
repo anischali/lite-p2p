@@ -192,6 +192,17 @@ int network::string_to_addr(int family, std::string saddr, struct sockaddr_t *ad
 }
 
 
+int network::string_to_addr(int family, std::string saddr, uint16_t port, struct sockaddr_t *addr) {
+    int ret = string_to_addr(family, saddr, addr);
+    if (ret < 0)
+        return ret;
+    
+    set_port(addr, port);
+
+    return 0;
+}
+
+
 std::string network::to_string()
 {
     std::string str_info = {0};
@@ -460,8 +471,6 @@ int network::resolve(struct sockaddr_t *hostaddr, int family, std::string hostna
         if (p->ai_family == family)
         {
             lite_p2p::network::set_address(family, hostaddr, p->ai_addr);
-            freeaddrinfo(servinfo);
-            servinfo = NULL;
             return 0;
         }
     }

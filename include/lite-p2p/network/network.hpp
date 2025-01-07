@@ -46,6 +46,7 @@ namespace lite_p2p
         static std::string addr_to_string(struct sockaddr_in *addr);
         static std::string addr_to_string(struct sockaddr_in6 *addr);
 
+        static int string_to_addr(int family, std::string saddr, uint16_t port, struct sockaddr_t *addr);
         static int string_to_addr(int family, std::string saddr, struct sockaddr_t *addr);
         static int string_to_addr(std::string saddr, struct sockaddr_in *addr);
         static int string_to_addr(std::string saddr, struct sockaddr_in6 *addr);
