@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 
     s = (secure) ? (lite_p2p::base_socket *)new lite_p2p::tsocket(family, type, 0, &cfg) : 
                     (lite_p2p::base_socket *)new lite_p2p::ssocket(family, type, 0);
-    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[5], atoi(argv[6]));
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(s, argv[5], (uint16_t)atoi(argv[6]));
 
     struct stun_server_t srv = servers[argv[4]];
     struct stun_session_t s_stun = {
