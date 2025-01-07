@@ -39,7 +39,7 @@
       //"args": ["test", "~/Documents/qr-code.png", "~/Documents/qr_code3.png"],
       //crypto-time
       //"args": ["~/Documents/qr-code.png"],
-      "args": ["4", "aws", "192.168.0.10", "40099"],
+      "args": ["4", "udp", "secure", "aws", "192.168.0.12", "40099"],
       //"args": ["4", "udp", "192.168.0.10", "4433", "192.168.0.10", "4443", "server"],
       "stopAtEntry": false,
       "externalConsole": false,
