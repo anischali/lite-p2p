@@ -62,7 +62,7 @@ connection::~connection()
     sock = NULL;
 };
 
-ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r)
+ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, int flags, struct sockaddr_t *r)
 {
 
     if (!nsock)
@@ -74,7 +74,7 @@ ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len,
         if (nsock->protocol == IPPROTO_TCP)
             return nsock->send(buf, len);
 
-        return nsock->send_to(buf, len, 0, r);
+        return nsock->send_to(buf, len, flags, r);
 
     case PEER_RELAYED_CONNECTION:
         if (!relay || !session)
@@ -92,25 +92,24 @@ ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len,
 
 ssize_t connection::send(uint8_t *buf, size_t len)
 {
-
-    return sock->send_to(buf, len, 0, &remote);
+    return send(sock, buf, len, 0, &remote);
 }
 
 ssize_t connection::send(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len)
 {
 
-    return send(nsock, buf, len, &remote);
+    return send(nsock, buf, len, 0, &remote);
 }
 
 ssize_t connection::send(lite_p2p::base_socket *nsock, std::vector<uint8_t> &buf)
 {
-    return send(nsock, buf.data(), buf.size(), &remote);
+    return send(nsock, buf.data(), buf.size(), 0, &remote);
 }
 
 ssize_t connection::send(std::vector<uint8_t> &buf)
 {
 
-    return send(sock, buf.data(), buf.size(), &remote);
+    return send(sock, buf.data(), buf.size(), 0, &remote);
 }
 
 ssize_t connection::recv(lite_p2p::base_socket *nsock, uint8_t *buf, size_t len, struct sockaddr_t *r)

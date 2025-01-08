@@ -3,6 +3,7 @@
 #include <thread>
 #include <cstdlib>
 #include <time.h>
+#include <atomic>
 #include "lite-p2p/common/common.hpp"
 #include "lite-p2p/protocol/stun/client.hpp"
 #include "lite-p2p/protocol/turn/client.hpp"
@@ -36,34 +37,24 @@ std::map<std::string, struct stun_server_t> servers = {
       }}}};
 #endif
 
+std::atomic<bool> terminate = false;
+
 void visichat_listener(void *args)
 {
     int ret;
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
-    lite_p2p::base_socket *s = NULL;
     struct sockaddr_t s_addr = {
         .sa_family = conn->sock->family,
     };
 
     printf("receiver thread start [OK]\n");
 
-    if (conn->sock->protocol == IPPROTO_TCP)
-    {
-        while (!s)
-        {
-            conn->sock->listen(1);
-            s = conn->sock->accept(&s_addr);
-        }
-    }
-    else
-    {
-        s = conn->sock;
-    }
+    //conn->new_sock = conn->estabilish(&conn->remote, 1);
 
-    while (true)
+    while (!terminate.load())
     {
-        ret = conn->recv(s, buf, sizeof(buf), &s_addr);
+        ret = conn->recv(buf, sizeof(buf), &s_addr);
         if (ret <= 0 || buf[0] == 0)
             continue;
 
@@ -83,19 +74,9 @@ void visichat_sender(void *args)
     static uint8_t buf[512];
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
 
-    if (conn->sock->protocol == IPPROTO_TCP)
-    {
-        int ret = conn->sock->connect(&conn->remote);
-        if (ret < 0)
-        {
-            ret = errno;
-            printf("%d - %s\n", ret, strerror(ret));
-        }
-    }
-
     printf("sender thread start [OK]\n");
 
-    while (true)
+    while (!terminate.load())
     {
         printf("\r> ");
         while ((c = getc(stdin)) != '\n')
@@ -115,12 +96,7 @@ void visichat_sender(void *args)
         cnt = 0;
 
         if (!strncmp("exit", (char *)&buf[0], 4))
-        {
-            sleep(1);
-            exit(0);
-            printf("sender thread stop [OK]\n");
-            return;
-        }
+            terminate = true;       
     }
 }
 
@@ -128,9 +104,9 @@ void visichat_keepalive(void *args)
 {
     lite_p2p::peer::connection *conn = (lite_p2p::peer::connection *)args;
 
-    while (true)
+    while (!terminate.load())
     {
-        conn->send(NULL, 0);
+        conn->send(conn->sock, NULL, 0);
 
         sleep(30);
     }
@@ -151,14 +127,14 @@ void visichat_keepalive(void *args)
 
 void usage(const char *prog)
 {
-    printf("%s: <protocol> <server_name> <lan-ip> <lport> <lifetime>\n", prog);
+    printf("%s: <protocol> <tcp|udp> <secure|unsecure> <server_name> <lan-ip> <lport> <lifetime>\n", prog);
     exit(0);
 }
 
 int main(int argc, char *argv[])
 {
 
-    if (argc < 6)
+    if (argc < 8)
     {
         usage(argv[0]);
     }
@@ -166,6 +142,10 @@ int main(int argc, char *argv[])
     lite_p2p::common::at_exit_cleanup __at_exit({SIGABRT, SIGHUP, SIGINT, SIGQUIT, SIGTERM});
     srand(time(NULL));
     int family = atoi(argv[1]) == 6 ? AF_INET6 : AF_INET;
+    int type = !strncmp("tcp", argv[2], 3) ? SOCK_STREAM : SOCK_DGRAM;
+    bool secure = !strncmp("secure", argv[3], 6);
+    lite_p2p::base_socket *sock;
+
     struct crypto_pkey_ctx_t ctx(EVP_PKEY_RSA);
     EVP_PKEY *p_keys = lite_p2p::crypto::crypto_generate_keypair(&ctx, "");
     struct tls_config_t cfg = {
@@ -178,10 +158,11 @@ int main(int argc, char *argv[])
         .ops = lite_tls_default_ops(),
     };
 
-    lite_p2p::tsocket *sock = new lite_p2p::tsocket(family, SOCK_DGRAM, 0, &cfg);
-    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(sock, argv[3], atoi(argv[4]));
+    sock = (secure) ? (lite_p2p::base_socket *)new lite_p2p::tsocket(family, type, 0, &cfg) : 
+                    (lite_p2p::base_socket *)new lite_p2p::ssocket(family, type, 0);
+    lite_p2p::peer::connection *conn = new lite_p2p::peer::connection(sock, argv[5], (uint16_t)atoi(argv[6]));
 
-    struct stun_server_t srv = servers[argv[2]];
+    struct stun_server_t srv = servers[argv[4]];
     struct stun_session_t s_turn = {
         .user = srv.username,
         .software = "lite-p2p v 1.0",
@@ -189,7 +170,7 @@ int main(int argc, char *argv[])
         .key_algo = SHA_ALGO_MD5,
         .password_algo = SHA_ALGO_CLEAR,
         .hmac_algo = SHA_ALGO_SHA1,
-        .lifetime = (uint32_t)atoi(argv[5]),
+        .lifetime = (uint32_t)atoi(argv[7]),
         .protocol = IPPROTO_UDP,
         .family = family == AF_INET6 ? INET_IPV6 : INET_IPV4,
         .lt_cred_mech = true,
@@ -269,18 +250,13 @@ int main(int argc, char *argv[])
     printf("bind: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->local).c_str(), lite_p2p::network::get_port(&conn->local));
     printf("peer: %s [%d]\n", lite_p2p::network::addr_to_string(&conn->remote).c_str(), lite_p2p::network::get_port(&conn->remote));
 
-    std::thread recver(visichat_listener, &conn);
-    std::thread sender(visichat_sender, &conn);
-    std::thread keepalive(visichat_keepalive, &conn);
+    std::thread recver(visichat_listener, conn);
+    std::thread sender(visichat_sender, conn);
+    std::thread keepalive(visichat_keepalive, conn);
 
     auto thread_cleanup = [](void *ctx)
     {
-        std::thread *t = (std::thread *)ctx;
-#if defined(__ANDROID__)
-        t->~thread();
-#else
-        pthread_cancel(t->native_handle());
-#endif
+        terminate = true;
     };
 
     __at_exit.at_exit_cleanup_add(&sender, thread_cleanup);
@@ -289,6 +265,7 @@ int main(int argc, char *argv[])
 
     recver.join();
     sender.join();
+    keepalive.join();
 
     return 0;
 }
