@@ -8,21 +8,43 @@ using namespace lite_p2p::peer;
 using namespace lite_p2p::protocol::stun;
 using namespace lite_p2p::protocol::turn;
 
+static int connection_set_options(base_socket *sock, long timeout) {
+    timeval tv = {.tv_sec = timeout};
+    const int enable = 1;
+    int ret;
+
+    ret = sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+    if (ret)
+        return ret;
+
+    ret = sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+    if (ret)
+        return ret;
+
+    ret = sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    if (ret)
+        return ret;
+
+    ret = sock->set_sockopt(SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
+    if (ret)
+        return ret;
+
+    return 0;
+}
+
+
+
 connection::connection(sa_family_t family, std::string _addr, uint16_t _port, int type, int protocol) : local_addr{_addr}
 {
-    timeval tv = {.tv_sec = 5};
-    const int enable = 1;
-
+    
     sock = new lite_p2p::ssocket(family, type, protocol);
     if (!sock)
     {
         throw std::runtime_error("failed to create socket");
     }
 
-    sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-    sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
+    connection_set_options(sock, 5);
+    
     network::string_to_addr(family, _addr, &local);
     network::set_port(&local, _port);
 
@@ -40,12 +62,7 @@ connection::connection(sa_family_t _family, std::string _addr, uint16_t _port) :
 
 connection::connection(lite_p2p::base_socket *s, std::string _addr, uint16_t _port) : sock{s}, local_addr{_addr}
 {
-    timeval tv = {.tv_sec = 5};
-    const int enable = 1;
-
-    sock->set_sockopt(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
-    sock->set_sockopt(SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
-    sock->set_sockopt(SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    connection_set_options(sock, 5);
 
     network::string_to_addr(s->family, _addr, &local);
     network::set_port(&local, _port);
