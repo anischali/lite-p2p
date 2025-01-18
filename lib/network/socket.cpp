@@ -26,9 +26,17 @@ int tsocket::tsocket_ssl_init()
 
     if (config->ciphers.length() > 0)
     {
-        ret = SSL_CTX_set_ciphersuites(tls.ctx, config->ciphers.c_str());
-        if (ret <= 0)
-            goto err_out;
+        if ((type & SOCK_DGRAM) != 0) {
+            ret = SSL_CTX_set_cipher_list(tls.ctx, config->ciphers.c_str());
+            if (ret <= 0)
+                goto err_out;
+        }
+        else {
+            ret = SSL_CTX_set_ciphersuites(tls.ctx, config->ciphers.c_str());
+            if (ret <= 0)
+                goto err_out;
+
+        }
     }
 
     ret = SSL_CTX_use_PrivateKey(tls.ctx, config->keys);

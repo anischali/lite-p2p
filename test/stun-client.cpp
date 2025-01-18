@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
         .timeout = 5,
         .verify_mode = SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, //| SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
         .min_version = TLS1_2_VERSION,
-        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,
+        .ciphers = TLS1_3_RFC_CHACHA20_POLY1305_SHA256,//TLS1_RFC_ECDHE_RSA_WITH_CHACHA20_POLY1305,
         .ops = lite_tls_default_ops(),
     };
 
