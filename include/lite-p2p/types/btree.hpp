@@ -18,8 +18,7 @@ namespace lite_p2p::types
     {
 
     private:
-        struct btree_node_t *root;
-        size_t depth;
+        struct btree_node_t *root = NULL;
 
         static inline int allocate_node(struct btree_node_t **node)
         {
@@ -36,29 +35,22 @@ namespace lite_p2p::types
             return 0;
         }
 
-        static inline void btree_free(struct btree_node_t *bt, int depth)
+        static inline void btree_free(struct btree_node_t *bt)
         {
-            struct btree_node_t *c1 = NULL, *c2 = NULL;
-            
-            if (!bt || depth == 0)
+            if (!bt || bt->leaf) {
                 return;
+            }
 
-            c1 = bt->children[0];
-            c2 = bt->children[1];
-            --depth;
-          
-            if (c1)
-                btree_free(c1, depth);
-
-            if (c2)
-                btree_free(c2, depth);
-
+            if (bt->children[0])
+                btree_free(bt->children[0]);
             
+            if (bt->children[1])
+                btree_free(bt->children[1]);
+
             if (bt) {
                 free(bt);
                 bt = NULL;
             }
-            
         }
 
         static inline void btree_print(struct btree_node_t *bt)
@@ -94,7 +86,6 @@ namespace lite_p2p::types
                 btree_callback_on_leaf(bt->children[1], exec_callback);
         }
 
-        
         static inline void btree_node_callback(btree_node_t *bt, void (*exec_callback)(lite_p2p::types::btree_node_t **node)) {
             
             if (!bt)
@@ -112,18 +103,20 @@ namespace lite_p2p::types
     public:
         btree() {
             allocate_node(&root);
-            depth = sizeof(T) * 8;
         };
         ~btree()
         {
-            btree_free(root, depth);
+            if (!root)
+                return;
+
+            btree_free(root);
             root = NULL;
         }
 
         int btree_insert_key(struct btree_node_t *node, T key)
         {
             struct btree_node_t *bt;
-            size_t vsize = (sizeof(T) * 8);
+            ssize_t vsize = (sizeof(T) * 8) - 1;
 
             if (!root)
             {
@@ -131,10 +124,12 @@ namespace lite_p2p::types
                     return -ENOMEM;
             }
 
+            //while(!key.at(vsize--) && vsize);
+
             bt = root;
-            for (size_t i = 0; i < vsize - 1 && bt; ++i)
+            for (ssize_t i = vsize; i > 0 && bt; --i)
             {
-                int vbit = key.at(i);
+                int vbit = !!key.at(i);
                 if (!bt->children[vbit])
                 {
                     if ((allocate_node(&bt->children[vbit])) != 0)
@@ -144,7 +139,7 @@ namespace lite_p2p::types
                 bt = bt->children[vbit];
             }
 
-            bt->children[key.at(vsize - 1)] = node;
+            bt->children[!!key.at(0)] = node;
 
             return 0;
         }
@@ -152,15 +147,17 @@ namespace lite_p2p::types
         struct btree_node_t *btree_find_node(T key)
         {
             struct btree_node_t *bt;
-            size_t vsize = (sizeof(T) * 8);
+            ssize_t vsize = (sizeof(T) * 8) - 1;
 
             bt = root;
             if (!bt)
                 return NULL;
 
-            for (size_t i = 0; i < vsize - 1 && bt; ++i)
+            //while(!key.at(vsize--) && vsize);
+
+            for (ssize_t i = vsize; i > 0 && bt; --i)
             {
-                int vbit = key.at(i);
+                int vbit = !!key.at(i);
                 if (!bt->children[vbit])
                 {
                     return NULL;
@@ -169,7 +166,7 @@ namespace lite_p2p::types
                 bt = bt->children[vbit];
             }
 
-            return bt->children[key.at(vsize - 1)];
+            return bt->children[!!key.at(0)];
         }
 
         void print()

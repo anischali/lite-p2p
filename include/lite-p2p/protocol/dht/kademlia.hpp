@@ -14,44 +14,36 @@ namespace lite_p2p::protocol::dht
     class kademlia_bucket
     {
     public:
-        constexpr static size_t bucket_size = sizeof(T) * 8;
+        size_t bucket_size = sizeof(T) * 8;
         std::vector<lite_p2p::peer::peer_info<T>> peers;
-        struct lite_p2p::types::btree_node_t node = {.leaf = true};
+        struct lite_p2p::types::btree_node_t node;
     };
-
     template <typename T>
     class kademlia
     {
     private:
+        base_socket *sock;
         T self_key;
         lite_p2p::types::btree<T> *kad_tree = new lite_p2p::types::btree<T>();
+        std::vector<kademlia_bucket<T> *> kbuckets; 
 
     public:
         kademlia(T skey) : self_key{skey} {}
+        kademlia(base_socket *s, T skey) : sock{s}, self_key{skey} {}
         ~kademlia()
         {
             if (!kad_tree)
                 return;
 
-            kad_tree->btree_callback_on_leaf([](lite_p2p::types::btree_node_t **n)
-            {
-                lite_p2p::protocol::dht::kademlia_bucket<T> *bucket = NULL;
-
-                if (!(*n))
-                    return;
-
-                if ((*n)->leaf) {    
-                    bucket = container_of(*n, lite_p2p::protocol::dht::kademlia_bucket<T>, node);
-                    if (bucket != NULL) {
-                        bucket->peers.~vector();
-                        free(bucket);
-                        bucket = NULL;
-                    }
-                }
-            });
-
             delete kad_tree;
             kad_tree = NULL;
+
+            for (auto &&b : kbuckets) {
+                if (b) {
+                    delete b;
+                    b = NULL;
+                }
+            }
         }
 
         lite_p2p::types::btree_node_t *find_closest_node(T key)
@@ -74,7 +66,11 @@ namespace lite_p2p::protocol::dht
 
             if (!n)
             {
-                bucket = (lite_p2p::protocol::dht::kademlia_bucket<T> *)calloc(1, sizeof(lite_p2p::protocol::dht::kademlia_bucket<T>));
+                bucket = new kademlia_bucket<T>();
+                if (!bucket)
+                    return;
+
+                kbuckets.push_back(bucket);
                 bucket->node.leaf = true;
                 s_key = self_key ^ info.key;
                 kad_tree->btree_insert_key(&bucket->node, s_key);
@@ -84,7 +80,11 @@ namespace lite_p2p::protocol::dht
                 bucket = container_of(n, lite_p2p::protocol::dht::kademlia_bucket<T>, node);
                 if (!bucket)
                 {
-                    bucket = (lite_p2p::protocol::dht::kademlia_bucket<T> *)calloc(1, sizeof(lite_p2p::protocol::dht::kademlia_bucket<T>));
+                    bucket = new kademlia_bucket<T>();
+                    if (!bucket)
+                        return;
+
+                    kbuckets.push_back(bucket);
                     bucket->node.leaf = true;
                     s_key = self_key ^ info.key;
                     kad_tree->btree_insert_key(&bucket->node, s_key);

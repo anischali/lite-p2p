@@ -31,6 +31,7 @@ namespace lite_p2p::peer
 
         T key;
         struct sockaddr_t addr;
+        long uptime;
         struct timeval last_seen;
         int status;
     };
