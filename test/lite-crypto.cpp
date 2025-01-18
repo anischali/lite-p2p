@@ -13,8 +13,11 @@
 #include "lite-p2p/protocol/dht/kademlia.hpp"
 
 
+lite_p2p::peer::peer_info<lite_p2p::types::lpint256_t> remotes[100];
 
 int main(int argc, char *argv[]) {
+    srand(time(NULL));
+
     std::vector<uint8_t> hash, sign;
     std::string str(argv[1]);
     std::vector<uint8_t> data;
@@ -81,19 +84,23 @@ int main(int argc, char *argv[]) {
     //close(fd2);
 
     lite_p2p::peer::peer_info<lite_p2p::types::lpint256_t> curr;
-    lite_p2p::peer::peer_info<lite_p2p::types::lpint256_t> rem;
+    auto dht = new lite_p2p::protocol::dht::kademlia<lite_p2p::types::lpint256_t>(curr.key);
 
-    lite_p2p::protocol::dht::kademlia<lite_p2p::types::lpint256_t> dht(curr.key);
+    dht->add_peer(curr);
 
-    dht.add_peer(curr);
-    dht.add_peer(rem);
+    for (auto &&r : remotes) {
+        r.key.set_bit(lite_p2p::common::rand_int(226, 256), 0);
+        r.key.set_bit(lite_p2p::common::rand_int(32, 255), 0);
+        r.key.set_bit(lite_p2p::common::rand_int(32, 255), 0);
+        r.key.set_bit(lite_p2p::common::rand_int(32, 255), 0);
+        dht->add_peer(r);
+    }
 
-    auto pi = dht.get_peer_info(rem.key);
+    auto pi = dht->get_peer_info(remotes[2].key);
 
-    printf("key: %s|%s\n", rem.key.to_string().c_str(), pi->key.to_string().c_str());
+    printf("key: %s|%s\n", remotes[2].key.to_string().c_str(), pi->key.to_string().c_str());
 
-    dht.~kademlia();
-
+    delete dht;
 
     lite_p2p::types::lpint8_t v1, v2, v3;
 

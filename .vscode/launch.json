@@ -36,16 +36,16 @@
       //turn
       //"args": ["<ip-family[4|6]>", "<server-name[see the code]>", "<lan-ip>", "<lport>", "<remote-mapped-ip>", "<remote-port>", "<turn-lifetime>"],
       //crypto
-      //"args": ["test", "~/Documents/qr-code.png", "~/Documents/qr_code3.png"],
+      "args": ["test", "~/Documents/qr-code.png", "~/Documents/qr_code3.png"],
       //crypto-time
       //"args": ["~/Documents/qr-code.png"],
-      "args": ["4", "udp", "secure", "aws", "192.168.0.10", "40084", "360"],
+      //"args": ["4", "tcp", "secure", "aws", "192.168.0.10", "40084", "360"],
       //"args": ["4", "udp", "192.168.0.10", "4433", "192.168.0.10", "4443", "server"],
       "stopAtEntry": false,
       "externalConsole": false,
       "cwd": "${workspaceFolder}/build/",
-      "program": "${workspaceFolder}/build/test/turn-client",
-      //"program": "${workspaceFolder}/build/test/lite-crypto",
+      //"program": "${workspaceFolder}/build/test/turn-client",
+      "program": "${workspaceFolder}/build/test/lite-crypto",
       //"program": "${workspaceFolder}/build/test/lite-crypto-time",
       //"program": "${workspaceFolder}/build/test/lite-socket",
       //"program": "${workspaceFolder}/build/test/stun-client",
