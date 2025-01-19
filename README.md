@@ -1,6 +1,6 @@
 **Encryption speeds (in term of encryption + decryption time, loop max for both encryption and decryption is 1000) **
 
-![Encryption speeds "image ploted with chat gpt"](data/image.png)
+
 
 # Crypto openssl context: 
 
