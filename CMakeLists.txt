@@ -73,6 +73,8 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
 endif()
 
 
+#add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/swig_wrappers")
+
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/lite-p2p.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/lite-p2p.pc
