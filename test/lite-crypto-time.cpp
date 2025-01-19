@@ -93,8 +93,17 @@ void encrypt_decrypt_measure(std::string algo, std::string filename, std::vector
     EVP_CIPHER_free(cipher);
 }
 
+void usage(const char *prog)
+{
+    printf("%s: <filename>\n", prog);
+    exit(0);
+}
+
 int main(int argc, const char *argv[])
 {
+    if (argc < 2)
+        usage(argv[0]);
+
     encrypt_decrypt_measure(SN_aes_128_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(128), lite_p2p::crypto::crypto_random_bytes(96));         // 128-bit key
     encrypt_decrypt_measure(SN_aes_192_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(192), lite_p2p::crypto::crypto_random_bytes(96));         // 192-bit key
     encrypt_decrypt_measure(SN_aes_256_gcm, argv[1], lite_p2p::crypto::crypto_random_bytes(256), lite_p2p::crypto::crypto_random_bytes(96));         // 256-bit key
