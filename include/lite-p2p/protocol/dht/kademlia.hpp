@@ -8,6 +8,10 @@
 #include "lite-p2p/types/list_head.hpp"
 #include "lite-p2p/peer/connection.hpp"
 
+using namespace lite_p2p::types;
+using namespace lite_p2p::peer;
+using namespace lite_p2p::protocol;
+
 namespace lite_p2p::protocol::dht
 {
     template <typename T>
@@ -15,8 +19,8 @@ namespace lite_p2p::protocol::dht
     {
     public:
         size_t bucket_size = sizeof(T) * 8;
-        std::vector<lite_p2p::peer::peer_info<T>> peers;
-        struct lite_p2p::types::btree_node_t node;
+        std::vector<peer_info<T>> peers;
+        struct btree_node_t node;
     };
     template <typename T>
     class kademlia
@@ -24,7 +28,7 @@ namespace lite_p2p::protocol::dht
     private:
         base_socket *sock;
         T self_key;
-        lite_p2p::types::btree<T> *kad_tree = new lite_p2p::types::btree<T>();
+        btree<T> *kad_tree = new btree<T>();
         std::vector<kademlia_bucket<T> *> kbuckets; 
 
     public:
@@ -46,9 +50,9 @@ namespace lite_p2p::protocol::dht
             }
         }
 
-        lite_p2p::types::btree_node_t *find_closest_node(T key)
+        btree_node_t *find_closest_node(T key)
         {
-            lite_p2p::types::btree_node_t *node = NULL;
+            btree_node_t *node = NULL;
             T s_key = key ^ self_key;
 
             node = kad_tree->btree_find_node(s_key);
@@ -58,11 +62,11 @@ namespace lite_p2p::protocol::dht
             return node;
         }
 
-        void add_peer(lite_p2p::peer::peer_info<T> &info)
+        void add_peer(peer_info<T> &info)
         {
             T s_key;
-            lite_p2p::protocol::dht::kademlia_bucket<T> *bucket = NULL;
-            lite_p2p::types::btree_node_t *n = find_closest_node(info.key);
+            kademlia_bucket<T> *bucket = NULL;
+            btree_node_t *n = find_closest_node(info.key);
 
             if (!n)
             {
@@ -77,7 +81,7 @@ namespace lite_p2p::protocol::dht
             }
             else
             {
-                bucket = container_of(n, lite_p2p::protocol::dht::kademlia_bucket<T>, node);
+                bucket = container_of(n, kademlia_bucket<T>, node);
                 if (!bucket)
                 {
                     bucket = new kademlia_bucket<T>();
@@ -94,22 +98,22 @@ namespace lite_p2p::protocol::dht
             bucket->peers.emplace_back(info);
         }
 
-        lite_p2p::peer::peer_info<T> *get_peer_info(T key)
+        peer_info<T> *get_peer_info(T key)
         {
-            lite_p2p::types::btree_node_t *n = find_closest_node(key);
-            lite_p2p::protocol::dht::kademlia_bucket<T> *bucket = NULL;
+            btree_node_t *n = find_closest_node(key);
+            kademlia_bucket<T> *bucket = NULL;
 
             if (!n)
                 return NULL;
 
-            bucket = container_of(n, lite_p2p::protocol::dht::kademlia_bucket<T>, node);
+            bucket = container_of(n, kademlia_bucket<T>, node);
             if (!bucket)
             {
                 std::throw_with_nested("kadmelia bucket not found!");
             }
 
             auto pi = std::find_if(bucket->peers.begin(),
-                                   bucket->peers.end(), [&](const lite_p2p::peer::peer_info<T> &v) -> bool
+                                   bucket->peers.end(), [&](const peer_info<T> &v) -> bool
                                    { 
                     printf("%s\n", key.to_string().c_str());
                     return  key == v.key; });
