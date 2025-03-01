@@ -52,14 +52,9 @@ namespace lite_p2p::protocol::dht
 
         btree_node_t *find_closest_node(T key)
         {
-            btree_node_t *node = NULL;
             T s_key = key ^ self_key;
 
-            node = kad_tree->btree_find_node(s_key);
-            if (node)
-                return node;
-
-            return node;
+            return kad_tree->btree_find_node(s_key);
         }
 
         void add_peer(peer_info<T> &info)
@@ -115,7 +110,6 @@ namespace lite_p2p::protocol::dht
             auto pi = std::find_if(bucket->peers.begin(),
                                    bucket->peers.end(), [&](const peer_info<T> &v) -> bool
                                    { 
-                    printf("%s\n", key.to_string().c_str());
                     return  key == v.key; });
 
             if (pi != bucket->peers.end())
