@@ -18,3 +18,9 @@ openssl s_server -accept 4433 -cert server.crt -key server.key -cipher ECDHE-RSA
 
 ** tls client **
 openssl s_client -connect 192.168.0.10:4433 -dtls -cipher ECDHE-RSA-AES256-GCM-SHA384
+
+** TODO: **
+
+1. Implement kademlia listen agent.
+2. Implement kademlia keep alive agent.
+3. Implement store peer info dht.
