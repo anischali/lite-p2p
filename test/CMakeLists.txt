@@ -89,3 +89,18 @@ target_link_libraries(lite-socket lite-p2p)
 install(TARGETS lite-socket
     DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
+
+add_executable(lite-dht)
+target_include_directories(lite-dht PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/include
+)
+
+target_sources(lite-dht PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/lite-dht.cxx
+)
+
+target_link_libraries(lite-dht lite-p2p)
+
+install(TARGETS lite-dht
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
