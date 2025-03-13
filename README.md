@@ -2,25 +2,26 @@
 
 ![Encryption speeds "image ploted with chat gpt"](data/image.png)
 
-# Crypto openssl context: 
-
-# Commands: 
-openssl ciphers -dtls -v
-
-** Generate a private key: **
-openssl genpkey -algorithm ED448 -out server.key
-
-** Generate a self-signed certificate **
-openssl req -new -x509 -key server.key -out server.crt -days 365 -subj "/CN=localhost"
-
-** tls server: **
-openssl s_server -accept 4433 -cert server.crt -key server.key -cipher ECDHE-RSA-AES256-GCM-SHA384 -dtls
-
-** tls client **
-openssl s_client -connect 192.168.0.10:4433 -dtls -cipher ECDHE-RSA-AES256-GCM-SHA384
-
-** TODO: **
+**TODO:**
 
 1. Implement kademlia listen agent.
 2. Implement kademlia keep alive agent.
 3. Implement store peer info dht.
+   
+
+**Compile:**
+
+```bash
+mkdir build && cd build
+cmake .. -DLITE_P2P_TEST_TOOLS=ON -DCMAKE_BUILD_TYPE=Debug
+make
+```
+
+**Compile with a buildenv:**
+
+```bash
+mkdir build && cd build
+. ../buildenv/<env-file>.env
+cmake .. -DLITE_P2P_TEST_TOOLS=ON -DCMAKE_BUILD_TYPE=Debug
+make
+```
