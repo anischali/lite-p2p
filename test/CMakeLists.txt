@@ -6,7 +6,7 @@ enable_language(C CXX ASM)
 
 add_compile_options(-Wall -Og)
 
-if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 message("build type: ${CMAKE_BUILD_TYPE}")
 add_compile_definitions(
     -DDEBUG=1
