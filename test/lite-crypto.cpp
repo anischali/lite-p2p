@@ -111,11 +111,11 @@ int main(int argc, char *argv[]) {
     printf("%s = %s ^ %s\n", v3.to_string().c_str(), v1.to_string().c_str(), v2.to_string().c_str());
 
     struct crypto_kdf_ctx_t ctx("ARGON2ID", {
-        {OSSL_KDF_PARAM_DIGEST, {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = SN_sha256}},
-        {OSSL_KDF_PARAM_THREADS, {.ossl_type = ossl_numeric_int, .int_val = 2}},
-        {OSSL_KDF_PARAM_ARGON2_LANES, {.ossl_type = ossl_numeric_int, .int_val = 2}},
-        {OSSL_KDF_PARAM_ARGON2_MEMCOST, {.ossl_type = ossl_numeric_int, .int_val = 4096}},
-        {OSSL_KDF_PARAM_ARGON2_VERSION, {.ossl_type = ossl_numeric_int, .int_val = 19}},
+        {"digest", {.ossl_type = ossl_utf8_string, .size = sizeof(SN_sha256), .str_val = SN_sha256}},
+        {"threads", {.ossl_type = ossl_numeric_int, .int_val = 2}},
+        {"lanes", {.ossl_type = ossl_numeric_int, .int_val = 2}},
+        {"memcost", {.ossl_type = ossl_numeric_int, .int_val = 4096}},
+        {"version", {.ossl_type = ossl_numeric_int, .int_val = 19}},
     });
     
     auto pss = std::string("test/pass");
