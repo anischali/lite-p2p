@@ -13,7 +13,8 @@
 #include <openssl/core_names.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
-#ifndef ANDROID
+#if __has_include("openssl/thread.h")
+#define OSSL_HAS_THREAD 1
 #include <openssl/thread.h>
 #endif
 
@@ -123,7 +124,7 @@ struct crypto_kdf_ctx_t
         algorithm = _algorithm;
         params = mparams;
 
-#ifndef ANDROID
+#if defined(OSSL_HAS_THREAD) && OSSL_HAS_THREAD == 1
         if (auto k = mparams.find(OSSL_KDF_PARAM_THREADS); k != mparams.end())
         {
             if (k->second.int_val > 1)
